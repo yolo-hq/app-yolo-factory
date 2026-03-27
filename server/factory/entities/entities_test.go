@@ -44,3 +44,21 @@ func TestTaskBaseEntity(t *testing.T) {
 	assert.Equal(t, "task-123", task.GetID())
 	assert.False(t, task.IsDeleted())
 }
+
+func TestRunImplementsInterfaces(t *testing.T) {
+	var run entities.Run
+	var _ entity.Entity = run
+	var _ entity.Named = run
+	var _ entity.Timestamped = run
+	var _ entity.SoftDeletable = run
+
+	assert.Equal(t, "runs", run.TableName())
+	assert.Equal(t, "Run", run.EntityName())
+}
+
+func TestRunBaseEntity(t *testing.T) {
+	run := entities.Run{}
+	run.ID = "run-123"
+	assert.Equal(t, "run-123", run.GetID())
+	assert.False(t, run.IsDeleted())
+}

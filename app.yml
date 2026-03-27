@@ -29,3 +29,6 @@ apps:
         entities:
           Repo: "*"
           Task: "*"
+          Run:
+            actions: [create]
+            queries: [list]
