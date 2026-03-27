@@ -1,16 +1,3 @@
-# Ralph working files
-.ralph/logs/
-.ralph/ralph.lock
-.ralph/worktrees/
-.ralph/locks/
-.ralph/state.json
-.ralph/worker_history.jsonl
-.ralph/result-*.tmp
-.ralph/.issue_cache.json
-.ralph/questions.md
-.ralph/cache/
-.ralph/workers/
-progress.txt
 
 # Go binaries
 *.exe
