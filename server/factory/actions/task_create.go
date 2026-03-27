@@ -21,10 +21,7 @@ type CreateTaskAction struct {
 
 
 func (a *CreateTaskAction) Execute(ctx context.Context, actx *action.Context) action.Result {
-	input, r := a.Input(actx)
-	if r != nil {
-		return *r
-	}
+	input := a.Get(actx)
 
 	// Parse dependsOn
 	deps := parseDeps(input.DependsOn)
@@ -96,11 +93,12 @@ func (a *CreateTaskAction) Execute(ctx context.Context, actx *action.Context) ac
 	}
 	task.ID = ulid.Make().String()
 
-	created, err := a.TaskWrite.Insert(ctx, task)
+	_, err := a.TaskWrite.Insert(ctx, task)
 	if err != nil {
 		return action.InternalError()
 	}
-	return action.Success(created, "task created")
+	actx.Resolve("Task", task.ID)
+	return action.OK()
 }
 
 func parseDeps(raw string) []string {

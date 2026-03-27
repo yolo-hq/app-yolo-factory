@@ -18,16 +18,13 @@ type ResolveQuestionAction struct {
 
 
 func (a *ResolveQuestionAction) Execute(ctx context.Context, actx *action.Context) action.Result {
-	input, r := a.Input(actx)
-	if r != nil {
-		return *r
-	}
+	input := a.Get(actx)
 
 	// EntityID comes from URL path — validated by framework
 	questionID := actx.EntityID
 
 	a.QuestionWrite.Update(ctx).
-		Where(entity.FilterCondition{Field: "id", Operator: entity.OpEq, Value: questionID}).
+		WhereID(questionID).
 		Set("status", input.Status).
 		Set("resolution", input.Resolution).
 		Exec(ctx)

@@ -21,10 +21,7 @@ type CompleteRunAction struct {
 
 
 func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) action.Result {
-	input, r := a.Input(actx)
-	if r != nil {
-		return *r
-	}
+	input := a.Get(actx)
 
 	// Load run
 	run, r2 := action.FindOrFail(ctx, a.RunRead, input.RunID)
@@ -35,7 +32,7 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) a
 	// Update run
 	now := time.Now()
 	a.RunWrite.Update(ctx).
-		Where(entity.FilterCondition{Field: "id", Operator: entity.OpEq, Value: input.RunID}).
+		WhereID(input.RunID).
 		Set("status", input.Status).
 		Set("cost", input.Cost).
 		Set("duration", input.Duration).
@@ -64,7 +61,7 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) a
 
 	// Update task
 	a.TaskWrite.Update(ctx).
-		Where(entity.FilterCondition{Field: "id", Operator: entity.OpEq, Value: run.TaskID}).
+		WhereID(run.TaskID).
 		Set("status", taskStatus).
 		Set("cost", task.Cost+input.Cost).
 		Exec(ctx)
@@ -102,7 +99,7 @@ func (a *CompleteRunAction) unblockDependents(ctx context.Context, completedTask
 
 		if allDepsDone(ctx, a.TaskRead, deps) {
 			a.TaskWrite.Update(ctx).
-				Where(entity.FilterCondition{Field: "id", Operator: entity.OpEq, Value: task.ID}).
+				WhereID(task.ID).
 				Set("status", "queued").
 				Exec(ctx)
 		}

@@ -63,7 +63,7 @@ func (a *ExecuteTaskAction) Execute(ctx context.Context, actx *action.Context) a
 
 	// Update task status
 	a.TaskWrite.Update(ctx).
-		Where(entity.FilterCondition{Field: "id", Operator: entity.OpEq, Value: task.ID}).
+		WhereID(task.ID).
 		Set("status", "running").
 		Set("run_count", task.RunCount+1).
 		Exec(ctx)

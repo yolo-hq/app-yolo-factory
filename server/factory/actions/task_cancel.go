@@ -21,7 +21,7 @@ func (a *CancelTaskAction) Execute(ctx context.Context, actx *action.Context) ac
 	}
 
 	_, err := a.Repo.Update(ctx).
-		Where(entity.FilterCondition{Field: "id", Operator: entity.OpEq, Value: actx.EntityID}).
+		WhereID(actx.EntityID).
 		Set("status", "cancelled").
 		Exec(ctx)
 	if err != nil {
