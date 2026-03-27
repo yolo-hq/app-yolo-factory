@@ -8,8 +8,3 @@ type CreateQuestionInput struct {
 	Tried   string `json:"tried"`
 	Body    string `json:"body" validate:"required"`
 }
-
-type ResolveQuestionInput struct {
-	Status     string `json:"status" validate:"required"`
-	Resolution string `json:"resolution" validate:"required"`
-}

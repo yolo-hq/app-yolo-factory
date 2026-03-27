@@ -1,12 +1,5 @@
 package inputs
 
-type CreateRunInput struct {
-	TaskID string `json:"taskId" validate:"required"`
-	RepoID string `json:"repoId" validate:"required"`
-	Agent  string `json:"agent"`
-	Model  string `json:"model" validate:"required"`
-}
-
 type CompleteRunInput struct {
 	RunID      string  `json:"runId" validate:"required"`
 	Status     string  `json:"status" validate:"required"`

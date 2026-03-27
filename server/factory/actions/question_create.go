@@ -1,7 +1,6 @@
 package actions
 
 import (
-	"github.com/yolo-hq/yolo"
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/entity"
 
@@ -10,10 +9,8 @@ import (
 )
 
 type CreateQuestionAction struct {
+	action.PublicAccess
 	action.BaseCreate[entities.Question, inputs.CreateQuestionInput]
 	Repo entity.WriteRepository[entities.Question]
 }
 
-func (a *CreateQuestionAction) Policies() []action.AnyPolicy {
-	return []action.AnyPolicy{yolo.IsAuthenticated()}
-}

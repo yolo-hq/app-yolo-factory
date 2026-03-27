@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/oklog/ulid/v2"
-	"github.com/yolo-hq/yolo"
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/entity"
 
@@ -15,6 +14,7 @@ import (
 
 // ExecuteTaskAction picks the highest-priority queued auto task and starts execution.
 type ExecuteTaskAction struct {
+	action.PublicAccess
 	action.NoInput
 	TaskRead  entity.ReadRepository[entities.Task]
 	TaskWrite entity.WriteRepository[entities.Task]
@@ -22,9 +22,6 @@ type ExecuteTaskAction struct {
 	RepoRead  entity.ReadRepository[entities.Repo]
 }
 
-func (a *ExecuteTaskAction) Policies() []action.AnyPolicy {
-	return []action.AnyPolicy{yolo.IsAuthenticated()}
-}
 
 func (a *ExecuteTaskAction) StatusCode() int { return 202 }
 
@@ -48,9 +45,9 @@ func (a *ExecuteTaskAction) Execute(ctx context.Context, actx *action.Context) a
 	task := tasks.Data[0]
 
 	// Load repo
-	repo, err := a.RepoRead.FindOne(ctx, entity.FindOneOptions{ID: task.RepoID})
-	if err != nil || repo == nil {
-		return action.Failure(fmt.Sprintf("repo %s not found", task.RepoID))
+	repo, r := action.FindOrFail(ctx, a.RepoRead, task.RepoID)
+	if r != nil {
+		return *r
 	}
 	if !repo.Active {
 		return action.Failure(fmt.Sprintf("repo %s is inactive", repo.Name))

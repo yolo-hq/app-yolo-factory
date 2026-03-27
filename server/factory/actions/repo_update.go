@@ -3,7 +3,6 @@ package actions
 import (
 	"context"
 
-	"github.com/yolo-hq/yolo"
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/entity"
 
@@ -16,9 +15,6 @@ type UpdateRepoAction struct {
 	Repo entity.WriteRepository[entities.Repo]
 }
 
-func (a *UpdateRepoAction) Policies() []action.AnyPolicy {
-	return []action.AnyPolicy{yolo.IsAuthenticated()}
-}
 
 func (a *UpdateRepoAction) Execute(ctx context.Context, actx *action.Context) action.Result {
 	if r := action.RequireEntityID(actx, "Repo"); r != nil {

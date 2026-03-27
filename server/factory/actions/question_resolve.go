@@ -3,7 +3,6 @@ package actions
 import (
 	"context"
 
-	"github.com/yolo-hq/yolo"
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/entity"
 
@@ -12,14 +11,12 @@ import (
 )
 
 type ResolveQuestionAction struct {
+	action.PublicAccess
 	action.TypedInput[inputs.ResolveQuestionInput]
 	QuestionRead  entity.ReadRepository[entities.Question]
 	QuestionWrite entity.WriteRepository[entities.Question]
 }
 
-func (a *ResolveQuestionAction) Policies() []action.AnyPolicy {
-	return []action.AnyPolicy{yolo.IsAuthenticated()}
-}
 
 func (a *ResolveQuestionAction) Execute(ctx context.Context, actx *action.Context) action.Result {
 	input, r := a.Input(actx)
@@ -32,9 +29,9 @@ func (a *ResolveQuestionAction) Execute(ctx context.Context, actx *action.Contex
 		return action.Failure("question ID required")
 	}
 
-	q, _ := a.QuestionRead.FindOne(ctx, entity.FindOneOptions{ID: questionID})
-	if q == nil {
-		return action.NotFound("Question", questionID)
+	_, r2 := action.FindOrFail(ctx, a.QuestionRead, questionID)
+	if r2 != nil {
+		return *r2
 	}
 
 	a.QuestionWrite.Update(ctx).

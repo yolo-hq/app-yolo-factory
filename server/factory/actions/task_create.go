@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/oklog/ulid/v2"
-	"github.com/yolo-hq/yolo"
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/entity"
 
@@ -15,14 +14,12 @@ import (
 )
 
 type CreateTaskAction struct {
+	action.PublicAccess
 	action.TypedInput[inputs.CreateTaskInput]
 	TaskWrite entity.WriteRepository[entities.Task]
 	TaskRead  entity.ReadRepository[entities.Task]
 }
 
-func (a *CreateTaskAction) Policies() []action.AnyPolicy {
-	return []action.AnyPolicy{yolo.IsAuthenticated()}
-}
 
 func (a *CreateTaskAction) Execute(ctx context.Context, actx *action.Context) action.Result {
 	input, r := a.Input(actx)

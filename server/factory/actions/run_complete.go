@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/yolo-hq/yolo"
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/entity"
 
@@ -13,6 +12,7 @@ import (
 )
 
 type CompleteRunAction struct {
+	action.PublicAccess
 	action.TypedInput[inputs.CompleteRunInput]
 	RunRead   entity.ReadRepository[entities.Run]
 	RunWrite  entity.WriteRepository[entities.Run]
@@ -20,9 +20,6 @@ type CompleteRunAction struct {
 	TaskWrite entity.WriteRepository[entities.Task]
 }
 
-func (a *CompleteRunAction) Policies() []action.AnyPolicy {
-	return []action.AnyPolicy{yolo.IsAuthenticated()}
-}
 
 func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) action.Result {
 	input, r := a.Input(actx)
@@ -31,9 +28,9 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) a
 	}
 
 	// Load run
-	run, _ := a.RunRead.FindOne(ctx, entity.FindOneOptions{ID: input.RunID})
-	if run == nil {
-		return action.NotFound("Run", input.RunID)
+	run, r2 := action.FindOrFail(ctx, a.RunRead, input.RunID)
+	if r2 != nil {
+		return *r2
 	}
 
 	// Update run
@@ -50,9 +47,9 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) a
 		Exec(ctx)
 
 	// Load task
-	task, _ := a.TaskRead.FindOne(ctx, entity.FindOneOptions{ID: run.TaskID})
-	if task == nil {
-		return action.NotFound("Task", run.TaskID)
+	task, r3 := action.FindOrFail(ctx, a.TaskRead, run.TaskID)
+	if r3 != nil {
+		return *r3
 	}
 
 	// Map run status to task status
