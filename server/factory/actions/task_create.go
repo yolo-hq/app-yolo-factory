@@ -21,7 +21,7 @@ type CreateTaskAction struct {
 
 
 func (a *CreateTaskAction) Execute(ctx context.Context, actx *action.Context) action.Result {
-	input := a.Get(actx)
+	input := a.Input(actx)
 
 	// Parse dependsOn
 	deps := parseDeps(input.DependsOn)

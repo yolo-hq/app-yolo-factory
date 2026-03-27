@@ -21,7 +21,7 @@ type CompleteRunAction struct {
 
 
 func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) action.Result {
-	input := a.Get(actx)
+	input := a.Input(actx)
 
 	// Load run
 	run, r2 := action.FindOrFail(ctx, a.RunRead, input.RunID)
