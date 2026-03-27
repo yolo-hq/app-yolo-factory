@@ -4,7 +4,12 @@ import (
 	"time"
 
 	"github.com/yolo-hq/yolo/core/entity"
+	"github.com/yolo-hq/yolo/core/registry"
 )
+
+func init() {
+	registry.RegisterGlobalEntity(Run{})
+}
 
 type Run struct {
 	entity.BaseEntity
