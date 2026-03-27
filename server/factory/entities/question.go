@@ -12,15 +12,12 @@ type Question struct {
 	Tried      string `json:"tried" bun:"tried"`
 	Body       string `json:"body" bun:"body,notnull"`
 	Resolution string `json:"resolution" bun:"resolution"`
+
+	// Relations
+	Task *Task `json:"task,omitempty" bun:"rel:belongs_to,join:task_id=id"`
+	Run  *Run  `json:"run,omitempty" bun:"rel:belongs_to,join:run_id=id"`
+	Repo *Repo `json:"repo,omitempty" bun:"rel:belongs_to,join:repo_id=id"`
 }
 
 func (Question) TableName() string  { return "questions" }
 func (Question) EntityName() string { return "Question" }
-
-func (Question) Relations() []entity.Relation {
-	return []entity.Relation{
-		{Name: "Task", Type: entity.RelationManyToOne, Table: "tasks", ForeignKey: "task_id", ReferenceKey: "id"},
-		{Name: "Run", Type: entity.RelationManyToOne, Table: "runs", ForeignKey: "run_id", ReferenceKey: "id"},
-		{Name: "Repo", Type: entity.RelationManyToOne, Table: "repos", ForeignKey: "repo_id", ReferenceKey: "id"},
-	}
-}

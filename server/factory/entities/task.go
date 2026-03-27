@@ -18,17 +18,14 @@ type Task struct {
 	RunCount    int     `json:"runCount" bun:"run_count,notnull,default:0"`
 	MaxRetries  int     `json:"maxRetries" bun:"max_retries,notnull,default:3"`
 	TimeoutSecs int     `json:"timeoutSecs" bun:"timeout_secs,notnull,default:600"`
+
+	// Relations
+	Repo      *Repo      `json:"repo,omitempty" bun:"rel:belongs_to,join:repo_id=id"`
+	Runs      []Run      `json:"runs,omitempty" bun:"rel:has_many,join:id=task_id"`
+	Questions []Question `json:"questions,omitempty" bun:"rel:has_many,join:id=task_id"`
+	Parent    *Task      `json:"parent,omitempty" bun:"rel:belongs_to,join:parent_id=id"`
+	Children  []Task     `json:"children,omitempty" bun:"rel:has_many,join:id=parent_id"`
 }
 
 func (Task) TableName() string  { return "tasks" }
 func (Task) EntityName() string { return "Task" }
-
-func (Task) Relations() []entity.Relation {
-	return []entity.Relation{
-		{Name: "Repo", Type: entity.RelationManyToOne, Table: "repos", ForeignKey: "repo_id", ReferenceKey: "id"},
-		{Name: "Runs", Type: entity.RelationOneToMany, Table: "runs", ForeignKey: "task_id", ReferenceKey: "id"},
-		{Name: "Questions", Type: entity.RelationOneToMany, Table: "questions", ForeignKey: "task_id", ReferenceKey: "id"},
-		{Name: "Parent", Type: entity.RelationManyToOne, Table: "tasks", ForeignKey: "parent_id", ReferenceKey: "id"},
-		{Name: "Children", Type: entity.RelationOneToMany, Table: "tasks", ForeignKey: "parent_id", ReferenceKey: "id"},
-	}
-}

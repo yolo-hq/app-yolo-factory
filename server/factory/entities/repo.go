@@ -11,14 +11,11 @@ type Repo struct {
 	DefaultModel  string `json:"defaultModel" bun:"default_model,notnull,default:'sonnet'"`
 	FeedbackLoops string `json:"feedbackLoops" bun:"feedback_loops,default:'[]'"`
 	Active        bool   `json:"active" bun:"active,notnull,default:true"`
+
+	// Relations
+	Tasks []Task `json:"tasks,omitempty" bun:"rel:has_many,join:id=repo_id"`
+	Runs  []Run  `json:"runs,omitempty" bun:"rel:has_many,join:id=repo_id"`
 }
 
 func (Repo) TableName() string  { return "repos" }
 func (Repo) EntityName() string { return "Repo" }
-
-func (Repo) Relations() []entity.Relation {
-	return []entity.Relation{
-		{Name: "Tasks", Type: entity.RelationOneToMany, Table: "tasks", ForeignKey: "repo_id", ReferenceKey: "id"},
-		{Name: "Runs", Type: entity.RelationOneToMany, Table: "runs", ForeignKey: "repo_id", ReferenceKey: "id"},
-	}
-}

@@ -20,15 +20,12 @@ type Run struct {
 	CommitHash  string     `json:"commitHash" bun:"commit_hash"`
 	StartedAt   time.Time  `json:"startedAt" bun:"started_at,notnull,default:current_timestamp"`
 	CompletedAt *time.Time `json:"completedAt" bun:"completed_at"`
+
+	// Relations
+	Task      *Task      `json:"task,omitempty" bun:"rel:belongs_to,join:task_id=id"`
+	Repo      *Repo      `json:"repo,omitempty" bun:"rel:belongs_to,join:repo_id=id"`
+	Questions []Question `json:"questions,omitempty" bun:"rel:has_many,join:id=run_id"`
 }
 
 func (Run) TableName() string  { return "runs" }
 func (Run) EntityName() string { return "Run" }
-
-func (Run) Relations() []entity.Relation {
-	return []entity.Relation{
-		{Name: "Task", Type: entity.RelationManyToOne, Table: "tasks", ForeignKey: "task_id", ReferenceKey: "id"},
-		{Name: "Repo", Type: entity.RelationManyToOne, Table: "repos", ForeignKey: "repo_id", ReferenceKey: "id"},
-		{Name: "Questions", Type: entity.RelationOneToMany, Table: "questions", ForeignKey: "run_id", ReferenceKey: "id"},
-	}
-}
