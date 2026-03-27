@@ -36,10 +36,10 @@ func main() {
 	registry.RegisterFilter("Task", filters.TaskFilter{})
 
 	// Actions
+	registry.RegisterActions("Question", &actions.CreateQuestionAction{}, &actions.ResolveQuestionAction{})
 	registry.RegisterActions("Repo", &actions.CreateRepoAction{}, &actions.UpdateRepoAction{})
 	registry.RegisterActions("Run", &actions.CompleteRunAction{}, &actions.CreateRunAction{})
-	registry.RegisterActions("Task", &actions.ExecuteTaskAction{}, &actions.CancelTaskAction{}, &actions.CreateTaskAction{}, &actions.UpdateTaskAction{})
-	registry.RegisterActions("Question", &actions.CreateQuestionAction{}, &actions.ResolveQuestionAction{})
+	registry.RegisterActions("Task", &actions.CancelTaskAction{}, &actions.CreateTaskAction{}, &actions.UpdateTaskAction{}, &actions.ExecuteTaskAction{})
 
 	yolo.MustRunBinary()
 }
