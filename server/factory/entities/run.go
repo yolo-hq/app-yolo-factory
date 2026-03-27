@@ -24,3 +24,10 @@ type Run struct {
 
 func (Run) TableName() string  { return "runs" }
 func (Run) EntityName() string { return "Run" }
+
+func (Run) Relations() []entity.Relation {
+	return []entity.Relation{
+		{Name: "Task", Type: entity.RelationManyToOne, Table: "tasks", ForeignKey: "task_id", ReferenceKey: "id"},
+		{Name: "Repo", Type: entity.RelationManyToOne, Table: "repos", ForeignKey: "repo_id", ReferenceKey: "id"},
+	}
+}

@@ -22,3 +22,9 @@ type Task struct {
 
 func (Task) TableName() string  { return "tasks" }
 func (Task) EntityName() string { return "Task" }
+
+func (Task) Relations() []entity.Relation {
+	return []entity.Relation{
+		{Name: "Repo", Type: entity.RelationManyToOne, Table: "repos", ForeignKey: "repo_id", ReferenceKey: "id"},
+	}
+}
