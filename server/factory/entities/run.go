@@ -21,6 +21,10 @@ type Run struct {
 	StartedAt   time.Time  `json:"startedAt" bun:"started_at,notnull,default:current_timestamp"`
 	CompletedAt *time.Time `json:"completedAt" bun:"completed_at"`
 
+	// Relations
+	Task      *Task      `json:"task,omitempty" yolo:"rel:belongs_to,fk:task_id"`
+	Repo      *Repo      `json:"repo,omitempty" yolo:"rel:belongs_to,fk:repo_id"`
+	Questions []Question `json:"questions,omitempty" yolo:"rel:has_many,fk:run_id"`
 }
 
 func (Run) TableName() string  { return "runs" }

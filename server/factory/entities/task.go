@@ -19,6 +19,12 @@ type Task struct {
 	MaxRetries  int     `json:"maxRetries" bun:"max_retries,notnull,default:3"`
 	TimeoutSecs int     `json:"timeoutSecs" bun:"timeout_secs,notnull,default:600"`
 
+	// Relations
+	Repo      *Repo      `json:"repo,omitempty" yolo:"rel:belongs_to,fk:repo_id"`
+	Runs      []Run      `json:"runs,omitempty" yolo:"rel:has_many,fk:task_id"`
+	Questions []Question `json:"questions,omitempty" yolo:"rel:has_many,fk:task_id"`
+	Parent    *Task      `json:"parent,omitempty" yolo:"rel:belongs_to,fk:parent_id"`
+	Children  []Task     `json:"children,omitempty" yolo:"rel:has_many,fk:parent_id"`
 }
 
 func (Task) TableName() string  { return "tasks" }

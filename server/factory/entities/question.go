@@ -13,6 +13,10 @@ type Question struct {
 	Body       string `json:"body" bun:"body,notnull"`
 	Resolution string `json:"resolution" bun:"resolution"`
 
+	// Relations
+	Task *Task `json:"task,omitempty" yolo:"rel:belongs_to,fk:task_id"`
+	Run  *Run  `json:"run,omitempty" yolo:"rel:belongs_to,fk:run_id"`
+	Repo *Repo `json:"repo,omitempty" yolo:"rel:belongs_to,fk:repo_id"`
 }
 
 func (Question) TableName() string  { return "questions" }
