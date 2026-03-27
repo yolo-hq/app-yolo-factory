@@ -14,12 +14,7 @@ type CancelTaskAction struct {
 	Repo entity.WriteRepository[entities.Task]
 }
 
-
 func (a *CancelTaskAction) Execute(ctx context.Context, actx *action.Context) action.Result {
-	if r := action.RequireEntityID(actx, "Task"); r != nil {
-		return *r
-	}
-
 	_, err := a.Repo.Update(ctx).
 		WhereID(actx.EntityID).
 		Set("status", "cancelled").
@@ -28,6 +23,5 @@ func (a *CancelTaskAction) Execute(ctx context.Context, actx *action.Context) ac
 		return action.Failure("cancel failed: " + err.Error())
 	}
 
-	actx.Resolve("Task", actx.EntityID)
 	return action.OK()
 }
