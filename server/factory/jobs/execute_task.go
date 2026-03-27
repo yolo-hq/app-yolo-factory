@@ -73,12 +73,9 @@ func (j *ExecuteTaskJob) Handle(ctx context.Context, payload []byte) error {
 		claudeMD = string(data)
 	}
 
-	// Parse feedback loops
-	var loops []string
-	json.Unmarshal([]byte(repo.FeedbackLoops), &loops)
-
-	// Compose prompt
-	prompt := ComposeWorkerPrompt(claudeMD, task.Body, loops)
+	// Build prompt
+	// TODO(ralph): feedback loops from repo config (#9)
+	prompt := ComposeWorkerPrompt(claudeMD, task.Body, nil)
 
 	// Git setup
 	branch := fmt.Sprintf("task-%s", task.ID)
