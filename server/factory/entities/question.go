@@ -13,7 +13,6 @@ type Question struct {
 	Body       string `json:"body" bun:"body,notnull"`
 	Resolution string `json:"resolution" bun:"resolution"`
 
-	// Relations
 }
 
 func (Question) TableName() string  { return "questions" }

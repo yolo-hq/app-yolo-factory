@@ -16,7 +16,16 @@ func main() {
 	// Entities
 	registry.Register(entities.Question{}, entities.Repo{}, entities.Run{}, entities.Task{})
 
-	// Repositories (typed, created by runtime with db)
+	// Models (register all before creating repos — bun needs them for relations)
+	registry.RegisterModel(func(db any) {
+		bunDB := db.(*bun.DB)
+		bunDB.RegisterModel((*entities.Question)(nil))
+		bunDB.RegisterModel((*entities.Repo)(nil))
+		bunDB.RegisterModel((*entities.Run)(nil))
+		bunDB.RegisterModel((*entities.Task)(nil))
+	})
+
+	// Repositories
 	registry.RegisterRepoFactory("Question", func(db any) (any, any) {
 		return bunrepo.NewReadRepository[entities.Question](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Question](db.(*bun.DB))
 	})
@@ -31,15 +40,15 @@ func main() {
 	})
 
 	// Filters
-	registry.RegisterFilter("Question", filters.QuestionFilter{})
 	registry.RegisterFilter("Run", filters.RunFilter{})
 	registry.RegisterFilter("Task", filters.TaskFilter{})
+	registry.RegisterFilter("Question", filters.QuestionFilter{})
 
 	// Actions
-	registry.RegisterActions("Task", &actions.ExecuteTaskAction{}, &actions.CreateTaskAction{}, &actions.UpdateTaskAction{}, &actions.CancelTaskAction{})
 	registry.RegisterActions("Question", &actions.CreateQuestionAction{}, &actions.ResolveQuestionAction{})
-	registry.RegisterActions("Repo", &actions.CreateRepoAction{}, &actions.UpdateRepoAction{})
-	registry.RegisterActions("Run", &actions.CreateRunAction{}, &actions.CompleteRunAction{})
+	registry.RegisterActions("Repo", &actions.UpdateRepoAction{}, &actions.CreateRepoAction{})
+	registry.RegisterActions("Run", &actions.CompleteRunAction{}, &actions.CreateRunAction{})
+	registry.RegisterActions("Task", &actions.CancelTaskAction{}, &actions.CreateTaskAction{}, &actions.ExecuteTaskAction{}, &actions.UpdateTaskAction{})
 
 	yolo.MustRunBinary()
 }

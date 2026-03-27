@@ -21,7 +21,6 @@ type Run struct {
 	StartedAt   time.Time  `json:"startedAt" bun:"started_at,notnull,default:current_timestamp"`
 	CompletedAt *time.Time `json:"completedAt" bun:"completed_at"`
 
-	// Relations
 }
 
 func (Run) TableName() string  { return "runs" }

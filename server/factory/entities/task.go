@@ -19,7 +19,6 @@ type Task struct {
 	MaxRetries  int     `json:"maxRetries" bun:"max_retries,notnull,default:3"`
 	TimeoutSecs int     `json:"timeoutSecs" bun:"timeout_secs,notnull,default:600"`
 
-	// Relations
 }
 
 func (Task) TableName() string  { return "tasks" }

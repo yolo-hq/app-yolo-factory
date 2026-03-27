@@ -12,7 +12,6 @@ type Repo struct {
 	FeedbackLoops string `json:"feedbackLoops" bun:"feedback_loops,default:'[]'"`
 	Active        bool   `json:"active" bun:"active,notnull,default:true"`
 
-	// Relations
 }
 
 func (Repo) TableName() string  { return "repos" }
