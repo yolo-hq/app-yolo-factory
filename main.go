@@ -12,18 +12,18 @@ import (
 
 func main() {
 	// Entities
-	registry.Register(entities.Task{}, entities.Question{}, entities.Repo{}, entities.Run{})
+	registry.Register(entities.Repo{}, entities.Run{}, entities.Task{}, entities.Question{})
 
 	// Filters
-	registry.RegisterFilter("Task", filters.TaskFilter{})
 	registry.RegisterFilter("Question", filters.QuestionFilter{})
 	registry.RegisterFilter("Run", filters.RunFilter{})
+	registry.RegisterFilter("Task", filters.TaskFilter{})
 
 	// Actions
-	registry.RegisterActions("Question", &actions.CreateQuestionAction{}, &actions.ResolveQuestionAction{})
-	registry.RegisterActions("Repo", &actions.UpdateRepoAction{}, &actions.CreateRepoAction{})
-	registry.RegisterActions("Task", &actions.CreateTaskAction{}, &actions.CancelTaskAction{}, &actions.ExecuteTaskAction{}, &actions.UpdateTaskAction{})
+	registry.RegisterActions("Task", &actions.CancelTaskAction{}, &actions.CreateTaskAction{}, &actions.ExecuteTaskAction{}, &actions.UpdateTaskAction{})
 	registry.RegisterActions("Run", &actions.CompleteRunAction{}, &actions.CreateRunAction{})
+	registry.RegisterActions("Question", &actions.CreateQuestionAction{}, &actions.ResolveQuestionAction{})
+	registry.RegisterActions("Repo", &actions.CreateRepoAction{}, &actions.UpdateRepoAction{})
 
 	yolo.MustRunBinary()
 }

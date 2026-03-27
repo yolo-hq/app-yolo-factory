@@ -15,10 +15,6 @@ import (
 // ExecuteTaskAction picks the highest-priority queued auto task and starts execution.
 type ExecuteTaskAction struct {
 	action.NoInput
-	TaskRead  entity.ReadRepository[entities.Task]
-	TaskWrite entity.WriteRepository[entities.Task]
-	RunWrite  entity.WriteRepository[entities.Run]
-	RepoRead  entity.ReadRepository[entities.Repo]
 }
 
 
@@ -26,7 +22,7 @@ func (a *ExecuteTaskAction) StatusCode() int { return 202 }
 
 func (a *ExecuteTaskAction) Execute(ctx context.Context, actx *action.Context) action.Result {
 	// Find highest priority queued auto task
-	tasks, err := a.TaskRead.FindMany(ctx, entity.FindOptions{
+	tasks, err := action.ReadRepo[entities.Task](actx).FindMany(ctx, entity.FindOptions{
 		Filters: []entity.FilterCondition{
 			{Field: "status", Operator: entity.OpEq, Value: "queued"},
 			{Field: "type", Operator: entity.OpEq, Value: "auto"},
@@ -44,7 +40,7 @@ func (a *ExecuteTaskAction) Execute(ctx context.Context, actx *action.Context) a
 	task := tasks.Data[0]
 
 	// Load repo
-	repo, r := action.FindOrFail(ctx, a.RepoRead, task.RepoID)
+	repo, r := action.FindOrFail(ctx, action.ReadRepo[entities.Repo](actx), task.RepoID)
 	if r != nil {
 		return *r
 	}
@@ -62,7 +58,7 @@ func (a *ExecuteTaskAction) Execute(ctx context.Context, actx *action.Context) a
 	}
 
 	// Update task status
-	a.TaskWrite.Update(ctx).
+	action.WriteRepo[entities.Task](actx).Update(ctx).
 		WhereID(task.ID).
 		Set("status", "running").
 		Set("run_count", task.RunCount+1).
@@ -80,7 +76,7 @@ func (a *ExecuteTaskAction) Execute(ctx context.Context, actx *action.Context) a
 	}
 	run.ID = ulid.Make().String()
 
-	created, err := a.RunWrite.Insert(ctx, run)
+	created, err := action.WriteRepo[entities.Run](actx).Insert(ctx, run)
 	if err != nil {
 		return action.InternalError()
 	}

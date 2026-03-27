@@ -15,8 +15,6 @@ import (
 
 type CreateTaskAction struct {
 	action.TypedInput[inputs.CreateTaskInput]
-	TaskWrite entity.WriteRepository[entities.Task]
-	TaskRead  entity.ReadRepository[entities.Task]
 }
 
 
@@ -28,14 +26,14 @@ func (a *CreateTaskAction) Execute(ctx context.Context, actx *action.Context) ac
 
 	// Validate all deps exist
 	for _, depID := range deps {
-		dep, _ := a.TaskRead.FindOne(ctx, entity.FindOneOptions{ID: depID})
+		dep, _ := action.ReadRepo[entities.Task](actx).FindOne(ctx, entity.FindOneOptions{ID: depID})
 		if dep == nil {
 			return action.Failure(fmt.Sprintf("dependency task %s not found", depID))
 		}
 	}
 
 	// Detect cycles
-	if hasCycle(ctx, a.TaskRead, deps) {
+	if hasCycle(ctx, action.ReadRepo[entities.Task](actx), deps) {
 		return action.Failure("circular dependency detected")
 	}
 
@@ -43,7 +41,7 @@ func (a *CreateTaskAction) Execute(ctx context.Context, actx *action.Context) ac
 	status := "queued"
 	if len(deps) > 0 {
 		for _, depID := range deps {
-			dep, _ := a.TaskRead.FindOne(ctx, entity.FindOneOptions{ID: depID})
+			dep, _ := action.ReadRepo[entities.Task](actx).FindOne(ctx, entity.FindOneOptions{ID: depID})
 			if dep != nil && dep.Status != "done" {
 				status = "blocked"
 				break
@@ -93,7 +91,7 @@ func (a *CreateTaskAction) Execute(ctx context.Context, actx *action.Context) ac
 	}
 	task.ID = ulid.Make().String()
 
-	_, err := a.TaskWrite.Insert(ctx, task)
+	_, err := action.WriteRepo[entities.Task](actx).Insert(ctx, task)
 	if err != nil {
 		return action.InternalError()
 	}

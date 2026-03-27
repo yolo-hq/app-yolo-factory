@@ -13,10 +13,6 @@ import (
 
 type CompleteRunAction struct {
 	action.TypedInput[inputs.CompleteRunInput]
-	RunRead   entity.ReadRepository[entities.Run]
-	RunWrite  entity.WriteRepository[entities.Run]
-	TaskRead  entity.ReadRepository[entities.Task]
-	TaskWrite entity.WriteRepository[entities.Task]
 }
 
 
@@ -24,14 +20,14 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) a
 	input := a.Input(actx)
 
 	// Load run
-	run, r2 := action.FindOrFail(ctx, a.RunRead, input.RunID)
+	run, r2 := action.FindOrFail(ctx, action.ReadRepo[entities.Run](actx), input.RunID)
 	if r2 != nil {
 		return *r2
 	}
 
 	// Update run
 	now := time.Now()
-	a.RunWrite.Update(ctx).
+	action.WriteRepo[entities.Run](actx).Update(ctx).
 		WhereID(input.RunID).
 		Set("status", input.Status).
 		Set("cost", input.Cost).
@@ -43,7 +39,7 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) a
 		Exec(ctx)
 
 	// Load task
-	task, r3 := action.FindOrFail(ctx, a.TaskRead, run.TaskID)
+	task, r3 := action.FindOrFail(ctx, action.ReadRepo[entities.Task](actx), run.TaskID)
 	if r3 != nil {
 		return *r3
 	}
@@ -60,7 +56,7 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) a
 	}
 
 	// Update task
-	a.TaskWrite.Update(ctx).
+	action.WriteRepo[entities.Task](actx).Update(ctx).
 		WhereID(run.TaskID).
 		Set("status", taskStatus).
 		Set("cost", task.Cost+input.Cost).
@@ -68,7 +64,7 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) a
 
 	// If done, unblock dependents
 	if taskStatus == "done" {
-		a.unblockDependents(ctx, run.TaskID)
+		a.unblockDependents(ctx, actx, run.TaskID)
 	}
 
 	// Set entity ID for event consumers and response
@@ -76,8 +72,8 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) a
 	return action.OK()
 }
 
-func (a *CompleteRunAction) unblockDependents(ctx context.Context, completedTaskID string) {
-	blocked, _ := a.TaskRead.FindMany(ctx, entity.FindOptions{
+func (a *CompleteRunAction) unblockDependents(ctx context.Context, actx *action.Context, completedTaskID string) {
+	blocked, _ := action.ReadRepo[entities.Task](actx).FindMany(ctx, entity.FindOptions{
 		Filters: []entity.FilterCondition{
 			{Field: "status", Operator: entity.OpEq, Value: "blocked"},
 		},
@@ -97,8 +93,8 @@ func (a *CompleteRunAction) unblockDependents(ctx context.Context, completedTask
 			continue
 		}
 
-		if allDepsDone(ctx, a.TaskRead, deps) {
-			a.TaskWrite.Update(ctx).
+		if allDepsDone(ctx, action.ReadRepo[entities.Task](actx), deps) {
+			action.WriteRepo[entities.Task](actx).Update(ctx).
 				WhereID(task.ID).
 				Set("status", "queued").
 				Exec(ctx)
