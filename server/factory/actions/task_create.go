@@ -167,3 +167,14 @@ func hasCycle(ctx context.Context, repo entity.ReadRepository[entities.Task], ne
 	}
 	return false
 }
+
+// allDepsDone checks if all dependency tasks have status "done".
+func allDepsDone(ctx context.Context, repo entity.ReadRepository[entities.Task], deps []string) bool {
+	for _, depID := range deps {
+		dep, _ := repo.FindOne(ctx, entity.FindOneOptions{ID: depID})
+		if dep == nil || dep.Status != "done" {
+			return false
+		}
+	}
+	return true
+}
