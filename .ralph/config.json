@@ -5,7 +5,7 @@
   "maxWorkers": 1,
   "mergeModel": "sonnet",
   "mergeStrategy": "push",
-  "targetBranch": "0.x",
+  "targetBranch": "main",
   "models": ["opus", "sonnet", "haiku"],
   "feedbackLoops": [
     "go build ./...",
