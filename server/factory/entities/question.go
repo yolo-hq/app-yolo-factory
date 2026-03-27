@@ -14,9 +14,9 @@ type Question struct {
 	Resolution string `json:"resolution" bun:"resolution"`
 
 	// Relations
-	Task *Task `json:"task,omitempty" yolo:"rel:belongs_to,fk:task_id"`
-	Run  *Run  `json:"run,omitempty" yolo:"rel:belongs_to,fk:run_id"`
-	Repo *Repo `json:"repo,omitempty" yolo:"rel:belongs_to,fk:repo_id"`
+	Task *Task `json:"task,omitempty" bun:"-" yolo:"rel:belongs_to,fk:task_id"`
+	Run  *Run  `json:"run,omitempty" bun:"-" yolo:"rel:belongs_to,fk:run_id"`
+	Repo *Repo `json:"repo,omitempty" bun:"-" yolo:"rel:belongs_to,fk:repo_id"`
 }
 
 func (Question) TableName() string  { return "questions" }

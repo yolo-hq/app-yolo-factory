@@ -13,8 +13,8 @@ type Repo struct {
 	Active        bool   `json:"active" bun:"active,notnull,default:true"`
 
 	// Relations
-	Tasks []Task `json:"tasks,omitempty" yolo:"rel:has_many,fk:repo_id"`
-	Runs  []Run  `json:"runs,omitempty" yolo:"rel:has_many,fk:repo_id"`
+	Tasks []Task `json:"tasks,omitempty" bun:"-" yolo:"rel:has_many,fk:repo_id"`
+	Runs  []Run  `json:"runs,omitempty" bun:"-" yolo:"rel:has_many,fk:repo_id"`
 }
 
 func (Repo) TableName() string  { return "repos" }

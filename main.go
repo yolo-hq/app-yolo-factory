@@ -14,18 +14,12 @@ import (
 
 func main() {
 	// Entities
-	registry.Register(entities.Repo{}, entities.Run{}, entities.Task{}, entities.Question{})
-
-	// Models (register all before creating repos — bun needs them for relations)
-	registry.RegisterModel(func(db any) {
-		bunDB := db.(*bun.DB)
-		bunDB.RegisterModel((*entities.Repo)(nil))
-		bunDB.RegisterModel((*entities.Run)(nil))
-		bunDB.RegisterModel((*entities.Task)(nil))
-		bunDB.RegisterModel((*entities.Question)(nil))
-	})
+	registry.Register(entities.Question{}, entities.Repo{}, entities.Run{}, entities.Task{})
 
 	// Repositories
+	registry.RegisterRepoFactory("Question", func(db any) (any, any) {
+		return bunrepo.NewReadRepository[entities.Question](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Question](db.(*bun.DB))
+	})
 	registry.RegisterRepoFactory("Repo", func(db any) (any, any) {
 		return bunrepo.NewReadRepository[entities.Repo](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Repo](db.(*bun.DB))
 	})
@@ -35,9 +29,6 @@ func main() {
 	registry.RegisterRepoFactory("Task", func(db any) (any, any) {
 		return bunrepo.NewReadRepository[entities.Task](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Task](db.(*bun.DB))
 	})
-	registry.RegisterRepoFactory("Question", func(db any) (any, any) {
-		return bunrepo.NewReadRepository[entities.Question](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Question](db.(*bun.DB))
-	})
 
 	// Filters
 	registry.RegisterFilter("Question", filters.QuestionFilter{})
@@ -45,10 +36,10 @@ func main() {
 	registry.RegisterFilter("Task", filters.TaskFilter{})
 
 	// Actions
-	registry.RegisterActions("Task", &actions.CancelTaskAction{}, &actions.CreateTaskAction{}, &actions.ExecuteTaskAction{}, &actions.UpdateTaskAction{})
-	registry.RegisterActions("Question", &actions.CreateQuestionAction{}, &actions.ResolveQuestionAction{})
 	registry.RegisterActions("Repo", &actions.CreateRepoAction{}, &actions.UpdateRepoAction{})
 	registry.RegisterActions("Run", &actions.CompleteRunAction{}, &actions.CreateRunAction{})
+	registry.RegisterActions("Task", &actions.ExecuteTaskAction{}, &actions.CancelTaskAction{}, &actions.CreateTaskAction{}, &actions.UpdateTaskAction{})
+	registry.RegisterActions("Question", &actions.CreateQuestionAction{}, &actions.ResolveQuestionAction{})
 
 	yolo.MustRunBinary()
 }

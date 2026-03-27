@@ -32,3 +32,4 @@ apps:
           Run:
             actions: [create]
             queries: [list]
+          Question: "*"

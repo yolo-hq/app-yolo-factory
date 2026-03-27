@@ -20,11 +20,11 @@ type Task struct {
 	TimeoutSecs int     `json:"timeoutSecs" bun:"timeout_secs,notnull,default:600"`
 
 	// Relations
-	Repo      *Repo      `json:"repo,omitempty" yolo:"rel:belongs_to,fk:repo_id"`
-	Runs      []Run      `json:"runs,omitempty" yolo:"rel:has_many,fk:task_id"`
-	Questions []Question `json:"questions,omitempty" yolo:"rel:has_many,fk:task_id"`
-	Parent    *Task      `json:"parent,omitempty" yolo:"rel:belongs_to,fk:parent_id"`
-	Children  []Task     `json:"children,omitempty" yolo:"rel:has_many,fk:parent_id"`
+	Repo      *Repo      `json:"repo,omitempty" bun:"-" yolo:"rel:belongs_to,fk:repo_id"`
+	Runs      []Run      `json:"runs,omitempty" bun:"-" yolo:"rel:has_many,fk:task_id"`
+	Questions []Question `json:"questions,omitempty" bun:"-" yolo:"rel:has_many,fk:task_id"`
+	Parent    *Task      `json:"parent,omitempty" bun:"-" yolo:"rel:belongs_to,fk:parent_id"`
+	Children  []Task     `json:"children,omitempty" bun:"-" yolo:"rel:has_many,fk:parent_id"`
 }
 
 func (Task) TableName() string  { return "tasks" }

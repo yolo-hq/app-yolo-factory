@@ -22,9 +22,9 @@ type Run struct {
 	CompletedAt *time.Time `json:"completedAt" bun:"completed_at"`
 
 	// Relations
-	Task      *Task      `json:"task,omitempty" yolo:"rel:belongs_to,fk:task_id"`
-	Repo      *Repo      `json:"repo,omitempty" yolo:"rel:belongs_to,fk:repo_id"`
-	Questions []Question `json:"questions,omitempty" yolo:"rel:has_many,fk:run_id"`
+	Task      *Task      `json:"task,omitempty" bun:"-" yolo:"rel:belongs_to,fk:task_id"`
+	Repo      *Repo      `json:"repo,omitempty" bun:"-" yolo:"rel:belongs_to,fk:repo_id"`
+	Questions []Question `json:"questions,omitempty" bun:"-" yolo:"rel:has_many,fk:run_id"`
 }
 
 func (Run) TableName() string  { return "runs" }
