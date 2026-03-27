@@ -1,13 +1,6 @@
 package entities
 
-import (
-	"github.com/yolo-hq/yolo/core/entity"
-	"github.com/yolo-hq/yolo/core/registry"
-)
-
-func init() {
-	registry.RegisterGlobalEntity(Question{})
-}
+import "github.com/yolo-hq/yolo/core/entity"
 
 type Question struct {
 	entity.BaseEntity
