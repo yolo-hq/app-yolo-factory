@@ -26,3 +26,21 @@ func TestRepoBaseEntity(t *testing.T) {
 	assert.Equal(t, "test-123", r.GetID())
 	assert.False(t, r.IsDeleted())
 }
+
+func TestTaskImplementsInterfaces(t *testing.T) {
+	var task entities.Task
+	var _ entity.Entity = task
+	var _ entity.Named = task
+	var _ entity.Timestamped = task
+	var _ entity.SoftDeletable = task
+
+	assert.Equal(t, "tasks", task.TableName())
+	assert.Equal(t, "Task", task.EntityName())
+}
+
+func TestTaskBaseEntity(t *testing.T) {
+	task := entities.Task{}
+	task.ID = "task-123"
+	assert.Equal(t, "task-123", task.GetID())
+	assert.False(t, task.IsDeleted())
+}

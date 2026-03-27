@@ -28,3 +28,4 @@ apps:
       factory:
         entities:
           Repo: "*"
+          Task: "*"
