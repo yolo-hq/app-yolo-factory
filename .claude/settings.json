@@ -1,0 +1,10 @@
+{
+  "extraKnownMarketplaces": {
+    "yolo-tools": {
+      "source": { "source": "github", "repo": "yolo-hq/devkit" }
+    }
+  },
+  "enabledPlugins": {
+    "yolo-dev@yolo-tools": true
+  }
+}
