@@ -9,7 +9,6 @@ import (
 )
 
 type CreateQuestionAction struct {
-	action.PublicAccess
 	action.BaseCreate[entities.Question, inputs.CreateQuestionInput]
 	Repo entity.WriteRepository[entities.Question]
 }

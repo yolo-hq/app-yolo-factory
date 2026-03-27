@@ -9,7 +9,6 @@ import (
 )
 
 type CreateRunAction struct {
-	action.PublicAccess
 	action.BaseCreate[entities.Run, inputs.CreateRunInput]
 	Repo entity.WriteRepository[entities.Run]
 }

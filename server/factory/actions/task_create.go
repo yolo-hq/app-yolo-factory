@@ -14,7 +14,6 @@ import (
 )
 
 type CreateTaskAction struct {
-	action.PublicAccess
 	action.TypedInput[inputs.CreateTaskInput]
 	TaskWrite entity.WriteRepository[entities.Task]
 	TaskRead  entity.ReadRepository[entities.Task]

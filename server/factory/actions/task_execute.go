@@ -14,7 +14,6 @@ import (
 
 // ExecuteTaskAction picks the highest-priority queued auto task and starts execution.
 type ExecuteTaskAction struct {
-	action.PublicAccess
 	action.NoInput
 	TaskRead  entity.ReadRepository[entities.Task]
 	TaskWrite entity.WriteRepository[entities.Task]
@@ -86,10 +85,7 @@ func (a *ExecuteTaskAction) Execute(ctx context.Context, actx *action.Context) a
 		return action.InternalError()
 	}
 
-	return action.Success(map[string]any{
-		"taskId": task.ID,
-		"runId":  created.ID,
-		"repo":   repo.Name,
-		"model":  model,
-	}, "task execution started")
+	actx.Resolve("Task", task.ID)
+	actx.Resolve("Run", created.ID)
+	return action.OK()
 }

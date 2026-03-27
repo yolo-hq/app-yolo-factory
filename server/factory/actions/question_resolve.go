@@ -11,7 +11,6 @@ import (
 )
 
 type ResolveQuestionAction struct {
-	action.PublicAccess
 	action.TypedInput[inputs.ResolveQuestionInput]
 	QuestionRead  entity.ReadRepository[entities.Question]
 	QuestionWrite entity.WriteRepository[entities.Question]
@@ -24,15 +23,8 @@ func (a *ResolveQuestionAction) Execute(ctx context.Context, actx *action.Contex
 		return *r
 	}
 
+	// EntityID comes from URL path — validated by framework
 	questionID := actx.EntityID
-	if questionID == "" {
-		return action.Failure("question ID required")
-	}
-
-	_, r2 := action.FindOrFail(ctx, a.QuestionRead, questionID)
-	if r2 != nil {
-		return *r2
-	}
 
 	a.QuestionWrite.Update(ctx).
 		Where(entity.FilterCondition{Field: "id", Operator: entity.OpEq, Value: questionID}).
@@ -40,8 +32,6 @@ func (a *ResolveQuestionAction) Execute(ctx context.Context, actx *action.Contex
 		Set("resolution", input.Resolution).
 		Exec(ctx)
 
-	return action.Success(map[string]any{
-		"questionId": questionID,
-		"status":     input.Status,
-	}, "question resolved")
+	actx.Resolve("Question", questionID)
+	return action.OK()
 }

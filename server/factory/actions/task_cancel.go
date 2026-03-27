@@ -10,7 +10,6 @@ import (
 )
 
 type CancelTaskAction struct {
-	action.PublicAccess
 	action.NoInput
 	Repo entity.WriteRepository[entities.Task]
 }
@@ -21,18 +20,14 @@ func (a *CancelTaskAction) Execute(ctx context.Context, actx *action.Context) ac
 		return *r
 	}
 
-	builder := a.Repo.Update(ctx).
+	_, err := a.Repo.Update(ctx).
 		Where(entity.FilterCondition{Field: "id", Operator: entity.OpEq, Value: actx.EntityID}).
 		Set("status", "cancelled").
-		Returning()
-
-	updated, err := builder.Exec(ctx)
+		Exec(ctx)
 	if err != nil {
 		return action.Failure("cancel failed: " + err.Error())
 	}
-	if updated == nil {
-		return action.NotFound("Task", actx.EntityID)
-	}
 
-	return action.Success(updated, "cancelled")
+	actx.Resolve("Task", actx.EntityID)
+	return action.OK()
 }

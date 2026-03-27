@@ -12,7 +12,6 @@ import (
 )
 
 type CompleteRunAction struct {
-	action.PublicAccess
 	action.TypedInput[inputs.CompleteRunInput]
 	RunRead   entity.ReadRepository[entities.Run]
 	RunWrite  entity.WriteRepository[entities.Run]
@@ -75,11 +74,9 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) a
 		a.unblockDependents(ctx, run.TaskID)
 	}
 
-	return action.Success(map[string]any{
-		"runId":      input.RunID,
-		"taskId":     run.TaskID,
-		"taskStatus": taskStatus,
-	}, "run completed")
+	// Set entity ID for event consumers and response
+	actx.Resolve("Run", input.RunID)
+	return action.OK()
 }
 
 func (a *CompleteRunAction) unblockDependents(ctx context.Context, completedTaskID string) {
