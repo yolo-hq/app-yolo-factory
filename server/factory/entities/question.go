@@ -14,9 +14,6 @@ type Question struct {
 	Resolution string `json:"resolution" bun:"resolution"`
 
 	// Relations
-	Task *Task `json:"task,omitempty" bun:"rel:belongs_to,join:task_id=id"`
-	Run  *Run  `json:"run,omitempty" bun:"rel:belongs_to,join:run_id=id"`
-	Repo *Repo `json:"repo,omitempty" bun:"rel:belongs_to,join:repo_id=id"`
 }
 
 func (Question) TableName() string  { return "questions" }

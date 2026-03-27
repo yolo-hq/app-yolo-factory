@@ -13,8 +13,6 @@ type Repo struct {
 	Active        bool   `json:"active" bun:"active,notnull,default:true"`
 
 	// Relations
-	Tasks []Task `json:"tasks,omitempty" bun:"rel:has_many,join:id=repo_id"`
-	Runs  []Run  `json:"runs,omitempty" bun:"rel:has_many,join:id=repo_id"`
 }
 
 func (Repo) TableName() string  { return "repos" }

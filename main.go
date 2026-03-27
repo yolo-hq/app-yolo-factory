@@ -4,6 +4,8 @@ package main
 import (
 	"github.com/yolo-hq/yolo"
 	"github.com/yolo-hq/yolo/core/registry"
+	bunrepo "github.com/yolo-hq/yolo/core/bun"
+	"github.com/uptrace/bun"
 
 	"github.com/yolo-hq/app-yolo-factory/server/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/server/factory/actions"
@@ -12,7 +14,21 @@ import (
 
 func main() {
 	// Entities
-	registry.Register(entities.Repo{}, entities.Run{}, entities.Task{}, entities.Question{})
+	registry.Register(entities.Question{}, entities.Repo{}, entities.Run{}, entities.Task{})
+
+	// Repositories (typed, created by runtime with db)
+	registry.RegisterRepoFactory("Question", func(db any) (any, any) {
+		return bunrepo.NewReadRepository[entities.Question](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Question](db.(*bun.DB))
+	})
+	registry.RegisterRepoFactory("Repo", func(db any) (any, any) {
+		return bunrepo.NewReadRepository[entities.Repo](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Repo](db.(*bun.DB))
+	})
+	registry.RegisterRepoFactory("Run", func(db any) (any, any) {
+		return bunrepo.NewReadRepository[entities.Run](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Run](db.(*bun.DB))
+	})
+	registry.RegisterRepoFactory("Task", func(db any) (any, any) {
+		return bunrepo.NewReadRepository[entities.Task](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Task](db.(*bun.DB))
+	})
 
 	// Filters
 	registry.RegisterFilter("Question", filters.QuestionFilter{})
@@ -20,10 +36,10 @@ func main() {
 	registry.RegisterFilter("Task", filters.TaskFilter{})
 
 	// Actions
-	registry.RegisterActions("Task", &actions.CancelTaskAction{}, &actions.CreateTaskAction{}, &actions.ExecuteTaskAction{}, &actions.UpdateTaskAction{})
-	registry.RegisterActions("Run", &actions.CompleteRunAction{}, &actions.CreateRunAction{})
+	registry.RegisterActions("Task", &actions.ExecuteTaskAction{}, &actions.CreateTaskAction{}, &actions.UpdateTaskAction{}, &actions.CancelTaskAction{})
 	registry.RegisterActions("Question", &actions.CreateQuestionAction{}, &actions.ResolveQuestionAction{})
 	registry.RegisterActions("Repo", &actions.CreateRepoAction{}, &actions.UpdateRepoAction{})
+	registry.RegisterActions("Run", &actions.CreateRunAction{}, &actions.CompleteRunAction{})
 
 	yolo.MustRunBinary()
 }
