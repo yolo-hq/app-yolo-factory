@@ -8,19 +8,11 @@ import (
 	"github.com/yolo-hq/yolo/core/entity"
 
 	"github.com/yolo-hq/app-yolo-factory/server/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/server/factory/inputs"
 )
 
-type UpdateRepoInput struct {
-	Name         *string `json:"name"`
-	URL          *string `json:"url"`
-	LocalPath    *string `json:"localPath"`
-	TargetBranch *string `json:"targetBranch"`
-	DefaultModel *string `json:"defaultModel"`
-	Active       *bool   `json:"active"`
-}
-
 type UpdateRepoAction struct {
-	action.TypedInput[UpdateRepoInput]
+	action.TypedInput[inputs.UpdateRepoInput]
 	Repo entity.WriteRepository[entities.Repo]
 }
 

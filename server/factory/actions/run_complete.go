@@ -9,20 +9,11 @@ import (
 	"github.com/yolo-hq/yolo/core/entity"
 
 	"github.com/yolo-hq/app-yolo-factory/server/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/server/factory/inputs"
 )
 
-type CompleteRunInput struct {
-	RunID      string  `json:"runId" validate:"required"`
-	Status     string  `json:"status" validate:"required"`
-	Cost       float64 `json:"cost"`
-	Duration   int     `json:"duration"`
-	Error      string  `json:"error"`
-	CommitHash string  `json:"commitHash"`
-	LogURL     string  `json:"logUrl"`
-}
-
 type CompleteRunAction struct {
-	action.TypedInput[CompleteRunInput]
+	action.TypedInput[inputs.CompleteRunInput]
 	RunRead   entity.ReadRepository[entities.Run]
 	RunWrite  entity.WriteRepository[entities.Run]
 	TaskRead  entity.ReadRepository[entities.Task]

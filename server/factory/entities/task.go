@@ -26,5 +26,9 @@ func (Task) EntityName() string { return "Task" }
 func (Task) Relations() []entity.Relation {
 	return []entity.Relation{
 		{Name: "Repo", Type: entity.RelationManyToOne, Table: "repos", ForeignKey: "repo_id", ReferenceKey: "id"},
+		{Name: "Runs", Type: entity.RelationOneToMany, Table: "runs", ForeignKey: "task_id", ReferenceKey: "id"},
+		{Name: "Questions", Type: entity.RelationOneToMany, Table: "questions", ForeignKey: "task_id", ReferenceKey: "id"},
+		{Name: "Parent", Type: entity.RelationManyToOne, Table: "tasks", ForeignKey: "parent_id", ReferenceKey: "id"},
+		{Name: "Children", Type: entity.RelationOneToMany, Table: "tasks", ForeignKey: "parent_id", ReferenceKey: "id"},
 	}
 }

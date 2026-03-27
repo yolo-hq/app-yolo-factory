@@ -16,3 +16,11 @@ type Question struct {
 
 func (Question) TableName() string  { return "questions" }
 func (Question) EntityName() string { return "Question" }
+
+func (Question) Relations() []entity.Relation {
+	return []entity.Relation{
+		{Name: "Task", Type: entity.RelationManyToOne, Table: "tasks", ForeignKey: "task_id", ReferenceKey: "id"},
+		{Name: "Run", Type: entity.RelationManyToOne, Table: "runs", ForeignKey: "run_id", ReferenceKey: "id"},
+		{Name: "Repo", Type: entity.RelationManyToOne, Table: "repos", ForeignKey: "repo_id", ReferenceKey: "id"},
+	}
+}

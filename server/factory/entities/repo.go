@@ -15,3 +15,10 @@ type Repo struct {
 
 func (Repo) TableName() string  { return "repos" }
 func (Repo) EntityName() string { return "Repo" }
+
+func (Repo) Relations() []entity.Relation {
+	return []entity.Relation{
+		{Name: "Tasks", Type: entity.RelationOneToMany, Table: "tasks", ForeignKey: "repo_id", ReferenceKey: "id"},
+		{Name: "Runs", Type: entity.RelationOneToMany, Table: "runs", ForeignKey: "repo_id", ReferenceKey: "id"},
+	}
+}
