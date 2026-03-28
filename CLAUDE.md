@@ -1,9 +1,20 @@
 # yolo-factory
 
-YOLO framework app — AI agent task orchestration platform.
+YOLO app. Domain-driven, action-pipeline architecture.
 
-- Entities embed entity.BaseEntity, actions use action.BaseCreate/TypedInput
-- Bootstrap: yolo.MustRunBinary() in main.go
-- Structure: server/factory/entities/, actions/, inputs/, filters/, jobs/
-- Run `go build ./...` and `go test ./...` before committing
-- Framework first: if a pattern doesn't exist in YOLO, build it in the framework
+## Rules
+- actx.Resolve("Entity", id) + action.OK() — never return entity data directly
+- fields.{key}= for field selection — bare fields= is rejected
+- registry.RegisterFilter() for standard list/get. RegisterQueries() for custom reads
+- Integration tests only — no mocks, real DB
+- Framework first — if YOLO lacks a pattern, build in yolo/ before app code
+- action.OK(Extras{}) for non-entity data — action.Success is deprecated
+
+## Structure
+server/{domain}/entities/, actions/, inputs/, queries/
+
+## Reference
+Read docs/*.md in the framework repo for full patterns.
+
+## Verify
+go build ./... && go test ./...
