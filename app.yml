@@ -21,7 +21,7 @@ apps:
           - logging
           - recovery
       - protocol: mcp
-        transport: tcp
+        transport: sse
         addr: ":3001"
     cors:
       origins: ["http://localhost:3000"]
@@ -42,8 +42,8 @@ apps:
     name: YOLO Factory Worker
     concurrency: 5
     queues:
-      default: 3
-      critical: 2
+      - critical
+      - default
     schedule:
       check-timeouts: "*/5 * * * *"
     health:
