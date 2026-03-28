@@ -18,6 +18,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestE2E_CreateRepo(t *testing.T) {
+	srv.SetT(t)
 	resp := srv.POST("/api/v1/factory/repos", map[string]any{
 		"name": "test-repo",
 		"url":  "https://github.com/test/repo",
@@ -27,6 +28,7 @@ func TestE2E_CreateRepo(t *testing.T) {
 }
 
 func TestE2E_CreateRepo_Duplicate(t *testing.T) {
+	srv.SetT(t)
 	srv.POST("/api/v1/factory/repos", map[string]any{
 		"name": "dup-repo",
 		"url":  "https://github.com/test/dup",
@@ -39,6 +41,7 @@ func TestE2E_CreateRepo_Duplicate(t *testing.T) {
 }
 
 func TestE2E_ListRepos(t *testing.T) {
+	srv.SetT(t)
 	resp := srv.GET("/api/v1/factory/repos?fields.repo=id,name")
 	resp.AssertStatus(t, 200)
 	resp.AssertSuccess(t)
@@ -50,11 +53,13 @@ func TestE2E_ListRepos(t *testing.T) {
 }
 
 func TestE2E_ListRepos_IDOnly(t *testing.T) {
+	srv.SetT(t)
 	resp := srv.GET("/api/v1/factory/repos")
 	resp.AssertSuccess(t)
 }
 
 func TestE2E_CreateTask(t *testing.T) {
+	srv.SetT(t)
 	resp := srv.POST("/api/v1/factory/tasks", map[string]any{
 		"repoId":   "test-repo-id",
 		"title":    "E2E Test Task",
@@ -65,6 +70,7 @@ func TestE2E_CreateTask(t *testing.T) {
 }
 
 func TestE2E_ListTasks(t *testing.T) {
+	srv.SetT(t)
 	resp := srv.GET("/api/v1/factory/tasks?fields.task=id,title,status,priority")
 	resp.AssertStatus(t, 200)
 	resp.AssertSuccess(t)
