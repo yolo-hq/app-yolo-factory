@@ -18,7 +18,8 @@ columns:
 
 form:
   rows:
-    - fields: [name, url]
+    - fields: [name]
+    - fields: [url]
     - fields: [local_path]
     - fields: [target_branch, default_model]
     - fields: [feedback_loops, active]
