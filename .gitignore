@@ -33,3 +33,8 @@ Thumbs.db
 # Air
 tmp/
 .air.toml
+
+# Node / Bun
+node_modules/
+bun.lock
+dist/

@@ -1,0 +1,35 @@
+views:
+  default: table
+
+columns:
+  - field: title
+    title: Title
+    width: 2fr
+    sortable: true
+  - field: status
+    title: Status
+    sortable: true
+  - field: priority
+    title: Priority
+    width: 80px
+    sortable: true
+  - field: type
+    title: Type
+  - field: repo_id
+    title: Repo
+  - field: created_at
+    title: Created
+    width: 150px
+    sortable: true
+
+form:
+  rows:
+    - fields: [body]
+    - fields: [priority, type]
+    - fields: [repo_id, model]
+    - fields: [branch, feedback_loops]
+
+card:
+  title: "{{title}}"
+  subtitle: "{{status}}"
+  badges: [priority, type]

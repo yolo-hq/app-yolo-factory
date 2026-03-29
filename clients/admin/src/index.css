@@ -1,0 +1,6 @@
+@import "tailwindcss";
+@import "@yolo-hq/components/styles/tokens.css";
+
+@source "../";
+@source "../node_modules/@yolo-hq/components";
+@source "../node_modules/@yolo-hq/admin";

@@ -58,3 +58,7 @@ apps:
     name: YOLO Factory CLI
     domains:
       factory: "*"
+
+clients:
+  admin:
+    port: 3000
