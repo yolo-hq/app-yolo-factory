@@ -1,0 +1,26 @@
+{
+  "name": "@yolo-factory/admin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vinxi dev --port 3000",
+    "build": "vinxi build",
+    "start": "vinxi start"
+  },
+  "dependencies": {
+    "@tanstack/react-router": "^1.120.6",
+    "@tanstack/start": "^1.120.6",
+    "@tanstack/react-query": "^5.0.0",
+    "@yolo-hq/sdk": "../../yolo-hq/client/packages/sdk",
+    "@yolo-hq/components": "../../yolo-hq/client/packages/components",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "vinxi": "^0.5.3"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "typescript": "^5.0.0"
+  }
+}
