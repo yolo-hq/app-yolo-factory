@@ -15,7 +15,7 @@ import (
 	seedgraph "github.com/yolo-hq/yolo/core/seed/graph"
 )
 
-const defaultTestDB = "postgresql://postgres@localhost:5432/yolo_factory_seed_test?sslmode=disable"
+const defaultTestDB = "postgresql://postgres@localhost:5432/yolo_factory?sslmode=disable"
 
 func testDB(t *testing.T) *sql.DB {
 	t.Helper()
