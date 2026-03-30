@@ -3,6 +3,7 @@ module github.com/yolo-hq/app-yolo-factory
 go 1.26.0
 
 require (
+	github.com/lib/pq v1.12.0
 	github.com/oklog/ulid/v2 v2.1.0
 	github.com/stretchr/testify v1.11.1
 	github.com/uptrace/bun v1.2.18
