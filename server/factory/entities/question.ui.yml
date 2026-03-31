@@ -1,13 +1,14 @@
 detail: sheet
 views: [table]
-columns:
-  - field: body
-    width: 3fr
-  - field: status
-  - field: task_id
-    width: 150px
-  - field: run_id
-    width: 150px
+table:
+  columns:
+    - field: body
+      width: 3fr
+    - field: status
+    - field: task_id
+      width: 150px
+    - field: run_id
+      width: 150px
 fields:
   status:
     color_map:

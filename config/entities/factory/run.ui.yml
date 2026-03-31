@@ -1,27 +1,28 @@
 views:
   default: table
 
-columns:
-  - field: task_id
-    title: Task
-    width: 200px
-  - field: status
-    title: Status
-    sortable: true
-  - field: agent
-    title: Agent
-    width: 100px
-  - field: model
-    title: Model
-    width: 100px
-  - field: cost
-    title: Cost
-    width: 80px
-    sortable: true
-  - field: duration
-    title: Duration
-    width: 80px
-  - field: started_at
-    title: Started
-    width: 150px
-    sortable: true
+table:
+  columns:
+    - field: task_id
+      title: Task
+      width: 200px
+    - field: status
+      title: Status
+      sortable: true
+    - field: agent
+      title: Agent
+      width: 100px
+    - field: model
+      title: Model
+      width: 100px
+    - field: cost
+      title: Cost
+      width: 80px
+      sortable: true
+    - field: duration
+      title: Duration
+      width: 80px
+    - field: started_at
+      title: Started
+      width: 150px
+      sortable: true

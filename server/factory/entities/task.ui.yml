@@ -1,17 +1,18 @@
 detail: sheet
 views: [table, board, card]
-columns:
-  - field: title
-    width: 2fr
-  - field: status
-  - field: priority
-    width: 80px
-  - field: type
-    width: 100px
-  - field: repo_id
-    width: 150px
-  - field: created_at
-    width: 150px
+table:
+  columns:
+    - field: title
+      width: 2fr
+    - field: status
+    - field: priority
+      width: 80px
+    - field: type
+      width: 100px
+    - field: repo_id
+      width: 150px
+    - field: created_at
+      width: 150px
 board:
   group_by_field: status
 card:

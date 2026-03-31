@@ -1,13 +1,14 @@
 views:
   default: table
 
-columns:
-  - field: body
-    title: Question
-    width: 3fr
-  - field: status
-    title: Status
-  - field: task_id
-    title: Task
-  - field: run_id
-    title: Run
+table:
+  columns:
+    - field: body
+      title: Question
+      width: 3fr
+    - field: status
+      title: Status
+    - field: task_id
+      title: Task
+    - field: run_id
+      title: Run

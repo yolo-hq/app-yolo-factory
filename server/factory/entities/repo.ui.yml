@@ -1,14 +1,15 @@
 detail: sheet
 views: [table, card]
-columns:
-  - field: name
-    width: 2fr
-  - field: url
-    width: 2fr
-  - field: target_branch
-    width: 120px
-  - field: active
-    width: 80px
+table:
+  columns:
+    - field: name
+      width: 2fr
+    - field: url
+      width: 2fr
+    - field: target_branch
+      width: 120px
+    - field: active
+      width: 80px
 card:
   title: name
   subtitle: url

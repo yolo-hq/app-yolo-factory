@@ -1,19 +1,20 @@
 detail: sheet
 views: [table]
-columns:
-  - field: task_id
-    width: 200px
-  - field: status
-  - field: agent
-    width: 100px
-  - field: model
-    width: 100px
-  - field: cost
-    width: 80px
-  - field: duration
-    width: 80px
-  - field: started_at
-    width: 150px
+table:
+  columns:
+    - field: task_id
+      width: 200px
+    - field: status
+    - field: agent
+      width: 100px
+    - field: model
+      width: 100px
+    - field: cost
+      width: 80px
+    - field: duration
+      width: 80px
+    - field: started_at
+      width: 150px
 fields:
   status:
     color_map:
