@@ -1,18 +1,73 @@
-detail: sheet
-views: [table]
+entity:
+  icon: help-circle
+  description: Questions raised by AI agents during task execution
+
+views:
+  default: table
+  options: [table]
+
 table:
+  density: comfortable
+  default_sort:
+    field: created_at
+    dir: desc
   columns:
     - field: body
+      title: Question
       width: 3fr
     - field: status
+      title: Status
+      sortable: true
+    - field: context
+      title: Context
+      width: 2fr
     - field: task_id
+      title: Task
       width: 150px
-    - field: run_id
+    - field: created_at
+      title: Asked
       width: 150px
-fields:
-  status:
-    color_map:
-      open: "bg-yellow-100 text-yellow-800"
-      resolved: "bg-green-100 text-green-800"
+      sortable: true
+  styles:
+    - when:
+        field: status
+        eq: open
+      class: text-yellow-400
+    - when:
+        field: status
+        eq: resolved
+      class: text-green-400
+    - when:
+        field: status
+        eq: dismissed
+      class: text-zinc-500
+
+filters:
+  - field: status
+    pinned: true
+    show_in: [toolbar]
+
 actions:
-  resolve: { placement: [row], form: sheet }
+  - name: resolve
+    label: Resolve
+    icon: check
+    style: success
+    show_in: [row, detail]
+  - name: dismiss
+    label: Dismiss
+    icon: x
+    show_in: [row, detail]
+
+detail:
+  sections:
+    - label: Question
+      fields: [body, context, tried]
+    - label: Resolution
+      fields: [status, resolution]
+    - label: Source
+      fields: [task_id, run_id, repo_id]
+
+empty:
+  title: No questions
+  description: Questions appear when AI agents need human input during execution.
+  icon: help-circle

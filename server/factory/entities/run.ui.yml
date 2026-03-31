@@ -1,25 +1,74 @@
-detail: sheet
-views: [table]
+entity:
+  icon: play-circle
+  description: Individual execution runs of tasks by AI agents
+
+views:
+  default: table
+  options: [table]
+
 table:
+  density: comfortable
+  default_sort:
+    field: started_at
+    dir: desc
   columns:
     - field: task_id
+      title: Task
       width: 200px
     - field: status
+      title: Status
+      sortable: true
     - field: agent
-      width: 100px
+      title: Agent
+      width: 120px
     - field: model
+      title: Model
       width: 100px
     - field: cost
+      title: Cost
       width: 80px
+      sortable: true
     - field: duration
-      width: 80px
+      title: Duration
+      width: 100px
+      sortable: true
     - field: started_at
+      title: Started
       width: 150px
-fields:
-  status:
-    color_map:
-      running: "bg-blue-100 text-blue-800"
-      success: "bg-green-100 text-green-800"
-      failed: "bg-red-100 text-red-800"
-actions:
-  complete: { placement: [row], form: sheet }
+      sortable: true
+  styles:
+    - when:
+        field: status
+        eq: failed
+      class: text-red-400
+    - when:
+        field: status
+        eq: completed
+      class: text-green-400
+    - when:
+        field: status
+        eq: running
+      class: text-blue-400
+
+filters:
+  - field: status
+    pinned: true
+    show_in: [toolbar]
+  - field: agent
+    show_in: [toolbar]
+  - field: model
+    show_in: [advanced]
+
+detail:
+  sections:
+    - label: Overview
+      fields: [task_id, repo_id, status, agent, model]
+    - label: Results
+      fields: [cost, duration, commit_hash, log_url, error]
+    - label: Timing
+      fields: [started_at, completed_at]
+
+empty:
+  title: No runs yet
+  description: Runs are created when tasks are executed.
+  icon: play-circle

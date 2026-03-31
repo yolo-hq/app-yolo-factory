@@ -1,24 +1,67 @@
-detail: sheet
-views: [table, card]
+entity:
+  icon: git-branch
+  description: Git repositories connected for AI task execution
+
+views:
+  default: table
+  options: [table, card]
+
 table:
+  density: comfortable
+  default_sort:
+    field: name
+    dir: asc
   columns:
     - field: name
+      title: Name
       width: 2fr
+      sortable: true
     - field: url
+      title: URL
       width: 2fr
     - field: target_branch
+      title: Branch
       width: 120px
+    - field: default_model
+      title: Model
+      width: 100px
     - field: active
+      title: Active
       width: 80px
+  styles:
+    - when:
+        field: active
+        eq: false
+      class: opacity-50
+
 card:
-  title: name
-  subtitle: url
-  badges: [active]
-create:
-  tabs:
+  title: "{{name}}"
+  subtitle: "{{target_branch}}"
+  badges: [default_model, active]
+
+filters:
+  - field: active
+    pinned: true
+    show_in: [toolbar]
+  - field: default_model
+    show_in: [toolbar]
+
+form:
+  rows:
+    - fields: [name]
+    - fields: [url]
+    - fields: [local_path]
+    - fields: [target_branch, default_model]
+    - fields: [active]
+
+detail:
+  sections:
     - label: Repository
-      rows:
-        - fields: [name, url]
-        - fields: [local_path]
-        - fields: [target_branch, default_model]
-        - fields: [feedback_loops]
+      fields: [name, url, local_path, target_branch]
+    - label: Configuration
+      fields: [default_model, active, feedback_loops]
+
+empty:
+  title: No repos connected
+  description: Add a repository to start running AI tasks against your codebase.
+  icon: git-branch

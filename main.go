@@ -16,20 +16,20 @@ import (
 
 func main() {
 	// Entities
-	registry.Register(entities.Repo{}, entities.Run{}, entities.Task{}, entities.Question{})
+	registry.Register(entities.Task{}, entities.Question{}, entities.Repo{}, entities.Run{})
 
 	// Repositories
-	registry.RegisterRepoFactory("Repo", func(db any) (any, any) {
-		return bunrepo.NewReadRepository[entities.Repo](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Repo](db.(*bun.DB))
-	})
-	registry.RegisterRepoFactory("Run", func(db any) (any, any) {
-		return bunrepo.NewReadRepository[entities.Run](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Run](db.(*bun.DB))
-	})
 	registry.RegisterRepoFactory("Task", func(db any) (any, any) {
 		return bunrepo.NewReadRepository[entities.Task](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Task](db.(*bun.DB))
 	})
 	registry.RegisterRepoFactory("Question", func(db any) (any, any) {
 		return bunrepo.NewReadRepository[entities.Question](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Question](db.(*bun.DB))
+	})
+	registry.RegisterRepoFactory("Repo", func(db any) (any, any) {
+		return bunrepo.NewReadRepository[entities.Repo](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Repo](db.(*bun.DB))
+	})
+	registry.RegisterRepoFactory("Run", func(db any) (any, any) {
+		return bunrepo.NewReadRepository[entities.Run](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Run](db.(*bun.DB))
 	})
 
 	// Filters
@@ -38,10 +38,10 @@ func main() {
 	registry.RegisterFilter("Task", filters.TaskFilter{})
 
 	// Actions
+	registry.RegisterActions("Task", &actions.ExecuteTaskAction{}, &actions.CancelTaskAction{}, &actions.UpdateTaskAction{}, &actions.CreateTaskAction{})
 	registry.RegisterActions("Question", &actions.CreateQuestionAction{}, &actions.ResolveQuestionAction{})
 	registry.RegisterActions("Repo", &actions.CreateRepoAction{}, &actions.UpdateRepoAction{})
 	registry.RegisterActions("Run", &actions.CompleteRunAction{}, &actions.CreateRunAction{})
-	registry.RegisterActions("Task", &actions.CancelTaskAction{}, &actions.CreateTaskAction{}, &actions.ExecuteTaskAction{}, &actions.UpdateTaskAction{})
 
 	// Commands
 	command.Register(&commands.CleanupRuns{})

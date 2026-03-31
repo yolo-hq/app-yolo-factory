@@ -1,50 +1,112 @@
-detail: sheet
-views: [table, board, card]
+entity:
+  icon: clipboard-check
+  description: AI agent tasks for code generation, review, and automation
+
+views:
+  default: table
+  options: [table, board, card]
+
 table:
+  density: comfortable
+  default_sort:
+    field: created_at
+    dir: desc
   columns:
     - field: title
+      title: Title
       width: 2fr
+      sortable: true
     - field: status
+      title: Status
+      sortable: true
     - field: priority
+      title: Priority
       width: 80px
+      sortable: true
     - field: type
+      title: Type
       width: 100px
-    - field: repo_id
-      width: 150px
+    - field: model
+      title: Model
+      width: 100px
+    - field: cost
+      title: Cost
+      width: 80px
+      sortable: true
     - field: created_at
+      title: Created
       width: 150px
+      sortable: true
+  styles:
+    - when:
+        field: status
+        eq: failed
+      class: text-red-400
+    - when:
+        field: status
+        eq: completed
+      class: text-green-400
+    - when:
+        field: status
+        eq: running
+      class: text-blue-400
+    - when:
+        field: status
+        eq: cancelled
+      class: text-yellow-400/60
+
 board:
-  group_by_field: status
+  group_by: status
+
 card:
-  title: title
-  subtitle: status
-  badges: [priority, type]
-  footer: [repo_id, created_at]
-fields:
-  status:
-    color_map:
-      queued: "bg-yellow-100 text-yellow-800"
-      running: "bg-blue-100 text-blue-800"
-      done: "bg-green-100 text-green-800"
-      failed: "bg-red-100 text-red-800"
-      blocked: "bg-gray-100 text-gray-800"
-      cancelled: "bg-gray-100 text-gray-500"
-  priority:
-    color_map:
-      1: "bg-red-100 text-red-800"
-      2: "bg-orange-100 text-orange-800"
-      3: "bg-yellow-100 text-yellow-800"
-      4: "bg-green-100 text-green-800"
-      5: "bg-gray-100 text-gray-800"
-create:
-  tabs:
-    - label: Details
-      rows:
-        - fields: [title, repo_id]
-        - fields: [body]
-        - fields: [type, priority]
-        - fields: [model, max_retries, timeout_secs]
+  title: "{{title}}"
+  subtitle: "{{type}} | {{model}}"
+  badges: [priority, status]
+
+filters:
+  - field: status
+    pinned: true
+    show_in: [toolbar]
+  - field: type
+    pinned: true
+    show_in: [toolbar]
+  - field: priority
+    show_in: [toolbar, advanced]
+  - field: model
+    show_in: [advanced]
+
 actions:
-  cancel: { placement: [row], form: confirm }
-  execute: { placement: [row] }
-  delete: { placement: [row, bulk], form: confirm }
+  - name: execute
+    label: Execute
+    icon: play
+    style: default
+    show_in: [row, detail]
+    pinned: true
+  - name: cancel
+    label: Cancel
+    icon: x-circle
+    style: destructive
+    confirm: "This will stop any running executions. Continue?"
+    show_in: [row, detail]
+
+form:
+  rows:
+    - fields: [title]
+    - fields: [body]
+    - fields: [priority, type]
+    - fields: [repo_id, model]
+    - fields: [max_retries, timeout_secs]
+
+detail:
+  sections:
+    - label: Overview
+      fields: [title, body, status, type, priority, model]
+    - label: Execution
+      fields: [run_count, max_retries, timeout_secs, cost]
+    - label: Dependencies
+      fields: [parent_id, depends_on, labels]
+
+empty:
+  title: No tasks yet
+  description: Create your first task to start automating with AI agents.
+  icon: clipboard-check

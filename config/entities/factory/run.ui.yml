@@ -1,7 +1,16 @@
+entity:
+  icon: play-circle
+  description: Individual execution runs of tasks by AI agents
+
 views:
   default: table
+  options: [table]
 
 table:
+  density: comfortable
+  default_sort:
+    field: started_at
+    dir: desc
   columns:
     - field: task_id
       title: Task
@@ -11,7 +20,7 @@ table:
       sortable: true
     - field: agent
       title: Agent
-      width: 100px
+      width: 120px
     - field: model
       title: Model
       width: 100px
@@ -21,8 +30,45 @@ table:
       sortable: true
     - field: duration
       title: Duration
-      width: 80px
+      width: 100px
+      sortable: true
     - field: started_at
       title: Started
       width: 150px
       sortable: true
+  styles:
+    - when:
+        field: status
+        eq: failed
+      class: text-red-400
+    - when:
+        field: status
+        eq: completed
+      class: text-green-400
+    - when:
+        field: status
+        eq: running
+      class: text-blue-400
+
+filters:
+  - field: status
+    pinned: true
+    show_in: [toolbar]
+  - field: agent
+    show_in: [toolbar]
+  - field: model
+    show_in: [advanced]
+
+detail:
+  sections:
+    - label: Overview
+      fields: [task_id, repo_id, status, agent, model]
+    - label: Results
+      fields: [cost, duration, commit_hash, log_url, error]
+    - label: Timing
+      fields: [started_at, completed_at]
+
+empty:
+  title: No runs yet
+  description: Runs are created when tasks are executed.
+  icon: play-circle
