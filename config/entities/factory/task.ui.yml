@@ -84,7 +84,7 @@ card:
   meta: [created_at, cost]
   fields: [run_count, model]
 
-filters:
+filters:  
   - field: status
     pinned: true
     show_in: [toolbar]

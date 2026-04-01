@@ -36,5 +36,7 @@ tmp/
 
 # Node / Bun
 node_modules/
-bun.lock
 dist/
+
+# Generated code
+generated/
