@@ -1,43 +1,63 @@
 entity:
   icon: git-branch
+  color: "#10b981"
+  label: Repo
+  plural: Repos
   description: Git repositories connected for AI task execution
+
+picker:
+  display: name
+  subtitle: target_branch
+  search_fields: [name, url]
+  mode: search
+
+groupable: [default_model, active]
 
 views:
   default: table
   options: [table, card]
 
+create:
+  mode: modal
+  width: md
+  fields: [name, url, local_path, target_branch, default_model]
+  required: [name, url]
+
+search:
+  enabled: true
+  fields: [name, url]
+  placeholder: "Search repos..."
+
 table:
   density: comfortable
+  page_size: 50
+  resizable: true
   default_sort:
     field: name
     dir: asc
   columns:
     - field: name
-      title: Name
       width: 2fr
       sortable: true
+      pinned: left
     - field: url
-      title: URL
       width: 2fr
     - field: target_branch
-      title: Branch
       width: 120px
     - field: default_model
-      title: Model
       width: 100px
     - field: active
-      title: Active
       width: 80px
   styles:
-    - when:
-        field: active
-        eq: false
+    - when: { field: active, eq: false }
       class: opacity-50
 
 card:
-  title: "{{name}}"
+  title: name
   subtitle: "{{target_branch}}"
   badges: [default_model, active]
+  meta: [url]
+  fields: [local_path, feedback_loops]
 
 filters:
   - field: active
@@ -46,7 +66,22 @@ filters:
   - field: default_model
     show_in: [toolbar]
 
+actions:
+  - name: sync
+    label: Sync
+    icon: refresh-cw
+    style: default
+    show_in: [row, detail, context]
+    pinned: true
+  - name: deactivate
+    label: Deactivate
+    icon: pause
+    style: destructive
+    confirm: "Deactivate this repository?"
+    show_in: [row, detail, context]
+
 form:
+  layout: rows
   rows:
     - fields: [name]
     - fields: [url]
@@ -55,13 +90,37 @@ form:
     - fields: [active]
 
 detail:
+  size: lg
+  layout: sections
   sections:
     - label: Repository
+      columns: 2
       fields: [name, url, local_path, target_branch]
     - label: Configuration
       fields: [default_model, active, feedback_loops]
+  sidebar:
+    fields: [active, default_model, target_branch]
+
+fields:
+  name:
+    label: Repository Name
+    placeholder: "Enter repository name..."
+  url:
+    label: Repository URL
+    placeholder: "https://github.com/..."
+  local_path:
+    label: Local Path
+  target_branch:
+    label: Target Branch
+  default_model:
+    label: Default Model
 
 empty:
   title: No repos connected
   description: Add a repository to start running AI tasks against your codebase.
   icon: git-branch
+  cta: Add Repository
+
+styles:
+  - when: { field: active, eq: false }
+    class: border-l-2 border-l-zinc-400

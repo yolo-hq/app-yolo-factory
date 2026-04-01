@@ -25,8 +25,6 @@ var Task = struct {
 	RunCount write.Field[int]
 	MaxRetries write.Field[int]
 	TimeoutSecs write.Field[int]
-	Repo write.Field[*Repo]
-	Parent write.Field[*Task]
 }{
 	ID: write.NewField[string]("id"),
 	CreatedAt: write.NewField[time.Time]("created_at"),
@@ -46,6 +44,4 @@ var Task = struct {
 	RunCount: write.NewField[int]("run_count"),
 	MaxRetries: write.NewField[int]("max_retries"),
 	TimeoutSecs: write.NewField[int]("timeout_secs"),
-	Repo: write.NewField[*Repo]("-"),
-	Parent: write.NewField[*Task]("-"),
 }

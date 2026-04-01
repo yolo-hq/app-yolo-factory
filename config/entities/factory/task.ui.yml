@@ -1,67 +1,88 @@
 entity:
   icon: clipboard-check
+  color: "#6366f1"
+  label: Task
+  plural: Tasks
   description: AI agent tasks for code generation, review, and automation
+
+picker:
+  display: title
+  subtitle: type
+  search_fields: [title, body]
+  mode: search
+
+groupable: [status, priority, type, model]
 
 views:
   default: table
-  options: [table, board, card]
+  options: [table, board, card, list]
+
+create:
+  mode: modal
+  width: md
+  fields: [title, body, priority, type, repo_id, model]
+  required: [title]
+
+search:
+  enabled: true
+  fields: [title, body]
+  placeholder: "Search tasks..."
 
 table:
   density: comfortable
+  page_size: 50
+  resizable: true
   default_sort:
     field: created_at
     dir: desc
   columns:
     - field: title
-      title: Title
       width: 2fr
       sortable: true
+      pinned: left
     - field: status
-      title: Status
       sortable: true
     - field: priority
-      title: Priority
       width: 80px
       sortable: true
     - field: type
-      title: Type
       width: 100px
     - field: model
-      title: Model
       width: 100px
     - field: cost
-      title: Cost
       width: 80px
       sortable: true
     - field: created_at
-      title: Created
       width: 150px
       sortable: true
   styles:
-    - when:
-        field: status
-        eq: failed
-      class: text-red-400
-    - when:
-        field: status
-        eq: completed
-      class: text-green-400
-    - when:
-        field: status
-        eq: running
-      class: text-blue-400
-    - when:
-        field: status
-        eq: cancelled
-      class: text-yellow-400/60
+    - when: { field: status, eq: failed }
+      class: text-red-500
+    - when: { field: status, eq: completed }
+      class: text-green-500
+    - when: { field: status, eq: running }
+      class: text-blue-500
+    - when: { field: status, eq: cancelled }
+      class: text-yellow-500/60
+
+list:
+  group_by: status
+  title_field: title
+  subtitle: "{{type}} | {{model}}"
+  meta: [created_at, cost, priority]
 
 board:
   group_by: status
+  column_width: 280
+  card_create: true
+  drag: true
 
 card:
-  title: "{{title}}"
+  title: title
   subtitle: "{{type}} | {{model}}"
   badges: [priority, status]
+  meta: [created_at, cost]
+  fields: [run_count, model]
 
 filters:
   - field: status
@@ -74,22 +95,28 @@ filters:
     show_in: [toolbar, advanced]
   - field: model
     show_in: [advanced]
+  - field: created_at
+    show_in: [advanced]
+    type: date_range
 
 actions:
   - name: execute
     label: Execute
     icon: play
     style: default
-    show_in: [row, detail]
+    show_in: [row, detail, bulk, context]
     pinned: true
+    shortcut: "mod+e"
   - name: cancel
     label: Cancel
     icon: x-circle
     style: destructive
     confirm: "This will stop any running executions. Continue?"
-    show_in: [row, detail]
+    show_in: [row, detail, context]
+    undo: true
 
 form:
+  layout: rows
   rows:
     - fields: [title]
     - fields: [body]
@@ -98,15 +125,39 @@ form:
     - fields: [max_retries, timeout_secs]
 
 detail:
+  size: lg
+  layout: sections
   sections:
     - label: Overview
+      columns: 2
       fields: [title, body, status, type, priority, model]
     - label: Execution
       fields: [run_count, max_retries, timeout_secs, cost]
     - label: Dependencies
       fields: [parent_id, depends_on, labels]
+  sidebar:
+    fields: [status, priority, type, created_at, updated_at]
+
+fields:
+  title:
+    label: Task Name
+    placeholder: "Enter task name..."
+  body:
+    label: Description
+  priority:
+    label: Priority
+  repo_id:
+    label: Repository
+  cost:
+    readonly: true
+    label: Total Cost
 
 empty:
   title: No tasks yet
   description: Create your first task to start automating with AI agents.
   icon: clipboard-check
+  cta: Create Task
+
+styles:
+  - when: { field: status, eq: failed }
+    class: border-l-2 border-l-red-500

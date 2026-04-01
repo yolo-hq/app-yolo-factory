@@ -19,9 +19,6 @@ var Question = struct {
 	Tried write.Field[string]
 	Body write.Field[string]
 	Resolution write.Field[string]
-	Task write.Field[*Task]
-	Run write.Field[*Run]
-	Repo write.Field[*Repo]
 }{
 	ID: write.NewField[string]("id"),
 	CreatedAt: write.NewField[time.Time]("created_at"),
@@ -35,7 +32,4 @@ var Question = struct {
 	Tried: write.NewField[string]("tried"),
 	Body: write.NewField[string]("body"),
 	Resolution: write.NewField[string]("resolution"),
-	Task: write.NewField[*Task]("-"),
-	Run: write.NewField[*Run]("-"),
-	Repo: write.NewField[*Repo]("-"),
 }

@@ -23,8 +23,6 @@ var Run = struct {
 	CommitHash write.Field[string]
 	StartedAt write.Field[time.Time]
 	CompletedAt write.Field[*time.Time]
-	Task write.Field[*Task]
-	Repo write.Field[*Repo]
 }{
 	ID: write.NewField[string]("id"),
 	CreatedAt: write.NewField[time.Time]("created_at"),
@@ -42,6 +40,4 @@ var Run = struct {
 	CommitHash: write.NewField[string]("commit_hash"),
 	StartedAt: write.NewField[time.Time]("started_at"),
 	CompletedAt: write.NewField[*time.Time]("completed_at"),
-	Task: write.NewField[*Task]("-"),
-	Repo: write.NewField[*Repo]("-"),
 }

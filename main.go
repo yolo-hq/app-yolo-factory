@@ -33,15 +33,15 @@ func main() {
 	})
 
 	// Filters
+	registry.RegisterFilter("Task", filters.TaskFilter{})
 	registry.RegisterFilter("Question", filters.QuestionFilter{})
 	registry.RegisterFilter("Run", filters.RunFilter{})
-	registry.RegisterFilter("Task", filters.TaskFilter{})
 
 	// Actions
-	registry.RegisterActions("Task", &actions.ExecuteTaskAction{}, &actions.CancelTaskAction{}, &actions.UpdateTaskAction{}, &actions.CreateTaskAction{})
 	registry.RegisterActions("Question", &actions.CreateQuestionAction{}, &actions.ResolveQuestionAction{})
-	registry.RegisterActions("Repo", &actions.CreateRepoAction{}, &actions.UpdateRepoAction{})
+	registry.RegisterActions("Repo", &actions.UpdateRepoAction{}, &actions.CreateRepoAction{})
 	registry.RegisterActions("Run", &actions.CompleteRunAction{}, &actions.CreateRunAction{})
+	registry.RegisterActions("Task", &actions.ExecuteTaskAction{}, &actions.UpdateTaskAction{}, &actions.CancelTaskAction{}, &actions.CreateTaskAction{})
 
 	// Commands
 	command.Register(&commands.CleanupRuns{})
