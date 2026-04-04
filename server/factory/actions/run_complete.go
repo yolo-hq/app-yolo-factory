@@ -3,6 +3,7 @@ package actions
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/yolo-hq/yolo/core/action"
@@ -84,22 +85,27 @@ func (a *CompleteRunAction) handleCompleted(
 	prdWrite entity.WriteRepository[entities.PRD],
 	now time.Time,
 ) {
-	// a. Update task: done, accumulate cost.
+	// a. Update task: done, accumulate cost (critical path).
 	summary := truncate(input.Result, 500)
-	_, _ = taskWrite.Update(ctx).
+	if _, err := taskWrite.Update(ctx).
 		WhereID(task.ID).
 		Set("status", "done").
 		Set("cost_usd", task.CostUSD+input.CostUSD).
 		Set("commit_hash", input.CommitHash).
 		Set("summary", summary).
 		Set("completed_at", now).
-		Exec(ctx)
+		Exec(ctx); err != nil {
+		fmt.Printf("[factory] ERROR: failed to update task %s to done: %v\n", task.ID, err)
+		return
+	}
 
 	// b. Unblock dependent tasks.
 	unblockedIDs := unblockDependents(ctx, taskRead, taskWrite, task.ID)
 
-	// c. Update PRD counters and check completion.
-	updatePRDCounters(ctx, taskRead, action.ReadRepo[entities.PRD](actx), prdWrite, task.PrdID)
+	// c. Update PRD counters and check completion (non-critical, log and continue).
+	if err := updatePRDCounters(ctx, taskRead, action.ReadRepo[entities.PRD](actx), prdWrite, task.PrdID); err != nil {
+		fmt.Printf("[factory] WARN: failed to update PRD counters for %s: %v\n", task.PrdID, err)
+	}
 
 	// d. Trigger next queued task — prefer newly unblocked, else next by sequence.
 	nextID := ""
@@ -109,9 +115,11 @@ func (a *CompleteRunAction) handleCompleted(
 		nextID = findNextQueued(ctx, taskRead, task.PrdID)
 	}
 	if nextID != "" && a.JobClient != nil && a.WorkflowJob != nil {
-		_, _ = a.JobClient.Dispatch(ctx, a.WorkflowJob, map[string]string{
+		if _, err := a.JobClient.Dispatch(ctx, a.WorkflowJob, map[string]string{
 			"task_id": nextID,
-		})
+		}); err != nil {
+			fmt.Printf("[factory] WARN: failed to dispatch workflow for task %s: %v\n", nextID, err)
+		}
 	}
 }
 
@@ -129,34 +137,44 @@ func (a *CompleteRunAction) handleFailed(
 	newCost := task.CostUSD + input.CostUSD
 
 	if newRunCount < task.MaxRetries {
-		// Retry: requeue the task.
-		_, _ = taskWrite.Update(ctx).
+		// Retry: requeue the task (critical path).
+		if _, err := taskWrite.Update(ctx).
 			WhereID(task.ID).
 			Set("status", "queued").
 			Set("cost_usd", newCost).
 			Set("run_count", newRunCount).
-			Exec(ctx)
+			Exec(ctx); err != nil {
+			fmt.Printf("[factory] ERROR: failed to requeue task %s: %v\n", task.ID, err)
+			return
+		}
 
 		// Enqueue retry.
 		if a.JobClient != nil && a.WorkflowJob != nil {
-			_, _ = a.JobClient.Dispatch(ctx, a.WorkflowJob, map[string]string{
+			if _, err := a.JobClient.Dispatch(ctx, a.WorkflowJob, map[string]string{
 				"task_id": task.ID,
-			})
+			}); err != nil {
+				fmt.Printf("[factory] WARN: failed to dispatch retry for task %s: %v\n", task.ID, err)
+			}
 		}
 	} else {
-		// Exhausted retries: mark failed.
-		_, _ = taskWrite.Update(ctx).
+		// Exhausted retries: mark failed (critical path).
+		if _, err := taskWrite.Update(ctx).
 			WhereID(task.ID).
 			Set("status", "failed").
 			Set("cost_usd", newCost).
 			Set("run_count", newRunCount).
-			Exec(ctx)
+			Exec(ctx); err != nil {
+			fmt.Printf("[factory] ERROR: failed to mark task %s as failed: %v\n", task.ID, err)
+			return
+		}
 
 		// Cascade failure to downstream dependents.
 		cascadeFailure(ctx, taskRead, taskWrite, task.ID, task.PrdID)
 
-		// Update PRD counters.
-		updatePRDCounters(ctx, taskRead, action.ReadRepo[entities.PRD](actx), prdWrite, task.PrdID)
+		// Update PRD counters (non-critical, log and continue).
+		if err := updatePRDCounters(ctx, taskRead, action.ReadRepo[entities.PRD](actx), prdWrite, task.PrdID); err != nil {
+			fmt.Printf("[factory] WARN: failed to update PRD counters for %s: %v\n", task.PrdID, err)
+		}
 	}
 }
 
@@ -286,7 +304,7 @@ func updatePRDCounters(
 	prdRead entity.ReadRepository[entities.PRD],
 	prdWrite entity.WriteRepository[entities.PRD],
 	prdID string,
-) {
+) error {
 	// Count task statuses for this PRD.
 	result, err := taskRead.FindMany(ctx, entity.FindOptions{
 		Filters: []entity.FilterCondition{
@@ -294,7 +312,7 @@ func updatePRDCounters(
 		},
 	})
 	if err != nil {
-		return
+		return fmt.Errorf("load tasks for PRD %s: %w", prdID, err)
 	}
 
 	var completed, failed, total int
@@ -310,12 +328,14 @@ func updatePRDCounters(
 		}
 	}
 
-	_, _ = prdWrite.Update(ctx).
+	if _, err := prdWrite.Update(ctx).
 		WhereID(prdID).
 		Set("completed_tasks", completed).
 		Set("failed_tasks", failed).
 		Set("total_cost_usd", totalCost).
-		Exec(ctx)
+		Exec(ctx); err != nil {
+		return fmt.Errorf("update PRD counters %s: %w", prdID, err)
+	}
 
 	// Check if PRD is complete: all tasks are in a terminal state.
 	if total > 0 && (completed+failed) == total {
@@ -324,12 +344,15 @@ func updatePRDCounters(
 		if failed > 0 {
 			status = "failed"
 		}
-		_, _ = prdWrite.Update(ctx).
+		if _, err := prdWrite.Update(ctx).
 			WhereID(prdID).
 			Set("status", status).
 			Set("completed_at", now).
-			Exec(ctx)
+			Exec(ctx); err != nil {
+			return fmt.Errorf("update PRD status %s: %w", prdID, err)
+		}
 	}
+	return nil
 }
 
 // containsDep checks if needle is in the slice.

@@ -47,10 +47,23 @@ func (s *DependencyService) Execute(ctx context.Context, in DependencyInput) (De
 		}
 	}
 
-	// Load all tasks in the same query for cycle detection.
-	result, err := s.TaskRead.FindMany(ctx, entity.FindOptions{})
+	// Load the task being checked to get its PRD scope.
+	task, err := s.TaskRead.FindOne(ctx, entity.FindOneOptions{ID: in.TaskID})
 	if err != nil {
-		return DependencyOutput{}, fmt.Errorf("load tasks: %w", err)
+		return DependencyOutput{}, fmt.Errorf("load task %s: %w", in.TaskID, err)
+	}
+	if task == nil {
+		return DependencyOutput{Valid: false, CycleError: fmt.Sprintf("task %s not found", in.TaskID)}, nil
+	}
+
+	// Load only tasks from the same PRD for cycle detection.
+	result, err := s.TaskRead.FindMany(ctx, entity.FindOptions{
+		Filters: []entity.FilterCondition{
+			{Field: "prd_id", Operator: entity.OpEq, Value: task.PrdID},
+		},
+	})
+	if err != nil {
+		return DependencyOutput{}, fmt.Errorf("load tasks for prd %s: %w", task.PrdID, err)
 	}
 
 	taskMap := make(map[string]*entities.Task, len(result.Data))

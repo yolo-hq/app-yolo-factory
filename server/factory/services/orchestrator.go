@@ -595,9 +595,31 @@ func truncateSummary(text string, maxLen int) string {
 	return text[:maxLen]
 }
 
-// runShellCommand executes a shell command and returns combined output.
+// shellMetaChars are characters that indicate shell injection attempts.
+var shellMetaChars = []string{"|", ";", "&", "$", "`", "(", ")", "{", "}", "<", ">", "!", "~"}
+
+// validateCommand checks that a command string has no shell metacharacters.
+func validateCommand(command string) error {
+	for _, ch := range shellMetaChars {
+		if strings.Contains(command, ch) {
+			return fmt.Errorf("command contains shell metacharacter %q: %s", ch, command)
+		}
+	}
+	return nil
+}
+
+// runShellCommand executes a command by splitting on whitespace (no shell).
 func runShellCommand(ctx context.Context, dir string, command string) (string, error) {
-	cmd := exec.CommandContext(ctx, "sh", "-c", command)
+	if err := validateCommand(command); err != nil {
+		return "", err
+	}
+
+	parts := strings.Fields(command)
+	if len(parts) == 0 {
+		return "", fmt.Errorf("empty command")
+	}
+
+	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
 	cmd.Dir = dir
 
 	var stdout, stderr bytes.Buffer

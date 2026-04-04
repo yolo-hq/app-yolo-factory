@@ -92,10 +92,13 @@ func (j *ExecuteWorkflowJob) Handle(ctx context.Context, payload []byte) error {
 	})
 	if err != nil {
 		// Orchestrator returned a hard error (not a step failure).
-		_, _ = j.TaskWrite.Update(ctx).
+		// No Run entity was created, so mark task failed directly as a safety net.
+		if _, taskErr := j.TaskWrite.Update(ctx).
 			WhereID(task.ID).
 			Set("status", "failed").
-			Exec(ctx)
+			Exec(ctx); taskErr != nil {
+			return fmt.Errorf("orchestrator: %w (also failed to update task: %v)", err, taskErr)
+		}
 		return fmt.Errorf("orchestrator: %w", err)
 	}
 
@@ -118,46 +121,9 @@ func (j *ExecuteWorkflowJob) Handle(ctx context.Context, payload []byte) error {
 		}
 	}
 
-	// 8. Update task based on outcome.
-	if out.Status == "completed" {
-		completedAt := time.Now()
-		_, err = j.TaskWrite.Update(ctx).
-			WhereID(task.ID).
-			Set("status", "done").
-			Set("cost_usd", task.CostUSD+out.CostUSD).
-			Set("commit_hash", out.CommitHash).
-			Set("summary", out.Summary).
-			Set("completed_at", completedAt).
-			Exec(ctx)
-		if err != nil {
-			return fmt.Errorf("update task to done: %w", err)
-		}
-
-		// Unblock dependent tasks.
-		_, _ = j.Orchestrator.Dependency.Unblock(ctx, services.UnblockInput{
-			CompletedTaskID: task.ID,
-		})
-	} else {
-		// Failed: check retries.
-		newRunCount := task.RunCount + 1
-		if newRunCount >= task.MaxRetries {
-			_, err = j.TaskWrite.Update(ctx).
-				WhereID(task.ID).
-				Set("status", "failed").
-				Set("cost_usd", task.CostUSD+out.CostUSD).
-				Exec(ctx)
-		} else {
-			// Requeue for retry.
-			_, err = j.TaskWrite.Update(ctx).
-				WhereID(task.ID).
-				Set("status", "queued").
-				Set("cost_usd", task.CostUSD+out.CostUSD).
-				Exec(ctx)
-		}
-		if err != nil {
-			return fmt.Errorf("update task after failure: %w", err)
-		}
-	}
+	// 8. Task/PRD state transitions are handled by CompleteRunAction,
+	// which is triggered on the Run entity after persistence.
+	// This job only persists orchestrator output — no duplicate state machine here.
 
 	return nil
 }
