@@ -6,11 +6,12 @@ import (
 
 	bunrepo "github.com/yolo-hq/yolo/core/bun"
 
+	"github.com/yolo-hq/app-yolo-factory/server/factory/actions"
 	"github.com/yolo-hq/app-yolo-factory/server/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/server/factory/filters"
 )
 
-// setup registers all entities and repositories.
-// Actions, filters, and commands will be added in issue #23.
+// setup registers all entities, repositories, actions, and filters.
 func setup() {
 	// Entities
 	registry.Register(
@@ -49,4 +50,39 @@ func setup() {
 	registry.RegisterRepoFactory("Suggestion", func(db any) (any, any) {
 		return bunrepo.NewReadRepository[entities.Suggestion](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Suggestion](db.(*bun.DB))
 	})
+
+	// Actions
+	registry.RegisterActions("Project",
+		&actions.CreateProjectAction{},
+		&actions.UpdateProjectAction{},
+		&actions.PauseProjectAction{},
+		&actions.ResumeProjectAction{},
+	)
+	registry.RegisterActions("PRD",
+		&actions.SubmitPRDAction{},
+		&actions.ApprovePRDAction{},
+	)
+	registry.RegisterActions("Task",
+		&actions.CancelTaskAction{},
+		&actions.RetryTaskAction{},
+	)
+	registry.RegisterActions("Run",
+		&actions.CompleteRunAction{},
+	)
+	registry.RegisterActions("Question",
+		&actions.AnswerQuestionAction{},
+	)
+	registry.RegisterActions("Suggestion",
+		&actions.ApproveSuggestionAction{},
+		&actions.RejectSuggestionAction{},
+	)
+
+	// Filters
+	registry.RegisterFilter("Project", &filters.ProjectFilter{})
+	registry.RegisterFilter("PRD", &filters.PRDFilter{})
+	registry.RegisterFilter("Task", &filters.TaskFilter{})
+	registry.RegisterFilter("Run", &filters.RunFilter{})
+	registry.RegisterFilter("Step", &filters.StepFilter{})
+	registry.RegisterFilter("Question", &filters.QuestionFilter{})
+	registry.RegisterFilter("Suggestion", &filters.SuggestionFilter{})
 }
