@@ -92,4 +92,7 @@ func setup() {
 	// Jobs
 	jobs.RegisterHandler(&factoryjobs.PlanPRDJob{})
 	jobs.RegisterHandler(&factoryjobs.ExecuteWorkflowJob{})
+	jobs.RegisterHandler(&factoryjobs.SentinelJob{})
+	jobs.RegisterHandler(&factoryjobs.AdvisorJob{})
+	jobs.RegisterHandler(&factoryjobs.BackupSnapshotJob{})
 }
