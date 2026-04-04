@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/uptrace/bun"
+	"github.com/yolo-hq/yolo/core/jobs"
 	"github.com/yolo-hq/yolo/core/registry"
 
 	bunrepo "github.com/yolo-hq/yolo/core/bun"
@@ -9,6 +10,7 @@ import (
 	"github.com/yolo-hq/app-yolo-factory/server/factory/actions"
 	"github.com/yolo-hq/app-yolo-factory/server/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/server/factory/filters"
+	factoryjobs "github.com/yolo-hq/app-yolo-factory/server/factory/jobs"
 )
 
 // setup registers all entities, repositories, actions, and filters.
@@ -61,6 +63,7 @@ func setup() {
 	registry.RegisterActions("PRD",
 		&actions.SubmitPRDAction{},
 		&actions.ApprovePRDAction{},
+		&actions.ExecutePRDAction{},
 	)
 	registry.RegisterActions("Task",
 		&actions.CancelTaskAction{},
@@ -85,4 +88,7 @@ func setup() {
 	registry.RegisterFilter("Step", &filters.StepFilter{})
 	registry.RegisterFilter("Question", &filters.QuestionFilter{})
 	registry.RegisterFilter("Suggestion", &filters.SuggestionFilter{})
+
+	// Jobs
+	jobs.RegisterHandler(&factoryjobs.PlanPRDJob{})
 }
