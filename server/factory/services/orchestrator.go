@@ -476,7 +476,12 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 		TaskID:       in.Task.ID,
 	})
 
-	// 15. Emit task completed event.
+	// 15. TODO: Trigger integration review after every N completed tasks.
+	// Use ShouldRunIntegrationReview(completedCount, defaultIntegrationReviewEvery)
+	// to decide. The job layer should count completed tasks in the PRD and call
+	// IntegrationReviewService.Execute with the combined diff from recent tasks.
+
+	// 16. Emit task completed event.
 	events.Emit(events.TaskCompleted, events.TaskPayload{
 		TaskID:      in.Task.ID,
 		Title:       in.Task.Title,
@@ -484,7 +489,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 		CostUSD:     totalCost,
 	})
 
-	// 16. Build final output.
+	// 17. Build final output.
 	completedAt := time.Now()
 	run.Status = entities.RunCompleted
 	run.CostUSD = totalCost

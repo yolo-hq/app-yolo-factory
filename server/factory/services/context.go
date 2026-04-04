@@ -104,6 +104,8 @@ func templateForPhase(phase string) (tmpl string, system string, err error) {
 		return skills.SentinelTemplate, "You are a code health sentinel.", nil
 	case "advisor":
 		return skills.AdvisorTemplate, "You are an optimization advisor.", nil
+	case "integration_review":
+		return skills.IntegrationReviewTemplate, "You are an integration reviewer.", nil
 	default:
 		return "", "", fmt.Errorf("unknown phase: %s", phase)
 	}

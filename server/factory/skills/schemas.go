@@ -49,6 +49,9 @@ const ReviewTaskSchema = `{
         "properties": {
           "criteria_id": {"type": "string"},
           "passed": {"type": "boolean"},
+          "evidence": {"type": "string"},
+          "file": {"type": "string"},
+          "line": {"type": "integer"},
           "comment": {"type": "string"}
         }
       }
@@ -100,6 +103,27 @@ const SentinelSchema = `{
           "status": {"type": "string", "enum": ["ok", "warning", "critical"]},
           "description": {"type": "string"},
           "suggested_action": {"type": "string"}
+        }
+      }
+    }
+  }
+}`
+
+// IntegrationReviewSchema is the JSON schema for integration review structured output.
+const IntegrationReviewSchema = `{
+  "type": "object",
+  "required": ["findings"],
+  "properties": {
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["category", "severity", "message"],
+        "properties": {
+          "category": {"type": "string"},
+          "severity": {"type": "string", "enum": ["error", "warning", "info"]},
+          "message": {"type": "string"},
+          "files": {"type": "array", "items": {"type": "string"}}
         }
       }
     }

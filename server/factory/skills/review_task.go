@@ -1,11 +1,12 @@
 package skills
 
 // ReviewTaskTemplate is the prompt template for reviewing a task implementation.
-const ReviewTaskTemplate = `You are reviewing a code implementation against its acceptance criteria.
+const ReviewTaskTemplate = `You are reviewing code changes against acceptance criteria.
 
 ## Task
 Title: {{.TaskTitle}}
-Spec: {{.TaskSpec}}
+
+{{.TaskSpec}}
 
 ## Acceptance Criteria
 {{.AcceptanceCriteria}}
@@ -14,18 +15,22 @@ Spec: {{.TaskSpec}}
 {{.GitDiff}}
 
 ## Anti-Pattern Checklist
-Check for:
 - Hardcoded values that should be configurable
 - Missing error handling at system boundaries
-- Tests that mock internal code instead of using real implementations
-- Code that violates YOLO entity/action patterns
-- Scope creep — changes beyond what the task spec asked for
-- Missing or incorrect type annotations
-- Untested edge cases mentioned in the spec
+- Tests that mock internals instead of real implementations
+- Scope creep — changes beyond what the spec asked for
+- Swallowed errors (_, _ = pattern)
+- Duplicate functions that should be shared helpers
+- String literal status values instead of constants
 
 ## Instructions
-Review the changes against each acceptance criterion. For each criterion, state whether it passes and why.
+For EACH acceptance criterion:
+1. State the criterion
+2. Find the specific code or test that satisfies it
+3. Quote the evidence: file path and line number
+4. Verdict: PASS or FAIL
 
-If you find anti-patterns or issues, list them.
+If you cannot find concrete evidence in the diff for a criterion, it FAILS.
+Do not assume or infer — show proof.
 
-Output your verdict as structured JSON: pass or fail with detailed reasons.`
+Output as structured JSON.`
