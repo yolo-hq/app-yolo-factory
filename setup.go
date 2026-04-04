@@ -115,6 +115,7 @@ func setup() {
 	jobs.RegisterHandler(&factoryjobs.BackupSnapshotJob{})
 	jobs.RegisterHandler(&factoryjobs.CheckTimeoutsJob{})
 	jobs.RegisterHandler(&factoryjobs.ResetBudgetsJob{})
+	jobs.RegisterHandler(&factoryjobs.ProcessAdvisorJob{})
 
 	// Commands
 	command.Register(&commands.ProjectAdd{})
@@ -144,4 +145,8 @@ func setup() {
 	command.Register(&commands.AdvisorRun{})
 	command.Register(&commands.Backup{})
 	command.Register(&commands.Recover{})
+	command.Register(&commands.InsightList{})
+	command.Register(&commands.InsightAcknowledge{})
+	command.Register(&commands.InsightApply{})
+	command.Register(&commands.InsightDismiss{})
 }

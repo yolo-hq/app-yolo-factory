@@ -130,6 +130,28 @@ const IntegrationReviewSchema = `{
   }
 }`
 
+// ProcessAdvisorSchema is the JSON schema for process advisor structured output.
+const ProcessAdvisorSchema = `{
+  "type": "object",
+  "properties": {
+    "insights": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {"type": "string"},
+          "body": {"type": "string"},
+          "recommendation": {"type": "string"},
+          "category": {"type": "string"},
+          "priority": {"type": "string", "enum": ["low", "medium", "high"]}
+        },
+        "required": ["title", "body", "recommendation", "category", "priority"]
+      }
+    }
+  },
+  "required": ["insights"]
+}`
+
 // AdvisorSchema is the JSON schema for advisor structured output.
 const AdvisorSchema = `{
   "type": "object",
