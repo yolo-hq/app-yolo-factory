@@ -7,6 +7,7 @@ import {
   type YoloViewConfig,
   type PageRouteConfig,
 } from '@yolo-hq/view'
+import { PRDDetail } from './custom/PRDDetail'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 10_000, retry: 1 } },
@@ -166,6 +167,12 @@ const pages: Record<string, PageRouteConfig> = {
       ],
       empty: { icon: 'file-text', title: 'No PRDs yet', description: 'Submit your first PRD to start building.', cta_label: 'Submit PRD' },
     },
+  },
+
+  // PRD Detail (custom component)
+  '/prds/$id': {
+    page: { page: { type: 'custom', title: 'PRD Detail', entity: 'PRD', domain: 'factory' } },
+    component: ({ params }) => <PRDDetail prdId={params.id} />,
   },
 
   // Tasks
