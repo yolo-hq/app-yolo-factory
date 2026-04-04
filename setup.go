@@ -27,6 +27,8 @@ func setup() {
 		entities.Review{},
 		entities.Question{},
 		entities.Suggestion{},
+		entities.Insight{},
+		entities.LintResult{},
 	)
 
 	// Repositories
@@ -53,6 +55,12 @@ func setup() {
 	})
 	registry.RegisterRepoFactory("Suggestion", func(db any) (any, any) {
 		return bunrepo.NewReadRepository[entities.Suggestion](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Suggestion](db.(*bun.DB))
+	})
+	registry.RegisterRepoFactory("Insight", func(db any) (any, any) {
+		return bunrepo.NewReadRepository[entities.Insight](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Insight](db.(*bun.DB))
+	})
+	registry.RegisterRepoFactory("LintResult", func(db any) (any, any) {
+		return bunrepo.NewReadRepository[entities.LintResult](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.LintResult](db.(*bun.DB))
 	})
 
 	// Actions
@@ -81,6 +89,11 @@ func setup() {
 		&actions.ApproveSuggestionAction{},
 		&actions.RejectSuggestionAction{},
 	)
+	registry.RegisterActions("Insight",
+		&actions.AcknowledgeInsightAction{},
+		&actions.ApplyInsightAction{},
+		&actions.DismissInsightAction{},
+	)
 
 	// Filters
 	registry.RegisterFilter("Project", &filters.ProjectFilter{})
@@ -90,6 +103,8 @@ func setup() {
 	registry.RegisterFilter("Step", &filters.StepFilter{})
 	registry.RegisterFilter("Question", &filters.QuestionFilter{})
 	registry.RegisterFilter("Suggestion", &filters.SuggestionFilter{})
+	registry.RegisterFilter("Insight", &filters.InsightFilter{})
+	registry.RegisterFilter("LintResult", &filters.LintResultFilter{})
 
 	// Jobs
 	jobs.RegisterHandler(&factoryjobs.PlanPRDJob{})

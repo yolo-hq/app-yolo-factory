@@ -22,6 +22,8 @@ server/{domain}/entities/, actions/, inputs/, queries/
 - Review — server/factory/entities/review.go
 - Question — server/factory/entities/question.go
 - Suggestion — server/factory/entities/suggestion.go
+- Insight — server/factory/entities/insight.go
+- LintResult — server/factory/entities/lint_result.go
 
 ## Reference
 Read docs/*.md in the framework repo for full patterns.

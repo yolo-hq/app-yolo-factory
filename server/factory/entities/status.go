@@ -123,6 +123,26 @@ const (
 	CategoryBugFix            = "bug_fix"
 )
 
+// --- Insight statuses ---
+
+const (
+	InsightPending      = "pending"
+	InsightAcknowledged = "acknowledged"
+	InsightApplied      = "applied"
+	InsightDismissed    = "dismissed"
+)
+
+// --- Insight categories ---
+
+const (
+	InsightRetryRate            = "retry_rate"
+	InsightCostOptimization     = "cost_optimization"
+	InsightModelSelection       = "model_selection"
+	InsightSpecQuality          = "spec_quality"
+	InsightGateEffectiveness    = "gate_effectiveness"
+	InsightWorkflowOptimization = "workflow_optimization"
+)
+
 // --- PRD sources ---
 
 const (

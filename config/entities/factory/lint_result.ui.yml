@@ -1,0 +1,63 @@
+entity:
+  icon: shield-check
+  color: "#06b6d4"
+  label: Lint Result
+  plural: Lint Results
+  description: Code quality check results from lint runs
+
+views:
+  default: table
+  options: [table]
+
+create:
+  mode: disabled
+
+table:
+  density: comfortable
+  page_size: 50
+  default_sort:
+    field: created_at
+    dir: desc
+  columns:
+    - field: passed
+      width: 80px
+      sortable: true
+    - field: checks_run
+      width: 100px
+      sortable: true
+    - field: checks_failed
+      width: 100px
+      sortable: true
+    - field: task_id
+      width: 200px
+    - field: run_id
+      width: 200px
+  styles:
+    - when: { field: passed, eq: true }
+      class: text-green-500
+    - when: { field: passed, eq: false }
+      class: text-red-500
+
+filters:
+  - field: passed
+    pinned: true
+    show_in: [toolbar]
+  - field: task_id
+    show_in: [toolbar]
+  - field: run_id
+    show_in: [toolbar]
+
+detail:
+  size: md
+  layout: sections
+  sections:
+    - label: Overview
+      columns: 2
+      fields: [task_id, run_id, passed, checks_run, checks_passed, checks_failed]
+    - label: Findings
+      fields: [findings]
+
+empty:
+  title: No lint results
+  description: Lint results are created during task execution.
+  icon: shield-check

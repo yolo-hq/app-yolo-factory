@@ -63,6 +63,9 @@ apps:
             queries: [list, get]
           Question: "*"
           Suggestion: "*"
+          Insight: "*"
+          LintResult:
+            queries: [list, get]
 
   worker:
     type: worker
