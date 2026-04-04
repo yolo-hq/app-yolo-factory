@@ -1,5 +1,5 @@
 {
-  "name": "@yolo-factory/admin",
+  "name": "@yolo-factory/mission-control",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,13 +9,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@yolo-hq/admin": "link:@yolo-hq/admin",
+    "@yolo-hq/view": "link:@yolo-hq/view",
     "@yolo-hq/sdk": "link:@yolo-hq/sdk",
-    "@yolo-hq/components": "link:@yolo-hq/components",
     "@tanstack/react-query": "^5.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^7.0.0"
+    "lucide-react": "^0.468.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
