@@ -1,31 +1,26 @@
 entity:
-  icon: play-circle
+  icon: play
   color: "#3b82f6"
   label: Run
   plural: Runs
-  description: Individual execution runs of tasks by AI agents
+  description: Individual execution attempts of tasks
 
 picker:
-  display: task_id
+  display: session_name
   subtitle: status
-  search_fields: [agent, model]
+  search_fields: [model, agent_type]
   mode: search
-
-groupable: [status, agent, model]
 
 views:
   default: table
-  options: [table, list, card]
+  options: [table]
 
 create:
-  mode: modal
-  width: md
-  fields: [task_id, repo_id, agent, model]
-  required: [task_id]
+  mode: disabled
 
 search:
   enabled: true
-  fields: [agent, model, error]
+  fields: [model, agent_type]
   placeholder: "Search runs..."
 
 table:
@@ -36,76 +31,39 @@ table:
     field: started_at
     dir: desc
   columns:
-    - field: task_id
-      width: 200px
-      pinned: left
-    - field: status
-      sortable: true
-    - field: agent
+    - field: agent_type
       width: 120px
     - field: model
       width: 100px
-    - field: cost
+    - field: status
+      sortable: true
+    - field: cost_usd
       width: 80px
       sortable: true
-    - field: duration
+    - field: duration_ms
       width: 100px
       sortable: true
+    - field: num_turns
+      width: 80px
     - field: started_at
       width: 150px
       sortable: true
   styles:
-    - when: { field: status, eq: failed }
-      class: text-red-500
-    - when: { field: status, eq: completed }
-      class: text-green-500
     - when: { field: status, eq: running }
       class: text-blue-500
-
-list:
-  group_by: status
-  title_field: task_id
-  subtitle: "{{agent}} | {{model}}"
-  meta: [started_at, cost, duration]
-
-card:
-  title: task_id
-  subtitle: "{{agent}} | {{model}}"
-  badges: [status]
-  meta: [started_at, cost, duration]
-  fields: [commit_hash, error]
+    - when: { field: status, eq: completed }
+      class: text-green-500
+    - when: { field: status, eq: failed }
+      class: text-red-500
 
 filters:
   - field: status
     pinned: true
     show_in: [toolbar]
-  - field: agent
-    show_in: [toolbar]
   - field: model
-    show_in: [advanced]
-  - field: started_at
-    show_in: [advanced]
-    type: date_range
-
-actions:
-  - name: retry
-    label: Retry
-    icon: refresh-cw
-    style: default
-    show_in: [row, detail, context]
-    pinned: true
-  - name: cancel
-    label: Cancel
-    icon: x-circle
-    style: destructive
-    confirm: "Cancel this run?"
-    show_in: [row, detail, context]
-
-form:
-  layout: rows
-  rows:
-    - fields: [task_id, repo_id]
-    - fields: [agent, model]
+    show_in: [toolbar]
+  - field: task_id
+    show_in: [toolbar]
 
 detail:
   size: lg
@@ -113,34 +71,14 @@ detail:
   sections:
     - label: Overview
       columns: 2
-      fields: [task_id, repo_id, status, agent, model]
-    - label: Results
-      fields: [cost, duration, commit_hash, log_url, error]
-    - label: Timing
-      fields: [started_at, completed_at]
-  sidebar:
-    fields: [status, agent, model, started_at, completed_at]
-
-fields:
-  task_id:
-    label: Task
-  agent:
-    label: Agent
-  cost:
-    readonly: true
-    label: Cost
-  duration:
-    readonly: true
-    label: Duration
-  error:
-    label: Error Output
+      fields: [task_id, agent_type, model, status, session_id]
+    - label: Metrics
+      columns: 2
+      fields: [cost_usd, tokens_in, tokens_out, duration_ms, num_turns]
+    - label: Result
+      fields: [commit_hash, branch_name, files_changed, result, error]
 
 empty:
-  title: No runs yet
-  description: Runs are created when tasks are executed.
-  icon: play-circle
-  cta: Execute Task
-
-styles:
-  - when: { field: status, eq: failed }
-    class: border-l-2 border-l-red-500
+  title: No runs
+  description: Runs are created when tasks execute.
+  icon: play

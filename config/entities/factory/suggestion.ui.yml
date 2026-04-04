@@ -1,0 +1,99 @@
+entity:
+  icon: lightbulb
+  color: "#eab308"
+  label: Suggestion
+  plural: Suggestions
+  description: AI-generated improvement suggestions for projects
+
+picker:
+  display: title
+  subtitle: category
+  search_fields: [title, body]
+  mode: search
+
+views:
+  default: table
+  options: [table]
+
+create:
+  mode: disabled
+
+search:
+  enabled: true
+  fields: [title, body]
+  placeholder: "Search suggestions..."
+
+table:
+  density: comfortable
+  page_size: 50
+  default_sort:
+    field: created_at
+    dir: desc
+  columns:
+    - field: title
+      width: 2fr
+      sortable: true
+      pinned: left
+    - field: source
+      width: 100px
+    - field: category
+      width: 100px
+    - field: priority
+      width: 80px
+      sortable: true
+    - field: status
+      sortable: true
+  styles:
+    - when: { field: status, eq: pending }
+      class: text-yellow-500
+    - when: { field: status, eq: accepted }
+      class: text-green-500
+    - when: { field: status, eq: rejected }
+      class: text-red-500
+    - when: { field: status, eq: converted }
+      class: text-blue-500
+    - when: { field: priority, eq: critical }
+      class: font-bold text-red-500
+    - when: { field: priority, eq: high }
+      class: font-semibold
+
+filters:
+  - field: status
+    pinned: true
+    show_in: [toolbar]
+  - field: category
+    pinned: true
+    show_in: [toolbar]
+  - field: priority
+    show_in: [toolbar]
+  - field: source
+    show_in: [toolbar]
+  - field: project_id
+    show_in: [toolbar]
+
+actions:
+  - name: approve
+    label: Approve
+    icon: check
+    style: success
+    show_in: [row, detail, context]
+  - name: reject
+    label: Reject
+    icon: x
+    style: destructive
+    show_in: [row, detail, context]
+
+detail:
+  size: lg
+  layout: sections
+  sections:
+    - label: Overview
+      columns: 2
+      fields: [title, source, category, priority, status, project_id]
+    - label: Content
+      fields: [body]
+
+empty:
+  title: No suggestions
+  description: Suggestions are created by reviews, sentinel, and advisor.
+  icon: lightbulb

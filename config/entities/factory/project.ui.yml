@@ -1,0 +1,94 @@
+entity:
+  icon: folder
+  color: "#10b981"
+  label: Project
+  plural: Projects
+  description: Git repositories managed by Factory
+
+picker:
+  display: name
+  subtitle: status
+  search_fields: [name, repo_url]
+  mode: search
+
+views:
+  default: table
+  options: [table, card]
+
+create:
+  mode: modal
+  width: md
+  fields: [name, repo_url, local_path, default_branch, default_model, budget_monthly_usd]
+  required: [name, repo_url]
+
+search:
+  enabled: true
+  fields: [name, repo_url]
+  placeholder: "Search projects..."
+
+table:
+  density: comfortable
+  page_size: 50
+  default_sort:
+    field: name
+    dir: asc
+  columns:
+    - field: name
+      width: 2fr
+      sortable: true
+      pinned: left
+    - field: status
+      sortable: true
+    - field: default_model
+      width: 100px
+    - field: spent_this_month_usd
+      width: 100px
+      sortable: true
+    - field: budget_monthly_usd
+      width: 100px
+  styles:
+    - when: { field: status, eq: active }
+      class: text-green-500
+    - when: { field: status, eq: paused }
+      class: text-yellow-500
+    - when: { field: status, eq: archived }
+      class: text-zinc-500
+
+filters:
+  - field: status
+    pinned: true
+    show_in: [toolbar]
+  - field: default_model
+    show_in: [toolbar]
+
+actions:
+  - name: pause
+    label: Pause
+    icon: pause
+    style: default
+    show_in: [row, detail, context]
+  - name: resume
+    label: Resume
+    icon: play
+    style: default
+    show_in: [row, detail, context]
+
+detail:
+  size: lg
+  layout: sections
+  sections:
+    - label: Repository
+      columns: 2
+      fields: [name, repo_url, local_path, default_branch]
+    - label: Configuration
+      columns: 2
+      fields: [default_model, escalation_model, max_retries, timeout_secs]
+    - label: Budget
+      columns: 2
+      fields: [budget_per_task_usd, budget_per_prd_usd, budget_monthly_usd, spent_this_month_usd]
+
+empty:
+  title: No projects
+  description: Add a project to start running AI tasks.
+  icon: folder
+  cta: Add Project

@@ -3,7 +3,7 @@ entity:
   color: "#f59e0b"
   label: Question
   plural: Questions
-  description: Questions raised by AI agents during task execution
+  description: Questions raised by AI agents needing human input
 
 picker:
   display: body
@@ -11,21 +11,16 @@ picker:
   search_fields: [body, context]
   mode: search
 
-groupable: [status]
-
 views:
   default: table
-  options: [table, list]
+  options: [table]
 
 create:
-  mode: modal
-  width: md
-  fields: [body, context, task_id]
-  required: [body]
+  mode: disabled
 
 search:
   enabled: true
-  fields: [body, context, tried]
+  fields: [body, context]
   placeholder: "Search questions..."
 
 table:
@@ -39,101 +34,54 @@ table:
     - field: body
       width: 3fr
       pinned: left
+    - field: confidence
+      width: 100px
     - field: status
       sortable: true
-    - field: context
-      width: 2fr
-    - field: task_id
-      width: 150px
-    - field: created_at
-      width: 150px
-      sortable: true
+    - field: answered_by
+      width: 100px
   styles:
     - when: { field: status, eq: open }
       class: text-yellow-500
-    - when: { field: status, eq: resolved }
+    - when: { field: status, eq: answered }
       class: text-green-500
     - when: { field: status, eq: dismissed }
       class: text-zinc-500
-
-list:
-  group_by: status
-  title_field: body
-  subtitle: "{{context}}"
-  meta: [task_id, created_at]
-
-card:
-  title: body
-  subtitle: "{{context}}"
-  badges: [status]
-  meta: [task_id, created_at]
+    - when: { field: confidence, eq: low }
+      class: font-bold
+    - when: { field: confidence, eq: high }
+      class: opacity-70
 
 filters:
   - field: status
     pinned: true
     show_in: [toolbar]
+  - field: confidence
+    show_in: [toolbar]
   - field: task_id
     show_in: [toolbar]
-  - field: created_at
-    show_in: [advanced]
-    type: date_range
 
 actions:
-  - name: resolve
-    label: Resolve
-    icon: check
-    style: success
-    show_in: [row, detail, bulk, context]
-    pinned: true
-    shortcut: "mod+r"
-  - name: dismiss
-    label: Dismiss
-    icon: x
-    style: destructive
+  - name: answer
+    label: Answer
+    icon: message-circle
+    style: default
     show_in: [row, detail, context]
-    undo: true
-
-form:
-  layout: rows
-  rows:
-    - fields: [body]
-    - fields: [context]
-    - fields: [task_id, run_id]
-    - fields: [resolution]
+    pinned: true
 
 detail:
   size: lg
   layout: sections
   sections:
     - label: Question
-      columns: 2
-      fields: [body, context, tried]
-    - label: Resolution
-      fields: [status, resolution]
+      fields: [body, context, confidence]
+    - label: Answer
+      fields: [status, answer, answered_by, answered_at]
     - label: Source
-      fields: [task_id, run_id, repo_id]
-  sidebar:
-    fields: [status, task_id, created_at]
-
-fields:
-  body:
-    label: Question
-    placeholder: "Enter the question..."
-  context:
-    label: Context
-  resolution:
-    label: Resolution
-  task_id:
-    label: Task
-  run_id:
-    label: Run
+      columns: 2
+      fields: [task_id, run_id]
 
 empty:
   title: No questions
-  description: Questions appear when AI agents need human input during execution.
+  description: Questions appear when AI agents need human input.
   icon: help-circle
-  cta: Ask Question
-
-styles:
-  - when: { field: status, eq: open }
-    class: border-l-2 border-l-yellow-500

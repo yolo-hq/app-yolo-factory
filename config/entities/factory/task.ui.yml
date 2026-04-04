@@ -1,31 +1,28 @@
 entity:
-  icon: clipboard-check
+  icon: list-checks
   color: "#6366f1"
   label: Task
   plural: Tasks
-  description: AI agent tasks for code generation, review, and automation
+  description: Individual implementation tasks executed by AI agents
 
 picker:
   display: title
-  subtitle: type
-  search_fields: [title, body]
+  subtitle: status
+  search_fields: [title, spec]
   mode: search
 
-groupable: [status, priority, type, model]
+groupable: [status, model]
 
 views:
   default: table
-  options: [table, board, card, list]
+  options: [table, board]
 
 create:
-  mode: modal
-  width: md
-  fields: [title, body, priority, type, repo_id, model]
-  required: [title]
+  mode: disabled
 
 search:
   enabled: true
-  fields: [title, body]
+  fields: [title, spec]
   placeholder: "Search tasks..."
 
 table:
@@ -33,96 +30,66 @@ table:
   page_size: 50
   resizable: true
   default_sort:
-    field: created_at
-    dir: desc
+    field: sequence
+    dir: asc
   columns:
+    - field: sequence
+      width: 60px
+      sortable: true
     - field: title
       width: 2fr
       sortable: true
       pinned: left
     - field: status
       sortable: true
-    - field: priority
-      width: 80px
-      sortable: true
-    - field: type
-      width: 100px
-    - field: model
-      width: 100px
-    - field: cost
-      width: 80px
-      sortable: true
-    - field: created_at
+    - field: branch
       width: 150px
+    - field: cost_usd
+      width: 80px
       sortable: true
+    - field: run_count
+      width: 60px
   styles:
-    - when: { field: status, eq: failed }
-      class: text-red-500
-    - when: { field: status, eq: completed }
-      class: text-green-500
+    - when: { field: status, eq: queued }
+      class: text-zinc-500
     - when: { field: status, eq: running }
       class: text-blue-500
+    - when: { field: status, eq: completed }
+      class: text-green-500
+    - when: { field: status, eq: failed }
+      class: text-red-500
     - when: { field: status, eq: cancelled }
       class: text-yellow-500/60
-
-list:
-  group_by: status
-  title_field: title
-  subtitle: "{{type}} | {{model}}"
-  meta: [created_at, cost, priority]
+    - when: { field: status, eq: blocked }
+      class: text-orange-500
 
 board:
   group_by: status
   column_width: 280
-  card_create: true
-  drag: true
+  card_create: false
+  drag: false
 
-card:
-  title: title
-  subtitle: "{{type}} | {{model}}"
-  badges: [priority, status]
-  meta: [created_at, cost]
-  fields: [run_count, model]
-
-filters:  
+filters:
   - field: status
     pinned: true
     show_in: [toolbar]
-  - field: type
-    pinned: true
+  - field: prd_id
     show_in: [toolbar]
-  - field: priority
-    show_in: [toolbar, advanced]
-  - field: model
-    show_in: [advanced]
-  - field: created_at
-    show_in: [advanced]
-    type: date_range
+  - field: project_id
+    show_in: [toolbar]
 
 actions:
-  - name: execute
-    label: Execute
-    icon: play
-    style: default
-    show_in: [row, detail, bulk, context]
-    pinned: true
-    shortcut: "mod+e"
   - name: cancel
     label: Cancel
     icon: x-circle
     style: destructive
-    confirm: "This will stop any running executions. Continue?"
+    confirm: "Cancel this task?"
     show_in: [row, detail, context]
-    undo: true
-
-form:
-  layout: rows
-  rows:
-    - fields: [title]
-    - fields: [body]
-    - fields: [priority, type]
-    - fields: [repo_id, model]
-    - fields: [max_retries, timeout_secs]
+  - name: retry
+    label: Retry
+    icon: refresh-cw
+    style: default
+    show_in: [row, detail, context]
 
 detail:
   size: lg
@@ -130,33 +97,17 @@ detail:
   sections:
     - label: Overview
       columns: 2
-      fields: [title, body, status, type, priority, model]
+      fields: [title, status, sequence, branch, model, prd_id, project_id]
+    - label: Spec
+      fields: [spec, acceptance_criteria]
     - label: Execution
-      fields: [run_count, max_retries, timeout_secs, cost]
-    - label: Dependencies
-      fields: [parent_id, depends_on, labels]
-  sidebar:
-    fields: [status, priority, type, created_at, updated_at]
-
-fields:
-  title:
-    label: Task Name
-    placeholder: "Enter task name..."
-  body:
-    label: Description
-  priority:
-    label: Priority
-  repo_id:
-    label: Repository
-  cost:
-    readonly: true
-    label: Total Cost
+      columns: 2
+      fields: [run_count, max_retries, cost_usd, commit_hash, summary]
 
 empty:
-  title: No tasks yet
-  description: Create your first task to start automating with AI agents.
-  icon: clipboard-check
-  cta: Create Task
+  title: No tasks
+  description: Tasks are created when a PRD is planned.
+  icon: list-checks
 
 styles:
   - when: { field: status, eq: failed }

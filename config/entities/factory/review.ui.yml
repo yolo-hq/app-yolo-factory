@@ -1,0 +1,61 @@
+entity:
+  icon: check-circle
+  color: "#22c55e"
+  label: Review
+  plural: Reviews
+  description: Code review results from AI agents
+
+views:
+  default: table
+  options: [table]
+
+create:
+  mode: disabled
+
+table:
+  density: comfortable
+  page_size: 50
+  default_sort:
+    field: created_at
+    dir: desc
+  columns:
+    - field: verdict
+      sortable: true
+    - field: model
+      width: 100px
+    - field: cost_usd
+      width: 80px
+      sortable: true
+    - field: task_id
+      width: 200px
+    - field: run_id
+      width: 200px
+  styles:
+    - when: { field: verdict, eq: pass }
+      class: text-green-500
+    - when: { field: verdict, eq: fail }
+      class: text-red-500
+    - when: { field: verdict, eq: retry }
+      class: text-yellow-500
+
+filters:
+  - field: verdict
+    pinned: true
+    show_in: [toolbar]
+  - field: task_id
+    show_in: [toolbar]
+
+detail:
+  size: lg
+  layout: sections
+  sections:
+    - label: Overview
+      columns: 2
+      fields: [task_id, run_id, verdict, model, cost_usd]
+    - label: Results
+      fields: [criteria_results, reasons, anti_patterns, suggestions]
+
+empty:
+  title: No reviews
+  description: Reviews are created after task implementation.
+  icon: check-circle
