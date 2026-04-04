@@ -91,4 +91,5 @@ func setup() {
 
 	// Jobs
 	jobs.RegisterHandler(&factoryjobs.PlanPRDJob{})
+	jobs.RegisterHandler(&factoryjobs.ExecuteWorkflowJob{})
 }
