@@ -53,6 +53,6 @@ require (
 )
 
 replace (
-	github.com/yolo-hq/yolo => ../yolo
-	github.com/yolo-hq/yolo/core => ../yolo/core
+	github.com/yolo-hq/yolo => ../../yolo
+	github.com/yolo-hq/yolo/core => ../../yolo/core
 )
