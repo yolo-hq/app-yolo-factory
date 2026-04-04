@@ -2,22 +2,27 @@ package actions
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/yolo-hq/yolo/core/action"
+	"github.com/yolo-hq/yolo/core/entity"
+	"github.com/yolo-hq/yolo/core/jobs"
 	"github.com/yolo-hq/yolo/core/write"
 
 	"github.com/yolo-hq/app-yolo-factory/server/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/server/factory/inputs"
 )
 
-// CompleteRunAction records run completion metrics.
+// CompleteRunAction records run completion and drives the task/PRD state machine.
 type CompleteRunAction struct {
 	action.TypedInput[inputs.CompleteRunInput]
+	JobClient   *jobs.Client
+	WorkflowJob jobs.Handler
 }
 
 func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) action.Result {
-	_, r := action.FindOrFail[entities.Run](ctx, action.ReadRepo[entities.Run](actx), actx.EntityID)
+	run, r := action.FindOrFail[entities.Run](ctx, action.ReadRepo[entities.Run](actx), actx.EntityID)
 	if r != nil {
 		return *r
 	}
@@ -25,6 +30,7 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) a
 	input := a.Input(actx)
 	now := time.Now()
 
+	// 1. Update the run with completion data.
 	_, err := action.Write[entities.Run](actx).Exec(ctx, write.Update{
 		ID: actx.EntityID,
 		Set: write.Set{
@@ -46,6 +52,300 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) a
 		return action.Failure(err.Error())
 	}
 
+	// 2. Load the parent task.
+	task, err := action.ReadRepo[entities.Task](actx).FindOne(ctx, entity.FindOneOptions{ID: run.TaskID})
+	if err != nil || task == nil {
+		return action.Failure("failed to load task for run")
+	}
+
+	// 3. Dispatch based on run outcome.
+	taskRead := action.ReadRepo[entities.Task](actx)
+	taskWrite := action.WriteRepo[entities.Task](actx)
+	prdWrite := action.WriteRepo[entities.PRD](actx)
+
+	switch input.Status {
+	case "completed":
+		a.handleCompleted(ctx, actx, task, input, taskRead, taskWrite, prdWrite, now)
+	case "failed":
+		a.handleFailed(ctx, actx, task, input, taskRead, taskWrite, prdWrite)
+	}
+
 	actx.Resolve("Run", actx.EntityID)
 	return action.OK()
+}
+
+func (a *CompleteRunAction) handleCompleted(
+	ctx context.Context,
+	actx *action.Context,
+	task *entities.Task,
+	input inputs.CompleteRunInput,
+	taskRead entity.ReadRepository[entities.Task],
+	taskWrite entity.WriteRepository[entities.Task],
+	prdWrite entity.WriteRepository[entities.PRD],
+	now time.Time,
+) {
+	// a. Update task: done, accumulate cost.
+	summary := truncate(input.Result, 500)
+	_, _ = taskWrite.Update(ctx).
+		WhereID(task.ID).
+		Set("status", "done").
+		Set("cost_usd", task.CostUSD+input.CostUSD).
+		Set("commit_hash", input.CommitHash).
+		Set("summary", summary).
+		Set("completed_at", now).
+		Exec(ctx)
+
+	// b. Unblock dependent tasks.
+	unblockedIDs := unblockDependents(ctx, taskRead, taskWrite, task.ID)
+
+	// c. Update PRD counters and check completion.
+	updatePRDCounters(ctx, taskRead, action.ReadRepo[entities.PRD](actx), prdWrite, task.PrdID)
+
+	// d. Trigger next queued task — prefer newly unblocked, else next by sequence.
+	nextID := ""
+	if len(unblockedIDs) > 0 {
+		nextID = unblockedIDs[0]
+	} else {
+		nextID = findNextQueued(ctx, taskRead, task.PrdID)
+	}
+	if nextID != "" && a.JobClient != nil && a.WorkflowJob != nil {
+		_, _ = a.JobClient.Dispatch(ctx, a.WorkflowJob, map[string]string{
+			"task_id": nextID,
+		})
+	}
+}
+
+func (a *CompleteRunAction) handleFailed(
+	ctx context.Context,
+	actx *action.Context,
+	task *entities.Task,
+	input inputs.CompleteRunInput,
+	taskRead entity.ReadRepository[entities.Task],
+	taskWrite entity.WriteRepository[entities.Task],
+	prdWrite entity.WriteRepository[entities.PRD],
+) {
+	// a. Accumulate cost, increment run count.
+	newRunCount := task.RunCount + 1
+	newCost := task.CostUSD + input.CostUSD
+
+	if newRunCount < task.MaxRetries {
+		// Retry: requeue the task.
+		_, _ = taskWrite.Update(ctx).
+			WhereID(task.ID).
+			Set("status", "queued").
+			Set("cost_usd", newCost).
+			Set("run_count", newRunCount).
+			Exec(ctx)
+
+		// Enqueue retry.
+		if a.JobClient != nil && a.WorkflowJob != nil {
+			_, _ = a.JobClient.Dispatch(ctx, a.WorkflowJob, map[string]string{
+				"task_id": task.ID,
+			})
+		}
+	} else {
+		// Exhausted retries: mark failed.
+		_, _ = taskWrite.Update(ctx).
+			WhereID(task.ID).
+			Set("status", "failed").
+			Set("cost_usd", newCost).
+			Set("run_count", newRunCount).
+			Exec(ctx)
+
+		// Cascade failure to downstream dependents.
+		cascadeFailure(ctx, taskRead, taskWrite, task.ID, task.PrdID)
+
+		// Update PRD counters.
+		updatePRDCounters(ctx, taskRead, action.ReadRepo[entities.PRD](actx), prdWrite, task.PrdID)
+	}
+}
+
+// --- Helper functions ---
+
+// parseDeps parses a JSON array string into a slice of strings.
+// Returns nil for empty, null, or invalid input.
+func parseDeps(jsonStr string) []string {
+	if jsonStr == "" || jsonStr == "null" || jsonStr == "[]" {
+		return nil
+	}
+	var deps []string
+	if err := json.Unmarshal([]byte(jsonStr), &deps); err != nil {
+		return nil
+	}
+	return deps
+}
+
+// unblockDependents finds blocked tasks depending on completedTaskID
+// and transitions them to "queued" if all their deps are met.
+// Returns IDs of newly unblocked tasks.
+func unblockDependents(
+	ctx context.Context,
+	taskRead entity.ReadRepository[entities.Task],
+	taskWrite entity.WriteRepository[entities.Task],
+	completedTaskID string,
+) []string {
+	result, err := taskRead.FindMany(ctx, entity.FindOptions{
+		Filters: []entity.FilterCondition{
+			{Field: "status", Operator: entity.OpEq, Value: "blocked"},
+		},
+	})
+	if err != nil {
+		return nil
+	}
+
+	var unblocked []string
+	for _, t := range result.Data {
+		deps := parseDeps(t.DependsOn)
+		if !containsDep(deps, completedTaskID) {
+			continue
+		}
+		if !allDepsMet(ctx, taskRead, deps) {
+			continue
+		}
+		_, err := taskWrite.Update(ctx).
+			WhereID(t.ID).
+			Set("status", "queued").
+			Exec(ctx)
+		if err == nil {
+			unblocked = append(unblocked, t.ID)
+		}
+	}
+	return unblocked
+}
+
+// allDepsMet checks if every dep ID has status "done".
+func allDepsMet(ctx context.Context, taskRead entity.ReadRepository[entities.Task], depIDs []string) bool {
+	for _, id := range depIDs {
+		t, err := taskRead.FindOne(ctx, entity.FindOneOptions{ID: id})
+		if err != nil || t == nil || t.Status != "done" {
+			return false
+		}
+	}
+	return true
+}
+
+// cascadeFailure recursively marks tasks that depend on failedTaskID as "failed".
+func cascadeFailure(
+	ctx context.Context,
+	taskRead entity.ReadRepository[entities.Task],
+	taskWrite entity.WriteRepository[entities.Task],
+	failedTaskID string,
+	prdID string,
+) {
+	// Load all non-terminal tasks in the same PRD.
+	result, err := taskRead.FindMany(ctx, entity.FindOptions{
+		Filters: []entity.FilterCondition{
+			{Field: "prd_id", Operator: entity.OpEq, Value: prdID},
+		},
+	})
+	if err != nil {
+		return
+	}
+
+	// Find direct dependents of the failed task.
+	for _, t := range result.Data {
+		if t.Status == "done" || t.Status == "failed" || t.Status == "cancelled" {
+			continue
+		}
+		deps := parseDeps(t.DependsOn)
+		if !containsDep(deps, failedTaskID) {
+			continue
+		}
+		_, err := taskWrite.Update(ctx).
+			WhereID(t.ID).
+			Set("status", "failed").
+			Exec(ctx)
+		if err == nil {
+			// Recurse: cascade to tasks depending on this one.
+			cascadeFailure(ctx, taskRead, taskWrite, t.ID, prdID)
+		}
+	}
+}
+
+// findNextQueued finds the next queued task in the PRD ordered by sequence.
+func findNextQueued(ctx context.Context, taskRead entity.ReadRepository[entities.Task], prdID string) string {
+	result, err := taskRead.FindMany(ctx, entity.FindOptions{
+		Filters: []entity.FilterCondition{
+			{Field: "prd_id", Operator: entity.OpEq, Value: prdID},
+			{Field: "status", Operator: entity.OpEq, Value: "queued"},
+		},
+		Sort:       &entity.SortParams{Field: "sequence", Order: "asc"},
+		Pagination: &entity.PaginationParams{Limit: 1},
+	})
+	if err != nil || len(result.Data) == 0 {
+		return ""
+	}
+	return result.Data[0].ID
+}
+
+// updatePRDCounters recalculates completed/failed task counts and cost,
+// and checks if the PRD is fully complete.
+func updatePRDCounters(
+	ctx context.Context,
+	taskRead entity.ReadRepository[entities.Task],
+	prdRead entity.ReadRepository[entities.PRD],
+	prdWrite entity.WriteRepository[entities.PRD],
+	prdID string,
+) {
+	// Count task statuses for this PRD.
+	result, err := taskRead.FindMany(ctx, entity.FindOptions{
+		Filters: []entity.FilterCondition{
+			{Field: "prd_id", Operator: entity.OpEq, Value: prdID},
+		},
+	})
+	if err != nil {
+		return
+	}
+
+	var completed, failed, total int
+	var totalCost float64
+	for _, t := range result.Data {
+		total++
+		totalCost += t.CostUSD
+		switch t.Status {
+		case "done":
+			completed++
+		case "failed":
+			failed++
+		}
+	}
+
+	_, _ = prdWrite.Update(ctx).
+		WhereID(prdID).
+		Set("completed_tasks", completed).
+		Set("failed_tasks", failed).
+		Set("total_cost_usd", totalCost).
+		Exec(ctx)
+
+	// Check if PRD is complete: all tasks are in a terminal state.
+	if total > 0 && (completed+failed) == total {
+		now := time.Now()
+		status := "completed"
+		if failed > 0 {
+			status = "failed"
+		}
+		_, _ = prdWrite.Update(ctx).
+			WhereID(prdID).
+			Set("status", status).
+			Set("completed_at", now).
+			Exec(ctx)
+	}
+}
+
+// containsDep checks if needle is in the slice.
+func containsDep(deps []string, needle string) bool {
+	for _, d := range deps {
+		if d == needle {
+			return true
+		}
+	}
+	return false
+}
+
+// truncate returns s truncated to maxLen characters.
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen]
 }
