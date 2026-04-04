@@ -10,10 +10,10 @@ import (
 )
 
 func TestParseDepsJSON(t *testing.T) {
-	assert.Nil(t, parseDepsJSON(""))
-	assert.Nil(t, parseDepsJSON("[]"))
-	assert.Nil(t, parseDepsJSON("invalid"))
-	assert.Equal(t, []string{"a", "b"}, parseDepsJSON(`["a","b"]`))
+	assert.Nil(t, ParseDeps(""))
+	assert.Nil(t, ParseDeps("[]"))
+	assert.Nil(t, ParseDeps("invalid"))
+	assert.Equal(t, []string{"a", "b"}, ParseDeps(`["a","b"]`))
 }
 
 func TestDetectCycle_NoCycle(t *testing.T) {
@@ -58,7 +58,7 @@ func TestContainsStr(t *testing.T) {
 	assert.False(t, containsStr(nil, "a"))
 }
 
-func TestToJSON(t *testing.T) {
-	assert.Equal(t, `["a","b"]`, toJSON([]string{"a", "b"}))
-	assert.Equal(t, "[]", toJSON([]string{}))
+func TestToJSON_Dep(t *testing.T) {
+	assert.Equal(t, `["a","b"]`, ToJSON([]string{"a", "b"}))
+	assert.Equal(t, "[]", ToJSON([]string{}))
 }

@@ -70,7 +70,7 @@ func (j *PlanPRDJob) Handle(ctx context.Context, payload []byte) error {
 		// Mark PRD as failed on planner error.
 		_, _ = j.PRDWrite.Update(ctx).
 			WhereID(prd.ID).
-			Set("status", "failed").
+			Set("status", entities.PRDFailed).
 			Exec(ctx)
 		return fmt.Errorf("planner: %w", err)
 	}
@@ -86,7 +86,7 @@ func (j *PlanPRDJob) Handle(ctx context.Context, payload []byte) error {
 	_, err = j.PRDWrite.Update(ctx).
 		WhereID(prd.ID).
 		Set("total_tasks", out.Count).
-		Set("status", "approved").
+		Set("status", entities.PRDApproved).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("update prd: %w", err)

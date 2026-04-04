@@ -79,7 +79,7 @@ func TestParseTestCommands_InvalidJSON(t *testing.T) {
 }
 
 func TestTruncateSummary_Short(t *testing.T) {
-	got := truncateSummary("short text", 500)
+	got := Truncate("short text", 500)
 	assert.Equal(t, "short text", got)
 }
 
@@ -88,14 +88,14 @@ func TestTruncateSummary_Long(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		long += "abcdefghij" // 1000 chars
 	}
-	got := truncateSummary(long, 500)
-	assert.Len(t, got, 500)
-	assert.Equal(t, long[:500], got)
+	got := Truncate(long, 500)
+	assert.Len(t, got, 503) // 500 + "..."
+	assert.Equal(t, long[:500]+"...", got)
 }
 
 func TestTruncateSummary_ExactLength(t *testing.T) {
 	text := "12345"
-	got := truncateSummary(text, 5)
+	got := Truncate(text, 5)
 	assert.Equal(t, "12345", got)
 }
 

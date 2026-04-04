@@ -2,7 +2,6 @@ package actions
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 
 	"github.com/yolo-hq/app-yolo-factory/server/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/server/factory/inputs"
+	"github.com/yolo-hq/app-yolo-factory/server/factory/services"
 )
 
 // CompleteRunAction records run completion and drives the task/PRD state machine.
@@ -65,9 +65,9 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) a
 	prdWrite := action.WriteRepo[entities.PRD](actx)
 
 	switch input.Status {
-	case "completed":
+	case entities.RunCompleted:
 		a.handleCompleted(ctx, actx, task, input, taskRead, taskWrite, prdWrite, now)
-	case "failed":
+	case entities.RunFailed:
 		a.handleFailed(ctx, actx, task, input, taskRead, taskWrite, prdWrite)
 	}
 
@@ -86,10 +86,10 @@ func (a *CompleteRunAction) handleCompleted(
 	now time.Time,
 ) {
 	// a. Update task: done, accumulate cost (critical path).
-	summary := truncate(input.Result, 500)
+	summary := services.Truncate(input.Result, 500)
 	if _, err := taskWrite.Update(ctx).
 		WhereID(task.ID).
-		Set("status", "done").
+		Set("status", entities.TaskDone).
 		Set("cost_usd", task.CostUSD+input.CostUSD).
 		Set("commit_hash", input.CommitHash).
 		Set("summary", summary).
@@ -140,7 +140,7 @@ func (a *CompleteRunAction) handleFailed(
 		// Retry: requeue the task (critical path).
 		if _, err := taskWrite.Update(ctx).
 			WhereID(task.ID).
-			Set("status", "queued").
+			Set("status", entities.TaskQueued).
 			Set("cost_usd", newCost).
 			Set("run_count", newRunCount).
 			Exec(ctx); err != nil {
@@ -160,7 +160,7 @@ func (a *CompleteRunAction) handleFailed(
 		// Exhausted retries: mark failed (critical path).
 		if _, err := taskWrite.Update(ctx).
 			WhereID(task.ID).
-			Set("status", "failed").
+			Set("status", entities.TaskFailed).
 			Set("cost_usd", newCost).
 			Set("run_count", newRunCount).
 			Exec(ctx); err != nil {
@@ -180,19 +180,6 @@ func (a *CompleteRunAction) handleFailed(
 
 // --- Helper functions ---
 
-// parseDeps parses a JSON array string into a slice of strings.
-// Returns nil for empty, null, or invalid input.
-func parseDeps(jsonStr string) []string {
-	if jsonStr == "" || jsonStr == "null" || jsonStr == "[]" {
-		return nil
-	}
-	var deps []string
-	if err := json.Unmarshal([]byte(jsonStr), &deps); err != nil {
-		return nil
-	}
-	return deps
-}
-
 // unblockDependents finds blocked tasks depending on completedTaskID
 // and transitions them to "queued" if all their deps are met.
 // Returns IDs of newly unblocked tasks.
@@ -204,7 +191,7 @@ func unblockDependents(
 ) []string {
 	result, err := taskRead.FindMany(ctx, entity.FindOptions{
 		Filters: []entity.FilterCondition{
-			{Field: "status", Operator: entity.OpEq, Value: "blocked"},
+			{Field: "status", Operator: entity.OpEq, Value: entities.TaskBlocked},
 		},
 	})
 	if err != nil {
@@ -213,16 +200,15 @@ func unblockDependents(
 
 	var unblocked []string
 	for _, t := range result.Data {
-		deps := parseDeps(t.DependsOn)
-		if !containsDep(deps, completedTaskID) {
+		if !services.ContainsDep(t.DependsOn, completedTaskID) {
 			continue
 		}
-		if !allDepsMet(ctx, taskRead, deps) {
+		if !allDepsMet(ctx, taskRead, services.ParseDeps(t.DependsOn)) {
 			continue
 		}
 		_, err := taskWrite.Update(ctx).
 			WhereID(t.ID).
-			Set("status", "queued").
+			Set("status", entities.TaskQueued).
 			Exec(ctx)
 		if err == nil {
 			unblocked = append(unblocked, t.ID)
@@ -235,7 +221,7 @@ func unblockDependents(
 func allDepsMet(ctx context.Context, taskRead entity.ReadRepository[entities.Task], depIDs []string) bool {
 	for _, id := range depIDs {
 		t, err := taskRead.FindOne(ctx, entity.FindOneOptions{ID: id})
-		if err != nil || t == nil || t.Status != "done" {
+		if err != nil || t == nil || t.Status != entities.TaskDone {
 			return false
 		}
 	}
@@ -262,16 +248,15 @@ func cascadeFailure(
 
 	// Find direct dependents of the failed task.
 	for _, t := range result.Data {
-		if t.Status == "done" || t.Status == "failed" || t.Status == "cancelled" {
+		if t.Status == entities.TaskDone || t.Status == entities.TaskFailed || t.Status == entities.TaskCancelled {
 			continue
 		}
-		deps := parseDeps(t.DependsOn)
-		if !containsDep(deps, failedTaskID) {
+		if !services.ContainsDep(t.DependsOn, failedTaskID) {
 			continue
 		}
 		_, err := taskWrite.Update(ctx).
 			WhereID(t.ID).
-			Set("status", "failed").
+			Set("status", entities.TaskFailed).
 			Exec(ctx)
 		if err == nil {
 			// Recurse: cascade to tasks depending on this one.
@@ -285,7 +270,7 @@ func findNextQueued(ctx context.Context, taskRead entity.ReadRepository[entities
 	result, err := taskRead.FindMany(ctx, entity.FindOptions{
 		Filters: []entity.FilterCondition{
 			{Field: "prd_id", Operator: entity.OpEq, Value: prdID},
-			{Field: "status", Operator: entity.OpEq, Value: "queued"},
+			{Field: "status", Operator: entity.OpEq, Value: entities.TaskQueued},
 		},
 		Sort:       &entity.SortParams{Field: "sequence", Order: "asc"},
 		Pagination: &entity.PaginationParams{Limit: 1},
@@ -321,9 +306,9 @@ func updatePRDCounters(
 		total++
 		totalCost += t.CostUSD
 		switch t.Status {
-		case "done":
+		case entities.TaskDone:
 			completed++
-		case "failed":
+		case entities.TaskFailed:
 			failed++
 		}
 	}
@@ -340,9 +325,9 @@ func updatePRDCounters(
 	// Check if PRD is complete: all tasks are in a terminal state.
 	if total > 0 && (completed+failed) == total {
 		now := time.Now()
-		status := "completed"
+		status := entities.PRDCompleted
 		if failed > 0 {
-			status = "failed"
+			status = entities.PRDFailed
 		}
 		if _, err := prdWrite.Update(ctx).
 			WhereID(prdID).
@@ -355,20 +340,3 @@ func updatePRDCounters(
 	return nil
 }
 
-// containsDep checks if needle is in the slice.
-func containsDep(deps []string, needle string) bool {
-	for _, d := range deps {
-		if d == needle {
-			return true
-		}
-	}
-	return false
-}
-
-// truncate returns s truncated to maxLen characters.
-func truncate(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen]
-}

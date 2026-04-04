@@ -66,8 +66,8 @@ func (c *PRDSubmit) Execute(ctx context.Context, cctx command.Context) error {
 		Title:              input.Title,
 		Body:               body,
 		AcceptanceCriteria: input.Criteria,
-		Status:             "draft",
-		Source:             "manual",
+		Status:             entities.PRDDraft,
+		Source:             entities.SourceManual,
 		CreatedBy:          "human",
 	}
 
@@ -200,7 +200,7 @@ func (c *PRDApprove) Execute(ctx context.Context, cctx command.Context) error {
 	}
 	w := repo.(entity.WriteRepository[entities.PRD])
 
-	if _, err := w.Update(ctx).WhereID(id).Set("status", "approved").Exec(ctx); err != nil {
+	if _, err := w.Update(ctx).WhereID(id).Set("status", entities.PRDApproved).Exec(ctx); err != nil {
 		return fmt.Errorf("approve prd: %w", err)
 	}
 
@@ -230,7 +230,7 @@ func (c *PRDExecute) Execute(ctx context.Context, cctx command.Context) error {
 	}
 	w := repo.(entity.WriteRepository[entities.PRD])
 
-	if _, err := w.Update(ctx).WhereID(id).Set("status", "in_progress").Exec(ctx); err != nil {
+	if _, err := w.Update(ctx).WhereID(id).Set("status", entities.PRDInProgress).Exec(ctx); err != nil {
 		return fmt.Errorf("update prd: %w", err)
 	}
 

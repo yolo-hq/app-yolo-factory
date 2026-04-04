@@ -20,13 +20,13 @@ func (a *PauseProjectAction) Execute(ctx context.Context, actx *action.Context) 
 		return *r
 	}
 
-	if project.Status != "active" {
+	if project.Status != entities.ProjectActive {
 		return action.Failure("project must be active to pause")
 	}
 
 	_, err := action.Write[entities.Project](actx).Exec(ctx, write.Update{
 		ID:  actx.EntityID,
-		Set: write.Set{write.NewField[string]("status").Value("paused")},
+		Set: write.Set{write.NewField[string]("status").Value(entities.ProjectPaused)},
 	})
 	if err != nil {
 		return action.Failure(err.Error())

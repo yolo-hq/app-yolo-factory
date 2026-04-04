@@ -91,7 +91,7 @@ func (c *QuestionAnswer) Execute(ctx context.Context, cctx command.Context) erro
 
 	now := time.Now()
 	if _, err := w.Update(ctx).WhereID(id).
-		Set("status", "answered").
+		Set("status", entities.QuestionAnswered).
 		Set("answer", answer).
 		Set("answered_by", "human").
 		Set("answered_at", now).

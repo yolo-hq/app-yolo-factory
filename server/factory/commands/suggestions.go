@@ -108,7 +108,7 @@ func (c *SuggestionApprove) Execute(ctx context.Context, cctx command.Context) e
 	}
 	w := repo.(entity.WriteRepository[entities.Suggestion])
 
-	if _, err := w.Update(ctx).WhereID(id).Set("status", "accepted").Exec(ctx); err != nil {
+	if _, err := w.Update(ctx).WhereID(id).Set("status", entities.SuggestionApproved).Exec(ctx); err != nil {
 		return fmt.Errorf("approve suggestion: %w", err)
 	}
 
@@ -142,7 +142,7 @@ func (c *SuggestionReject) Execute(ctx context.Context, cctx command.Context) er
 	}
 	w := repo.(entity.WriteRepository[entities.Suggestion])
 
-	if _, err := w.Update(ctx).WhereID(id).Set("status", "rejected").Exec(ctx); err != nil {
+	if _, err := w.Update(ctx).WhereID(id).Set("status", entities.SuggestionRejected).Exec(ctx); err != nil {
 		return fmt.Errorf("reject suggestion: %w", err)
 	}
 

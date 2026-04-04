@@ -2,6 +2,8 @@ package actions
 
 import (
 	"testing"
+
+	"github.com/yolo-hq/app-yolo-factory/server/factory/services"
 )
 
 func TestParseDeps(t *testing.T) {
@@ -16,13 +18,13 @@ func TestParseDeps(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := parseDeps(tt.input)
+			got := services.ParseDeps(tt.input)
 			if len(got) != len(tt.want) {
-				t.Fatalf("parseDeps(%q) = %v, want %v", tt.input, got, tt.want)
+				t.Fatalf("ParseDeps(%q) = %v, want %v", tt.input, got, tt.want)
 			}
 			for i := range got {
 				if got[i] != tt.want[i] {
-					t.Errorf("parseDeps(%q)[%d] = %q, want %q", tt.input, i, got[i], tt.want[i])
+					t.Errorf("ParseDeps(%q)[%d] = %q, want %q", tt.input, i, got[i], tt.want[i])
 				}
 			}
 		})
@@ -42,36 +44,36 @@ func TestParseDeps_Empty(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := parseDeps(tt.input)
+			got := services.ParseDeps(tt.input)
 			if got != nil {
-				t.Errorf("parseDeps(%q) = %v, want nil", tt.input, got)
+				t.Errorf("ParseDeps(%q) = %v, want nil", tt.input, got)
 			}
 		})
 	}
 }
 
 func TestContainsDep(t *testing.T) {
-	deps := []string{"a", "b", "c"}
-	if !containsDep(deps, "b") {
-		t.Error("containsDep should find 'b'")
+	depsJSON := `["a","b","c"]`
+	if !services.ContainsDep(depsJSON, "b") {
+		t.Error("ContainsDep should find 'b'")
 	}
-	if containsDep(deps, "d") {
-		t.Error("containsDep should not find 'd'")
+	if services.ContainsDep(depsJSON, "d") {
+		t.Error("ContainsDep should not find 'd'")
 	}
-	if containsDep(nil, "a") {
-		t.Error("containsDep(nil) should return false")
+	if services.ContainsDep("[]", "a") {
+		t.Error("ContainsDep([]) should return false")
 	}
 }
 
 func TestTruncate(t *testing.T) {
-	if got := truncate("hello", 10); got != "hello" {
-		t.Errorf("truncate short string: got %q", got)
+	if got := services.Truncate("hello", 10); got != "hello" {
+		t.Errorf("Truncate short string: got %q", got)
 	}
-	if got := truncate("hello world", 5); got != "hello" {
-		t.Errorf("truncate long string: got %q", got)
+	if got := services.Truncate("hello world", 5); got != "hello..." {
+		t.Errorf("Truncate long string: got %q", got)
 	}
-	if got := truncate("", 5); got != "" {
-		t.Errorf("truncate empty: got %q", got)
+	if got := services.Truncate("", 5); got != "" {
+		t.Errorf("Truncate empty: got %q", got)
 	}
 }
 

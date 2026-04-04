@@ -40,7 +40,7 @@ func (c *SentinelRun) Execute(ctx context.Context, cctx command.Context) error {
 
 		result, err := r.FindMany(ctx, entity.FindOptions{
 			Filters: []entity.FilterCondition{
-				{Field: "status", Operator: entity.OpEq, Value: "active"},
+				{Field: "status", Operator: entity.OpEq, Value: entities.ProjectActive},
 			},
 		})
 		if err != nil {

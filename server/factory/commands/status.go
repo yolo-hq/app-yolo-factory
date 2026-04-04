@@ -39,7 +39,7 @@ func (c *Status) Execute(ctx context.Context, cctx command.Context) error {
 	cctx.Print("=== Factory Status ===")
 	cctx.Print("")
 	cctx.Print("Tasks:")
-	for _, s := range []string{"queued", "running", "completed", "failed", "cancelled", "blocked"} {
+	for _, s := range []string{entities.TaskQueued, entities.TaskRunning, entities.TaskDone, entities.TaskFailed, entities.TaskCancelled, entities.TaskBlocked} {
 		if c := counts[s]; c > 0 {
 			cctx.Print("  %-12s %d", s, c)
 		}
@@ -55,7 +55,7 @@ func (c *Status) Execute(ctx context.Context, cctx command.Context) error {
 
 	activePRDs, err := pr.FindMany(ctx, entity.FindOptions{
 		Filters: []entity.FilterCondition{
-			{Field: "status", Operator: entity.OpEq, Value: "in_progress"},
+			{Field: "status", Operator: entity.OpEq, Value: entities.PRDInProgress},
 		},
 	})
 	if err != nil {

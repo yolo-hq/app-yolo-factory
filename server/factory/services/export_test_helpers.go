@@ -16,14 +16,6 @@ func ExportParseTestCommands(raw string) []string {
 	return parseTestCommands(raw)
 }
 
-func ExportTruncateSummary(text string, maxLen int) string {
-	return truncateSummary(text, maxLen)
-}
-
 func ExportDetectCycle(taskID string, dependsOn []string, allTasks map[string]*entities.Task) error {
 	return detectCycle(taskID, dependsOn, allTasks)
-}
-
-func ExportParseDepsJSON(jsonStr string) []string {
-	return parseDepsJSON(jsonStr)
 }

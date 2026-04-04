@@ -24,19 +24,19 @@ func (a *SubmitPRDAction) Execute(ctx context.Context, actx *action.Context) act
 	if r != nil {
 		return *r
 	}
-	if project.Status != "active" {
+	if project.Status != entities.ProjectActive {
 		return action.Failure("project must be active to submit a PRD")
 	}
 
 	source := input.Source
 	if source == "" {
-		source = "manual"
+		source = entities.SourceManual
 	}
 
 	res, err := action.Write[entities.PRD](actx).Exec(ctx, write.Create{
 		FromInput: input,
 		Set: write.Set{
-			write.NewField[string]("status").Value("draft"),
+			write.NewField[string]("status").Value(entities.PRDDraft),
 			write.NewField[string]("created_by").Value("human"),
 			write.NewField[string]("source").Value(source),
 		},

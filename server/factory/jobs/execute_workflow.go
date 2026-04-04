@@ -76,7 +76,7 @@ func (j *ExecuteWorkflowJob) Handle(ctx context.Context, payload []byte) error {
 	now := time.Now()
 	_, err = j.TaskWrite.Update(ctx).
 		WhereID(task.ID).
-		Set("status", "running").
+		Set("status", entities.TaskRunning).
 		Set("started_at", now).
 		Set("run_count", task.RunCount+1).
 		Exec(ctx)
@@ -95,7 +95,7 @@ func (j *ExecuteWorkflowJob) Handle(ctx context.Context, payload []byte) error {
 		// No Run entity was created, so mark task failed directly as a safety net.
 		if _, taskErr := j.TaskWrite.Update(ctx).
 			WhereID(task.ID).
-			Set("status", "failed").
+			Set("status", entities.TaskFailed).
 			Exec(ctx); taskErr != nil {
 			return fmt.Errorf("orchestrator: %w (also failed to update task: %v)", err, taskErr)
 		}

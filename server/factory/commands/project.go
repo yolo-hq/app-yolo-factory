@@ -42,7 +42,7 @@ func (c *ProjectAdd) Execute(ctx context.Context, cctx command.Context) error {
 		LocalPath:     input.LocalPath,
 		DefaultBranch: input.Branch,
 		DefaultModel:  input.Model,
-		Status:        "active",
+		Status:        entities.ProjectActive,
 	}
 	if p.DefaultBranch == "" {
 		p.DefaultBranch = "main"
@@ -213,7 +213,7 @@ func (c *ProjectPause) Execute(ctx context.Context, cctx command.Context) error 
 	}
 	w := repo.(entity.WriteRepository[entities.Project])
 
-	if _, err := w.Update(ctx).WhereID(id).Set("status", "paused").Exec(ctx); err != nil {
+	if _, err := w.Update(ctx).WhereID(id).Set("status", entities.ProjectPaused).Exec(ctx); err != nil {
 		return fmt.Errorf("pause project: %w", err)
 	}
 
@@ -242,7 +242,7 @@ func (c *ProjectResume) Execute(ctx context.Context, cctx command.Context) error
 	}
 	w := repo.(entity.WriteRepository[entities.Project])
 
-	if _, err := w.Update(ctx).WhereID(id).Set("status", "active").Exec(ctx); err != nil {
+	if _, err := w.Update(ctx).WhereID(id).Set("status", entities.ProjectActive).Exec(ctx); err != nil {
 		return fmt.Errorf("resume project: %w", err)
 	}
 
@@ -271,7 +271,7 @@ func (c *ProjectArchive) Execute(ctx context.Context, cctx command.Context) erro
 	}
 	w := repo.(entity.WriteRepository[entities.Project])
 
-	if _, err := w.Update(ctx).WhereID(id).Set("status", "archived").Exec(ctx); err != nil {
+	if _, err := w.Update(ctx).WhereID(id).Set("status", entities.ProjectArchived).Exec(ctx); err != nil {
 		return fmt.Errorf("archive project: %w", err)
 	}
 

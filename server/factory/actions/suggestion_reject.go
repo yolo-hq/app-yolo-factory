@@ -26,7 +26,7 @@ func (a *RejectSuggestionAction) Execute(ctx context.Context, actx *action.Conte
 
 	_, err := action.Write[entities.Suggestion](actx).Exec(ctx, write.Update{
 		ID:  actx.EntityID,
-		Set: write.Set{write.NewField[string]("status").Value("rejected")},
+		Set: write.Set{write.NewField[string]("status").Value(entities.SuggestionRejected)},
 	})
 	if err != nil {
 		return action.Failure(err.Error())

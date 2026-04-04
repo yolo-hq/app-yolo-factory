@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/yolo-hq/yolo/core/entity"
@@ -86,7 +85,7 @@ func (s *DependencyService) Execute(ctx context.Context, in DependencyInput) (De
 	// Check which deps are not done.
 	for _, depID := range in.DependsOn {
 		t := taskMap[depID]
-		if t.Status != "done" {
+		if t.Status != entities.TaskDone {
 			out.AllMet = false
 			out.BlockedBy = append(out.BlockedBy, depID)
 		}
@@ -113,7 +112,7 @@ func (s *DependencyService) Unblock(ctx context.Context, in UnblockInput) (Unblo
 	// Load all blocked tasks.
 	result, err := s.TaskRead.FindMany(ctx, entity.FindOptions{
 		Filters: []entity.FilterCondition{
-			{Field: "status", Operator: entity.OpEq, Value: "blocked"},
+			{Field: "status", Operator: entity.OpEq, Value: entities.TaskBlocked},
 		},
 	})
 	if err != nil {
@@ -121,7 +120,7 @@ func (s *DependencyService) Unblock(ctx context.Context, in UnblockInput) (Unblo
 	}
 
 	for _, task := range result.Data {
-		deps := parseDepsJSON(task.DependsOn)
+		deps := ParseDeps(task.DependsOn)
 		if !containsStr(deps, in.CompletedTaskID) {
 			continue
 		}
@@ -138,7 +137,7 @@ func (s *DependencyService) Unblock(ctx context.Context, in UnblockInput) (Unblo
 		// Transition blocked → queued.
 		_, err = s.TaskWrite.Update(ctx).
 			WhereID(task.ID).
-			Set("status", "queued").
+			Set("status", entities.TaskQueued).
 			Exec(ctx)
 		if err != nil {
 			return out, fmt.Errorf("unblock task %s: %w", task.ID, err)
@@ -155,7 +154,7 @@ func (s *DependencyService) allDepsDone(ctx context.Context, depIDs []string) (b
 		if err != nil {
 			return false, err
 		}
-		if t == nil || t.Status != "done" {
+		if t == nil || t.Status != entities.TaskDone {
 			return false, nil
 		}
 	}
@@ -169,7 +168,7 @@ func detectCycle(taskID string, dependsOn []string, allTasks map[string]*entitie
 
 	// Temporarily add the candidate task.
 	orig, existed := allTasks[taskID]
-	allTasks[taskID] = &entities.Task{DependsOn: toJSON(dependsOn)}
+	allTasks[taskID] = &entities.Task{DependsOn: ToJSON(dependsOn)}
 	defer func() {
 		if existed {
 			allTasks[taskID] = orig
@@ -189,7 +188,7 @@ func detectCycle(taskID string, dependsOn []string, allTasks map[string]*entitie
 			return nil
 		}
 
-		for _, depID := range parseDepsJSON(t.DependsOn) {
+		for _, depID := range ParseDeps(t.DependsOn) {
 			if path[depID] {
 				return fmt.Errorf("cycle detected: %s -> %s", id, depID)
 			}
@@ -205,24 +204,6 @@ func detectCycle(taskID string, dependsOn []string, allTasks map[string]*entitie
 	}
 
 	return dfs(taskID)
-}
-
-// parseDepsJSON parses a JSON array string into a slice of strings.
-// Returns nil for empty/invalid input.
-func parseDepsJSON(jsonStr string) []string {
-	if jsonStr == "" || jsonStr == "[]" {
-		return nil
-	}
-	var deps []string
-	if err := json.Unmarshal([]byte(jsonStr), &deps); err != nil {
-		return nil
-	}
-	return deps
-}
-
-func toJSON(ss []string) string {
-	b, _ := json.Marshal(ss)
-	return string(b)
 }
 
 func containsStr(ss []string, s string) bool {

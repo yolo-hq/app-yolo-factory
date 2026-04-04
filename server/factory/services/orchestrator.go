@@ -74,7 +74,7 @@ type StepResult struct {
 
 // Execute runs the full task workflow and returns the result.
 func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput) (OrchestratorOutput, error) {
-	out := OrchestratorOutput{Status: "failed"}
+	out := OrchestratorOutput{Status: entities.RunFailed}
 
 	// 1. Determine working directory.
 	workDir := workingDir(in.Project, in.Task.ID)
@@ -124,8 +124,8 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	now := time.Now()
 	run := entities.Run{
 		TaskID:      in.Task.ID,
-		AgentType:   "implementer",
-		Status:      "running",
+		AgentType:   entities.AgentImplementer,
+		Status:      entities.RunRunning,
 		Model:       model,
 		BranchName:  branchName,
 		StartedAt:   now,
@@ -151,8 +151,8 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	planResult, err := s.executeStep(ctx, StepParams{
 		RunID:  runID,
 		TaskID: in.Task.ID,
-		Phase:  "plan",
-		Skill:  "plan",
+		Phase:  entities.PhasePlan,
+		Skill:  entities.PhasePlan,
 		Model:  "opus",
 		Config: claude.Config{
 			Model:          "opus",
@@ -173,7 +173,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	steps = append(steps, planResult.Step)
 	totalCost += planResult.Step.CostUSD
 	if planResult.Failed {
-		return s.buildOutput(run, steps, nil, totalCost, "failed", planResult), nil
+		return s.buildOutput(run, steps, nil, totalCost, entities.RunFailed, planResult), nil
 	}
 
 	// 7. Step 2: IMPLEMENT — resume plan session.
@@ -191,8 +191,8 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	implResult, err := s.executeStep(ctx, StepParams{
 		RunID:    runID,
 		TaskID:   in.Task.ID,
-		Phase:    "implement",
-		Skill:    "implement",
+		Phase:    entities.PhaseImplement,
+		Skill:    entities.PhaseImplement,
 		Model:    model,
 		ResumeID: planResult.SessionID,
 		Config: claude.Config{
@@ -214,7 +214,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	steps = append(steps, implResult.Step)
 	totalCost += implResult.Step.CostUSD
 	if implResult.Failed {
-		return s.buildOutput(run, steps, nil, totalCost, "failed", implResult), nil
+		return s.buildOutput(run, steps, nil, totalCost, entities.RunFailed, implResult), nil
 	}
 
 	// 8. Step 3: TEST — shell commands, not an agent.
@@ -222,8 +222,8 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	testResult, err := s.executeStep(ctx, StepParams{
 		RunID:    runID,
 		TaskID:   in.Task.ID,
-		Phase:    "test",
-		Skill:    "test",
+		Phase:    entities.PhaseTest,
+		Skill:    entities.PhaseTest,
 		Model:    "shell",
 		IsShell:  true,
 		Commands: testCommands,
@@ -236,7 +236,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	}
 	steps = append(steps, testResult.Step)
 	if testResult.Failed {
-		return s.buildOutput(run, steps, nil, totalCost, "failed", testResult), nil
+		return s.buildOutput(run, steps, nil, totalCost, entities.RunFailed, testResult), nil
 	}
 
 	// 9. Step 4: AUDIT — Sonnet, read+bash.
@@ -262,8 +262,8 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	auditResult, err := s.executeStep(ctx, StepParams{
 		RunID:  runID,
 		TaskID: in.Task.ID,
-		Phase:  "audit",
-		Skill:  "audit",
+		Phase:  entities.PhaseAudit,
+		Skill:  entities.PhaseAudit,
 		Model:  "sonnet",
 		Config: claude.Config{
 			Model:          "sonnet",
@@ -285,7 +285,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	steps = append(steps, auditResult.Step)
 	totalCost += auditResult.Step.CostUSD
 	if auditResult.Failed {
-		return s.buildOutput(run, steps, nil, totalCost, "failed", auditResult), nil
+		return s.buildOutput(run, steps, nil, totalCost, entities.RunFailed, auditResult), nil
 	}
 
 	// 10. Step 5: REVIEW — Sonnet, read-only, NEW session.
@@ -310,8 +310,8 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	reviewResult, err := s.executeStep(ctx, StepParams{
 		RunID:  runID,
 		TaskID: in.Task.ID,
-		Phase:  "review",
-		Skill:  "review",
+		Phase:  entities.PhaseReview,
+		Skill:  entities.PhaseReview,
 		Model:  "sonnet",
 		Config: claude.Config{
 			Model:          "sonnet",
@@ -340,7 +340,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	}
 
 	if reviewResult.Failed {
-		return s.buildOutput(run, steps, review, totalCost, "failed", reviewResult), nil
+		return s.buildOutput(run, steps, review, totalCost, entities.RunFailed, reviewResult), nil
 	}
 
 	// 11. All steps passed — capture files changed BEFORE committing.
@@ -351,7 +351,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	filesChanged := filesOut.FilesChanged
 
 	// 12. Git commit.
-	summary := truncateSummary(implResult.Output, 500)
+	summary := Truncate(implResult.Output, 500)
 	commitOut, err := s.Git.Execute(ctx, GitInput{
 		Operation: "commit",
 		RepoPath:  workDir,
@@ -399,10 +399,10 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 
 	// 15. Build final output.
 	completedAt := time.Now()
-	run.Status = "completed"
+	run.Status = entities.RunCompleted
 	run.CostUSD = totalCost
 	run.CommitHash = commitHash
-	run.FilesChanged = toJSON(filesChanged)
+	run.FilesChanged = ToJSON(filesChanged)
 	run.CompletedAt = &completedAt
 	run.Result = summary
 
@@ -410,7 +410,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 		Run:          run,
 		Steps:        steps,
 		Review:       review,
-		Status:       "completed",
+		Status:       entities.RunCompleted,
 		CostUSD:      totalCost,
 		CommitHash:   commitHash,
 		FilesChanged: filesChanged,
@@ -427,7 +427,7 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 		RunID:   params.RunID,
 		Phase:   params.Phase,
 		Skill:   params.Skill,
-		Status:  "running",
+		Status:  entities.StepRunning,
 		Model:   params.Model,
 		StartedAt: startedAt,
 	}
@@ -443,10 +443,10 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 			combinedOutput.WriteString(fmt.Sprintf("$ %s\n%s\n", cmd, cmdOut))
 			if err != nil {
 				completedAt := time.Now()
-				step.Status = "failed"
+				step.Status = entities.StepFailed
 				step.CompletedAt = &completedAt
 				step.DurationMs = int(completedAt.Sub(startedAt).Milliseconds())
-				step.OutputSummary = truncateSummary(combinedOutput.String(), 500)
+				step.OutputSummary = Truncate(combinedOutput.String(), 500)
 				result.Step = step
 				result.Failed = true
 				result.Error = fmt.Sprintf("command failed: %s: %s", cmd, cmdOut)
@@ -455,10 +455,10 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 			}
 		}
 		completedAt := time.Now()
-		step.Status = "completed"
+		step.Status = entities.StepCompleted
 		step.CompletedAt = &completedAt
 		step.DurationMs = int(completedAt.Sub(startedAt).Milliseconds())
-		step.OutputSummary = truncateSummary(combinedOutput.String(), 500)
+		step.OutputSummary = Truncate(combinedOutput.String(), 500)
 		result.Step = step
 		result.Output = combinedOutput.String()
 		return result, nil
@@ -479,8 +479,8 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 	step.CompletedAt = &completedAt
 
 	if err != nil {
-		step.Status = "failed"
-		step.OutputSummary = truncateSummary(err.Error(), 500)
+		step.Status = entities.StepFailed
+		step.OutputSummary = Truncate(err.Error(), 500)
 		result.Step = step
 		result.Failed = true
 		result.Error = err.Error()
@@ -496,8 +496,8 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 	result.Output = claudeResult.Text
 
 	if claudeResult.IsError {
-		step.Status = "failed"
-		step.OutputSummary = truncateSummary(claudeResult.Text, 500)
+		step.Status = entities.StepFailed
+		step.OutputSummary = Truncate(claudeResult.Text, 500)
 		result.Step = step
 		result.Failed = true
 		result.Error = claudeResult.Text
@@ -506,22 +506,22 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 
 	// Parse structured output for audit and review steps.
 	switch params.Phase {
-	case "audit":
+	case entities.PhaseAudit:
 		failed, errMsg := parseAuditOutput(claudeResult.StructuredOutput)
 		if failed {
-			step.Status = "failed"
-			step.OutputSummary = truncateSummary(errMsg, 500)
+			step.Status = entities.StepFailed
+			step.OutputSummary = Truncate(errMsg, 500)
 			result.Step = step
 			result.Failed = true
 			result.Error = errMsg
 			return result, nil
 		}
-	case "review":
+	case entities.PhaseReview:
 		review, failed, errMsg := parseReviewOutput(claudeResult.StructuredOutput, params.RunID, params.TaskID, claudeResult)
 		result.Review = review
 		if failed {
-			step.Status = "failed"
-			step.OutputSummary = truncateSummary(errMsg, 500)
+			step.Status = entities.StepFailed
+			step.OutputSummary = Truncate(errMsg, 500)
 			result.Step = step
 			result.Failed = true
 			result.Error = errMsg
@@ -529,8 +529,8 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 		}
 	}
 
-	step.Status = "completed"
-	step.OutputSummary = truncateSummary(claudeResult.Text, 500)
+	step.Status = entities.StepCompleted
+	step.OutputSummary = Truncate(claudeResult.Text, 500)
 	result.Step = step
 	return result, nil
 }
@@ -585,14 +585,6 @@ func parseTestCommands(raw string) []string {
 		return []string{"go build ./...", "go test ./..."}
 	}
 	return cmds
-}
-
-// truncateSummary truncates text to maxLen characters.
-func truncateSummary(text string, maxLen int) string {
-	if len(text) <= maxLen {
-		return text
-	}
-	return text[:maxLen]
 }
 
 // shellMetaChars are characters that indicate shell injection attempts.
@@ -679,15 +671,15 @@ func parseReviewOutput(raw json.RawMessage, runID, taskID string, result *claude
 		SessionID:       result.SessionID,
 		Model:           "sonnet",
 		Verdict:         out.Verdict,
-		Reasons:         toJSON(out.Reasons),
-		AntiPatterns:    toJSON(out.AntiPatterns),
+		Reasons:         ToJSON(out.Reasons),
+		AntiPatterns:    ToJSON(out.AntiPatterns),
 		CriteriaResults: string(out.CriteriaResults),
-		Suggestions:     toJSON(out.Suggestions),
+		Suggestions:     ToJSON(out.Suggestions),
 		CostUSD:         result.CostUSD,
 	}
 	review.ID = ulid.Make().String()
 
-	if out.Verdict == "fail" {
+	if out.Verdict == entities.ReviewFail {
 		return review, true, fmt.Sprintf("review failed: %s", strings.Join(out.Reasons, "; "))
 	}
 	return review, false, ""

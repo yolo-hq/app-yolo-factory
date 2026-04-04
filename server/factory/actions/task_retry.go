@@ -21,14 +21,14 @@ func (a *RetryTaskAction) Execute(ctx context.Context, actx *action.Context) act
 		return *r
 	}
 
-	if task.Status != "failed" {
+	if task.Status != entities.TaskFailed {
 		return action.Failure("task must be failed to retry")
 	}
 
 	input := a.Input(actx)
 
 	set := write.Set{
-		write.NewField[string]("status").Value("queued"),
+		write.NewField[string]("status").Value(entities.TaskQueued),
 	}
 	if input.Model != "" {
 		set = append(set, write.NewField[string]("model").Value(input.Model))

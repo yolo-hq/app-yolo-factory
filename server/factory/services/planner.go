@@ -108,7 +108,7 @@ func (s *PlannerService) Execute(ctx context.Context, in PlannerInput) (PlannerO
 
 	// 5. Validate dependencies (cycle detection).
 	for _, task := range tasks {
-		deps := parseDepsJSON(task.DependsOn)
+		deps := ParseDeps(task.DependsOn)
 		if len(deps) == 0 {
 			continue
 		}
@@ -182,7 +182,7 @@ func (s *PlannerService) convertToEntities(defs []TaskDef, in PlannerInput) ([]e
 	for i, def := range defs {
 		if len(def.DependsOn) == 0 {
 			tasks[i].DependsOn = "[]"
-			tasks[i].Status = "queued"
+			tasks[i].Status = entities.TaskQueued
 			continue
 		}
 
@@ -195,8 +195,8 @@ func (s *PlannerService) convertToEntities(defs []TaskDef, in PlannerInput) ([]e
 			depIDs = append(depIDs, depID)
 		}
 
-		tasks[i].DependsOn = toJSON(depIDs)
-		tasks[i].Status = "blocked"
+		tasks[i].DependsOn = ToJSON(depIDs)
+		tasks[i].Status = entities.TaskBlocked
 	}
 
 	return tasks, nil

@@ -144,7 +144,7 @@ func formatRunHistory(runs []entities.Run) string {
 	for _, r := range runs {
 		line := fmt.Sprintf("- Run %s: status=%s model=%s cost=$%.2f", r.ID, r.Status, r.Model, r.CostUSD)
 		if r.Error != "" {
-			line += fmt.Sprintf(" error=%s", truncateSummary(r.Error, 100))
+			line += fmt.Sprintf(" error=%s", Truncate(r.Error, 100))
 		}
 		lines = append(lines, line)
 	}

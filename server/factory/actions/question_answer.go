@@ -22,7 +22,7 @@ func (a *AnswerQuestionAction) Execute(ctx context.Context, actx *action.Context
 		return *r
 	}
 
-	if question.Status != "open" {
+	if question.Status != entities.QuestionOpen {
 		return action.Failure("question must be open to answer")
 	}
 
@@ -32,7 +32,7 @@ func (a *AnswerQuestionAction) Execute(ctx context.Context, actx *action.Context
 	_, err := action.Write[entities.Question](actx).Exec(ctx, write.Update{
 		ID: actx.EntityID,
 		Set: write.Set{
-			write.NewField[string]("status").Value("answered"),
+			write.NewField[string]("status").Value(entities.QuestionAnswered),
 			write.NewField[string]("answer").Value(input.Answer),
 			write.NewField[string]("answered_by").Value("human"),
 			write.NewField[*time.Time]("answered_at").Value(&now),

@@ -114,9 +114,9 @@ func TestE2E_OrchestratorHelpers(t *testing.T) {
 	assert.Equal(t, []string{"make build"}, services.ExportParseTestCommands(`["make build"]`))
 	assert.Equal(t, []string{"go build ./...", "go test ./..."}, services.ExportParseTestCommands(""))
 
-	// Test truncateSummary.
-	assert.Equal(t, "hello", services.ExportTruncateSummary("hello", 100))
-	assert.Len(t, services.ExportTruncateSummary("hello world", 5), 5)
+	// Test Truncate.
+	assert.Equal(t, "hello", services.Truncate("hello", 100))
+	assert.Equal(t, "hello...", services.Truncate("hello world", 5))
 }
 
 // TestE2E_DependencyChain verifies cycle detection and dependency parsing.
@@ -143,10 +143,10 @@ func TestE2E_DependencyChain(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "cycle detected")
 
-	// ParseDepsJSON.
-	assert.Nil(t, services.ExportParseDepsJSON(""))
-	assert.Nil(t, services.ExportParseDepsJSON("[]"))
-	assert.Equal(t, []string{"a", "b"}, services.ExportParseDepsJSON(`["a","b"]`))
+	// ParseDeps.
+	assert.Nil(t, services.ParseDeps(""))
+	assert.Nil(t, services.ParseDeps("[]"))
+	assert.Equal(t, []string{"a", "b"}, services.ParseDeps(`["a","b"]`))
 }
 
 // TestE2E_BackupRoundTrip tests backup serialization and recovery.

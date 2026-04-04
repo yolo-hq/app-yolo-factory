@@ -22,7 +22,7 @@ func (a *CancelTaskAction) Execute(ctx context.Context, actx *action.Context) ac
 
 	_, err := action.Write[entities.Task](actx).Exec(ctx, write.Update{
 		ID:  actx.EntityID,
-		Set: write.Set{write.NewField[string]("status").Value("cancelled")},
+		Set: write.Set{write.NewField[string]("status").Value(entities.TaskCancelled)},
 	})
 	if err != nil {
 		return action.Failure(err.Error())

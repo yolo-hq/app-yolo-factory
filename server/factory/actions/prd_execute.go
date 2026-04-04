@@ -23,7 +23,7 @@ func (a *ExecutePRDAction) Execute(ctx context.Context, actx *action.Context) ac
 		return *r
 	}
 
-	if prd.Status != "draft" && prd.Status != "approved" {
+	if prd.Status != entities.PRDDraft && prd.Status != entities.PRDApproved {
 		return action.Failure("PRD must be in draft or approved status to execute")
 	}
 
@@ -31,7 +31,7 @@ func (a *ExecutePRDAction) Execute(ctx context.Context, actx *action.Context) ac
 	_, err := action.Write[entities.PRD](actx).Exec(ctx, write.Update{
 		ID: actx.EntityID,
 		Set: write.Set{
-			write.NewField[string]("status").Value("planning"),
+			write.NewField[string]("status").Value(entities.PRDPlanning),
 		},
 	})
 	if err != nil {
@@ -47,5 +47,5 @@ func (a *ExecutePRDAction) Execute(ctx context.Context, actx *action.Context) ac
 	}
 
 	actx.Resolve("PRD", actx.EntityID)
-	return action.OK(map[string]string{"status": "planning"})
+	return action.OK(map[string]string{"status": entities.PRDPlanning})
 }

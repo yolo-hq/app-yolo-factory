@@ -67,7 +67,7 @@ func (s *SentinelService) Execute(ctx context.Context, in SentinelInput) (Sentin
 				ProjectID: in.Project.ID,
 				Title:     fmt.Sprintf("[sentinel] %s", f.Message),
 				Spec:      f.Message,
-				Status:    "queued",
+				Status:    entities.TaskQueued,
 				Branch:    in.Project.DefaultBranch,
 			}
 			task.ID = ulid.Make().String()
@@ -77,7 +77,7 @@ func (s *SentinelService) Execute(ctx context.Context, in SentinelInput) (Sentin
 				ProjectID: in.Project.ID,
 				Source:    "sentinel",
 				Category:  categoryFromWatch(f.Watch),
-				Title:     fmt.Sprintf("[sentinel] %s", truncateSummary(f.Message, 80)),
+				Title:     fmt.Sprintf("[sentinel] %s", Truncate(f.Message, 80)),
 				Body:      f.Message,
 				Priority:  f.Severity,
 			}
@@ -116,7 +116,7 @@ func (s *SentinelService) checkBuild(ctx context.Context, project entities.Proje
 		return []Finding{{
 			Watch:    "build_health",
 			Severity: "critical",
-			Message:  fmt.Sprintf("build failed: %s", truncateSummary(output, 300)),
+			Message:  fmt.Sprintf("build failed: %s", Truncate(output, 300)),
 			Action:   "create_task",
 		}}, nil
 	}
@@ -134,7 +134,7 @@ func (s *SentinelService) checkTests(ctx context.Context, project entities.Proje
 		return []Finding{{
 			Watch:    "test_health",
 			Severity: "critical",
-			Message:  fmt.Sprintf("tests failed: %s", truncateSummary(output, 300)),
+			Message:  fmt.Sprintf("tests failed: %s", Truncate(output, 300)),
 			Action:   "create_task",
 		}}, nil
 	}
@@ -162,7 +162,7 @@ func (s *SentinelService) checkSecurity(ctx context.Context, project entities.Pr
 		return []Finding{{
 			Watch:    "security",
 			Severity: "critical",
-			Message:  fmt.Sprintf("vulnerabilities found: %s", truncateSummary(output, 300)),
+			Message:  fmt.Sprintf("vulnerabilities found: %s", Truncate(output, 300)),
 			Action:   "create_task",
 		}}, nil
 	}
@@ -180,7 +180,7 @@ func (s *SentinelService) checkConventions(ctx context.Context, project entities
 		return []Finding{{
 			Watch:    "convention_drift",
 			Severity: "warning",
-			Message:  fmt.Sprintf("convention violations: %s", truncateSummary(output, 300)),
+			Message:  fmt.Sprintf("convention violations: %s", Truncate(output, 300)),
 			Action:   "create_suggestion",
 		}}, nil
 	}

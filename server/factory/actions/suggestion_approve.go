@@ -24,7 +24,7 @@ func (a *ApproveSuggestionAction) Execute(ctx context.Context, actx *action.Cont
 	input := a.Input(actx)
 
 	set := write.Set{
-		write.NewField[string]("status").Value("approved"),
+		write.NewField[string]("status").Value(entities.SuggestionApproved),
 	}
 	if input.PRDID != "" {
 		set = append(set, write.NewField[string]("converted_task_id").Value(input.PRDID))

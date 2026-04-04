@@ -138,7 +138,7 @@ func (c *TaskCancel) Execute(ctx context.Context, cctx command.Context) error {
 	}
 	w := repo.(entity.WriteRepository[entities.Task])
 
-	if _, err := w.Update(ctx).WhereID(id).Set("status", "cancelled").Exec(ctx); err != nil {
+	if _, err := w.Update(ctx).WhereID(id).Set("status", entities.TaskCancelled).Exec(ctx); err != nil {
 		return fmt.Errorf("cancel task: %w", err)
 	}
 
@@ -173,7 +173,7 @@ func (c *TaskRetry) Execute(ctx context.Context, cctx command.Context) error {
 	}
 	w := repo.(entity.WriteRepository[entities.Task])
 
-	ub := w.Update(ctx).WhereID(id).Set("status", "queued")
+	ub := w.Update(ctx).WhereID(id).Set("status", entities.TaskQueued)
 	if input != nil && input.Model != "" {
 		ub = ub.Set("model", input.Model)
 	}
