@@ -1,0 +1,20 @@
+CREATE TABLE factory_steps (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES factory_runs(id),
+    phase TEXT NOT NULL,
+    skill TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'running',
+    model TEXT NOT NULL,
+    session_id TEXT,
+    cost_usd REAL DEFAULT 0,
+    tokens_in INTEGER DEFAULT 0,
+    tokens_out INTEGER DEFAULT 0,
+    duration_ms INTEGER DEFAULT 0,
+    input_summary TEXT,
+    output_summary TEXT,
+    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP
+);

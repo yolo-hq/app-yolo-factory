@@ -2,49 +2,51 @@ package main
 
 import (
 	"github.com/uptrace/bun"
-	"github.com/yolo-hq/yolo/core/command"
 	"github.com/yolo-hq/yolo/core/registry"
 
 	bunrepo "github.com/yolo-hq/yolo/core/bun"
 
-	"github.com/yolo-hq/app-yolo-factory/server/factory/actions"
-	"github.com/yolo-hq/app-yolo-factory/server/factory/commands"
 	"github.com/yolo-hq/app-yolo-factory/server/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/server/factory/filters"
 )
 
-// setup registers all entities, repositories, filters, actions, and commands.
-// Called by both main() and test code.
+// setup registers all entities and repositories.
+// Actions, filters, and commands will be added in issue #23.
 func setup() {
 	// Entities
-	registry.Register(entities.Repo{}, entities.Run{}, entities.Task{}, entities.Question{})
+	registry.Register(
+		entities.Project{},
+		entities.PRD{},
+		entities.Task{},
+		entities.Run{},
+		entities.Step{},
+		entities.Review{},
+		entities.Question{},
+		entities.Suggestion{},
+	)
 
 	// Repositories
-	registry.RegisterRepoFactory("Repo", func(db any) (any, any) {
-		return bunrepo.NewReadRepository[entities.Repo](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Repo](db.(*bun.DB))
+	registry.RegisterRepoFactory("Project", func(db any) (any, any) {
+		return bunrepo.NewReadRepository[entities.Project](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Project](db.(*bun.DB))
 	})
-	registry.RegisterRepoFactory("Run", func(db any) (any, any) {
-		return bunrepo.NewReadRepository[entities.Run](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Run](db.(*bun.DB))
+	registry.RegisterRepoFactory("PRD", func(db any) (any, any) {
+		return bunrepo.NewReadRepository[entities.PRD](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.PRD](db.(*bun.DB))
 	})
 	registry.RegisterRepoFactory("Task", func(db any) (any, any) {
 		return bunrepo.NewReadRepository[entities.Task](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Task](db.(*bun.DB))
 	})
+	registry.RegisterRepoFactory("Run", func(db any) (any, any) {
+		return bunrepo.NewReadRepository[entities.Run](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Run](db.(*bun.DB))
+	})
+	registry.RegisterRepoFactory("Step", func(db any) (any, any) {
+		return bunrepo.NewReadRepository[entities.Step](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Step](db.(*bun.DB))
+	})
+	registry.RegisterRepoFactory("Review", func(db any) (any, any) {
+		return bunrepo.NewReadRepository[entities.Review](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Review](db.(*bun.DB))
+	})
 	registry.RegisterRepoFactory("Question", func(db any) (any, any) {
 		return bunrepo.NewReadRepository[entities.Question](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Question](db.(*bun.DB))
 	})
-
-	// Filters
-	registry.RegisterFilter("Task", filters.TaskFilter{})
-	registry.RegisterFilter("Question", filters.QuestionFilter{})
-	registry.RegisterFilter("Run", filters.RunFilter{})
-
-	// Actions
-	registry.RegisterActions("Task", &actions.CreateTaskAction{}, &actions.CancelTaskAction{}, &actions.ExecuteTaskAction{}, &actions.UpdateTaskAction{})
-	registry.RegisterActions("Question", &actions.CreateQuestionAction{}, &actions.ResolveQuestionAction{})
-	registry.RegisterActions("Repo", &actions.CreateRepoAction{}, &actions.UpdateRepoAction{})
-	registry.RegisterActions("Run", &actions.CompleteRunAction{}, &actions.CreateRunAction{})
-
-	// Commands
-	command.Register(&commands.RetryFailed{})
-	command.Register(&commands.CleanupRuns{})
+	registry.RegisterRepoFactory("Suggestion", func(db any) (any, any) {
+		return bunrepo.NewReadRepository[entities.Suggestion](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Suggestion](db.(*bun.DB))
+	})
 }

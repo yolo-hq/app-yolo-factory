@@ -3,49 +3,9 @@ package main
 
 import (
 	"github.com/yolo-hq/yolo"
-	"github.com/yolo-hq/yolo/core/registry"
-	bunrepo "github.com/yolo-hq/yolo/core/bun"
-	"github.com/uptrace/bun"
-
-	"github.com/yolo-hq/app-yolo-factory/server/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/server/factory/actions"
-	"github.com/yolo-hq/app-yolo-factory/server/factory/filters"
-	"github.com/yolo-hq/app-yolo-factory/server/factory/commands"
-	"github.com/yolo-hq/yolo/core/command"
 )
 
 func main() {
-	// Entities
-	registry.Register(entities.Task{}, entities.Question{}, entities.Repo{}, entities.Run{})
-
-	// Repositories
-	registry.RegisterRepoFactory("Task", func(db any) (any, any) {
-		return bunrepo.NewReadRepository[entities.Task](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Task](db.(*bun.DB))
-	})
-	registry.RegisterRepoFactory("Question", func(db any) (any, any) {
-		return bunrepo.NewReadRepository[entities.Question](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Question](db.(*bun.DB))
-	})
-	registry.RegisterRepoFactory("Repo", func(db any) (any, any) {
-		return bunrepo.NewReadRepository[entities.Repo](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Repo](db.(*bun.DB))
-	})
-	registry.RegisterRepoFactory("Run", func(db any) (any, any) {
-		return bunrepo.NewReadRepository[entities.Run](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Run](db.(*bun.DB))
-	})
-
-	// Filters
-	registry.RegisterFilter("Task", filters.TaskFilter{})
-	registry.RegisterFilter("Question", filters.QuestionFilter{})
-	registry.RegisterFilter("Run", filters.RunFilter{})
-
-	// Actions
-	registry.RegisterActions("Question", &actions.CreateQuestionAction{}, &actions.ResolveQuestionAction{})
-	registry.RegisterActions("Repo", &actions.UpdateRepoAction{}, &actions.CreateRepoAction{})
-	registry.RegisterActions("Run", &actions.CompleteRunAction{}, &actions.CreateRunAction{})
-	registry.RegisterActions("Task", &actions.ExecuteTaskAction{}, &actions.UpdateTaskAction{}, &actions.CancelTaskAction{}, &actions.CreateTaskAction{})
-
-	// Commands
-	command.Register(&commands.CleanupRuns{})
-	command.Register(&commands.RetryFailed{})
-
+	setup()
 	yolo.MustRunBinary()
 }

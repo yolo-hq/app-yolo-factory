@@ -1,0 +1,20 @@
+CREATE TABLE factory_prds (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL REFERENCES factory_projects(id),
+    title TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft',
+    source TEXT NOT NULL DEFAULT 'manual',
+    created_by TEXT NOT NULL DEFAULT 'human',
+    body TEXT NOT NULL,
+    acceptance_criteria TEXT NOT NULL,
+    design_decisions TEXT DEFAULT '[]',
+    total_tasks INTEGER DEFAULT 0,
+    completed_tasks INTEGER DEFAULT 0,
+    failed_tasks INTEGER DEFAULT 0,
+    total_cost_usd REAL DEFAULT 0,
+    approved_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP
+);

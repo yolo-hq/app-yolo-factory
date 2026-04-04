@@ -1,0 +1,23 @@
+CREATE TABLE factory_tasks (
+    id TEXT PRIMARY KEY,
+    prd_id TEXT REFERENCES factory_prds(id),
+    project_id TEXT REFERENCES factory_projects(id),
+    title TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'queued',
+    spec TEXT NOT NULL,
+    acceptance_criteria TEXT NOT NULL,
+    branch TEXT NOT NULL,
+    model TEXT DEFAULT '',
+    sequence INTEGER NOT NULL,
+    depends_on TEXT DEFAULT '[]',
+    run_count INTEGER DEFAULT 0,
+    max_retries INTEGER DEFAULT 3,
+    cost_usd REAL DEFAULT 0,
+    summary TEXT,
+    commit_hash TEXT,
+    started_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP
+);

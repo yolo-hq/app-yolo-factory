@@ -1,5 +1,5 @@
 name: "yolo-factory"
-version: "0.1.0"
+version: "0.2.0"
 
 database:
   primary:
@@ -8,6 +8,27 @@ database:
       max_open: 20
       max_idle: 10
       max_lifetime: "5m"
+
+agent_profiles:
+  default:
+    model: sonnet
+    timeout_secs: 600
+    max_retries: 3
+  escalated:
+    model: opus
+    timeout_secs: 900
+    max_retries: 1
+
+backup:
+  enabled: false
+  schedule: "0 2 * * *"
+  retention_days: 30
+
+sentinel:
+  enabled: false
+
+advisor:
+  enabled: false
 
 apps:
   api:
@@ -30,12 +51,18 @@ apps:
     domains:
       factory:
         entities:
-          Repo: "*"
+          Project: "*"
+          PRD: "*"
           Task: "*"
           Run:
             actions: [create]
-            queries: [list]
+            queries: [list, get]
+          Step:
+            queries: [list, get]
+          Review:
+            queries: [list, get]
           Question: "*"
+          Suggestion: "*"
 
   worker:
     type: worker
@@ -46,6 +73,7 @@ apps:
       - default
     schedule:
       check-timeouts: "*/5 * * * *"
+      reset-monthly-budgets: "0 0 1 * *"
     health:
       addr: ":9001"
     shutdown:
