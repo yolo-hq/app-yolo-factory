@@ -14,16 +14,16 @@ YOLO app. Domain-driven, action-pipeline architecture.
 server/{domain}/entities/, actions/, inputs/, queries/
 
 ## Entities
-- Step — server/factory/entities/step.go
+- Question — server/factory/entities/question.go
 - Insight — server/factory/entities/insight.go
-- Project — server/factory/entities/project.go
+- Review — server/factory/entities/review.go
+- Run — server/factory/entities/run.go
+- Step — server/factory/entities/step.go
 - Suggestion — server/factory/entities/suggestion.go
 - Task — server/factory/entities/task.go
 - LintResult — server/factory/entities/lintresult.go
 - PRD — server/factory/entities/prd.go
-- Question — server/factory/entities/question.go
-- Review — server/factory/entities/review.go
-- Run — server/factory/entities/run.go
+- Project — server/factory/entities/project.go
 
 ## Reference
 Read docs/*.md in the framework repo for full patterns.

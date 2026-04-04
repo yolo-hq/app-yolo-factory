@@ -1,5 +1,0 @@
-@import "tailwindcss";
-@import "@yolo-hq/view/styles";
-
-@source "../";
-@source "../node_modules/@yolo-hq/view/src";
