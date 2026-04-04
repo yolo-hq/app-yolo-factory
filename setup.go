@@ -105,6 +105,7 @@ func setup() {
 	registry.RegisterFilter("Suggestion", &filters.SuggestionFilter{})
 	registry.RegisterFilter("Insight", &filters.InsightFilter{})
 	registry.RegisterFilter("LintResult", &filters.LintResultFilter{})
+	registry.RegisterFilter("Review", &filters.ReviewFilter{})
 
 	// Jobs
 	jobs.RegisterHandler(&factoryjobs.PlanPRDJob{})
@@ -112,6 +113,8 @@ func setup() {
 	jobs.RegisterHandler(&factoryjobs.SentinelJob{})
 	jobs.RegisterHandler(&factoryjobs.AdvisorJob{})
 	jobs.RegisterHandler(&factoryjobs.BackupSnapshotJob{})
+	jobs.RegisterHandler(&factoryjobs.CheckTimeoutsJob{})
+	jobs.RegisterHandler(&factoryjobs.ResetBudgetsJob{})
 
 	// Commands
 	command.Register(&commands.ProjectAdd{})

@@ -11,6 +11,7 @@ import (
 	"github.com/yolo-hq/yolo/core/service"
 
 	"github.com/yolo-hq/app-yolo-factory/server/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/server/factory/events"
 )
 
 // SentinelService runs health checks against a project and produces findings.
@@ -57,6 +58,24 @@ func (s *SentinelService) Execute(ctx context.Context, in SentinelInput) (Sentin
 			continue
 		}
 		out.Findings = append(out.Findings, findings...)
+	}
+
+	// Emit events for critical findings.
+	for _, f := range out.Findings {
+		switch {
+		case f.Watch == "build_health" && f.Severity == "critical":
+			events.Emit(events.SentinelBuildBroken, events.SentinelPayload{
+				ProjectName: in.Project.Name,
+				Error:       f.Message,
+				Severity:    f.Severity,
+			})
+		case f.Watch == "security" && f.Severity == "critical":
+			events.Emit(events.SentinelSecurityVuln, events.SentinelPayload{
+				ProjectName: in.Project.Name,
+				Error:       f.Message,
+				Severity:    f.Severity,
+			})
+		}
 	}
 
 	// Convert findings to tasks/suggestions.

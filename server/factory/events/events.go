@@ -1,5 +1,16 @@
 package events
 
+import (
+	"encoding/json"
+	"log"
+)
+
+// Emit logs a structured event. Will be replaced with YOLO event system when wired.
+func Emit(eventType string, payload any) {
+	data, _ := json.Marshal(payload)
+	log.Printf("[event] %s %s", eventType, string(data))
+}
+
 const (
 	TaskStarted         = "factory.task.started"
 	TaskCompleted       = "factory.task.completed"

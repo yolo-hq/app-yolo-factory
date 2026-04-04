@@ -10,6 +10,7 @@ import (
 	"github.com/yolo-hq/yolo/core/service"
 
 	"github.com/yolo-hq/app-yolo-factory/server/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/server/factory/events"
 )
 
 // QuestionResolverService attempts to answer agent questions automatically.
@@ -56,7 +57,13 @@ func (s *QuestionResolverService) Execute(ctx context.Context, in QuestionResolv
 		}
 	}
 
-	// 3. Needs human.
+	// 3. Needs human — emit event.
+	events.Emit(events.QuestionNeedsHuman, events.QuestionPayload{
+		QuestionID: in.Question.ID,
+		TaskID:     in.Question.TaskID,
+		Body:       in.Question.Body,
+		Context:    in.Question.Context,
+	})
 	return QuestionResolverOutput{
 		Resolved: false,
 	}, nil

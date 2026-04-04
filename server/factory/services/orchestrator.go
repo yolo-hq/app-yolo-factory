@@ -16,6 +16,7 @@ import (
 	"github.com/yolo-hq/yolo/core/service"
 
 	"github.com/yolo-hq/app-yolo-factory/server/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/server/factory/events"
 	"github.com/yolo-hq/app-yolo-factory/server/factory/lint"
 	"github.com/yolo-hq/app-yolo-factory/server/factory/skills"
 )
@@ -82,6 +83,12 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 
 	// 0. Budget enforcement — check before any work.
 	if err := checkBudget(in.Project); err != nil {
+		events.Emit(events.BudgetExceeded, events.BudgetPayload{
+			ProjectName: in.Project.Name,
+			Spent:       in.Project.SpentThisMonthUSD,
+			Limit:       in.Project.BudgetMonthlyUSD,
+			Percentage:  100,
+		})
 		out.Summary = err.Error()
 		return out, nil
 	}
@@ -90,6 +97,12 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	if in.Project.BudgetMonthlyUSD > 0 && in.Project.BudgetWarningAt > 0 {
 		ratio := in.Project.SpentThisMonthUSD / in.Project.BudgetMonthlyUSD
 		if ratio >= in.Project.BudgetWarningAt {
+			events.Emit(events.BudgetWarning, events.BudgetPayload{
+				ProjectName: in.Project.Name,
+				Spent:       in.Project.SpentThisMonthUSD,
+				Limit:       in.Project.BudgetMonthlyUSD,
+				Percentage:  ratio * 100,
+			})
 			slog.Warn("budget warning",
 				"project", in.Project.Name,
 				"spent", in.Project.SpentThisMonthUSD,
@@ -98,6 +111,13 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 			)
 		}
 	}
+
+	// 0c. Emit task started event.
+	events.Emit(events.TaskStarted, events.TaskPayload{
+		TaskID:      in.Task.ID,
+		Title:       in.Task.Title,
+		ProjectName: in.Project.Name,
+	})
 
 	// 1. Determine working directory.
 	workDir := workingDir(in.Project, in.Task.ID)
@@ -140,6 +160,16 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 			return out, fmt.Errorf("create branch: %w", err)
 		}
 		branchName = gitOut.BranchName
+	}
+
+	// 4b. Run setup commands if defined.
+	setupCommands := parseTestCommands(in.Project.SetupCommands)
+	if in.Project.SetupCommands != "" && in.Project.SetupCommands != "[]" {
+		for _, cmd := range setupCommands {
+			if _, err := runShellCommand(ctx, workDir, cmd); err != nil {
+				return out, fmt.Errorf("setup command %q: %w", cmd, err)
+			}
+		}
 	}
 
 	// 5. Create Run entity struct.
@@ -201,7 +231,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	steps = append(steps, planResult.Step)
 	totalCost += planResult.Step.CostUSD
 	if planResult.Failed {
-		return s.buildOutput(run, steps, nil, totalCost, entities.RunFailed, planResult), nil
+		return s.buildFailure(ctx, in, run, steps, nil, totalCost, planResult)
 	}
 
 	// 7. Step 2: IMPLEMENT — resume plan session.
@@ -247,7 +277,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	steps = append(steps, implResult.Step)
 	totalCost += implResult.Step.CostUSD
 	if implResult.Failed {
-		return s.buildOutput(run, steps, nil, totalCost, entities.RunFailed, implResult), nil
+		return s.buildFailure(ctx, in, run, steps, nil, totalCost, implResult)
 	}
 
 	// 7b. Detect questions in implementation output.
@@ -275,7 +305,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	}
 	steps = append(steps, testResult.Step)
 	if testResult.Failed {
-		return s.buildOutput(run, steps, nil, totalCost, entities.RunFailed, testResult), nil
+		return s.buildFailure(ctx, in, run, steps, nil, totalCost, testResult)
 	}
 
 	// 9. Step 4: LINT — zero-token static analysis.
@@ -285,7 +315,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	}
 	steps = append(steps, lintResult.Step)
 	if lintResult.Failed {
-		return s.buildOutput(run, steps, nil, totalCost, entities.RunFailed, lintResult), nil
+		return s.buildFailure(ctx, in, run, steps, nil, totalCost, lintResult)
 	}
 
 	// 10. Step 5: AUDIT — Sonnet, read+bash.
@@ -334,7 +364,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	steps = append(steps, auditResult.Step)
 	totalCost += auditResult.Step.CostUSD
 	if auditResult.Failed {
-		return s.buildOutput(run, steps, nil, totalCost, entities.RunFailed, auditResult), nil
+		return s.buildFailure(ctx, in, run, steps, nil, totalCost, auditResult)
 	}
 
 	// 10. Step 5: REVIEW — Sonnet, read-only, NEW session.
@@ -389,7 +419,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	}
 
 	if reviewResult.Failed {
-		return s.buildOutput(run, steps, review, totalCost, entities.RunFailed, reviewResult), nil
+		return s.buildFailure(ctx, in, run, steps, review, totalCost, reviewResult)
 	}
 
 	// 11. All steps passed — capture files changed BEFORE committing.
@@ -446,7 +476,15 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 		TaskID:       in.Task.ID,
 	})
 
-	// 15. Build final output.
+	// 15. Emit task completed event.
+	events.Emit(events.TaskCompleted, events.TaskPayload{
+		TaskID:      in.Task.ID,
+		Title:       in.Task.Title,
+		ProjectName: in.Project.Name,
+		CostUSD:     totalCost,
+	})
+
+	// 16. Build final output.
 	completedAt := time.Now()
 	run.Status = entities.RunCompleted
 	run.CostUSD = totalCost
@@ -585,22 +623,39 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 	return result, nil
 }
 
-// buildOutput constructs an OrchestratorOutput for early-return (failure) cases.
-func (s *OrchestratorService) buildOutput(run entities.Run, steps []entities.Step, review *entities.Review, totalCost float64, status string, lastResult *StepResult) OrchestratorOutput {
+// buildFailure constructs an OrchestratorOutput for early-return (failure) cases.
+// It also emits TaskFailed event and pushes the branch if push_failed_branches is set.
+func (s *OrchestratorService) buildFailure(ctx context.Context, in OrchestratorInput, run entities.Run, steps []entities.Step, review *entities.Review, totalCost float64, lastResult *StepResult) (OrchestratorOutput, error) {
 	completedAt := time.Now()
-	run.Status = status
+	run.Status = entities.RunFailed
 	run.CostUSD = totalCost
 	run.Error = lastResult.Error
 	run.CompletedAt = &completedAt
+
+	events.Emit(events.TaskFailed, events.TaskPayload{
+		TaskID:      run.TaskID,
+		Title:       in.Task.Title,
+		ProjectName: in.Project.Name,
+		CostUSD:     totalCost,
+		Error:       lastResult.Error,
+	})
+
+	if in.Project.PushFailedBranches && run.BranchName != "" {
+		_, _ = s.Git.Execute(ctx, GitInput{
+			Operation: "push",
+			RepoPath:  workingDir(in.Project, in.Task.ID),
+			Branch:    run.BranchName,
+		})
+	}
 
 	return OrchestratorOutput{
 		Run:     run,
 		Steps:   steps,
 		Review:  review,
-		Status:  status,
+		Status:  entities.RunFailed,
 		CostUSD: totalCost,
 		Summary: lastResult.Error,
-	}
+	}, nil
 }
 
 // workingDir returns the directory to run agents in.

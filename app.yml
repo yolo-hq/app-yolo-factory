@@ -74,6 +74,7 @@ apps:
     queues:
       - critical
       - default
+      - execution
     schedule:
       check-timeouts: "*/5 * * * *"
       reset-monthly-budgets: "0 0 1 * *"

@@ -11,6 +11,7 @@ import (
 	"github.com/yolo-hq/yolo/core/write"
 
 	"github.com/yolo-hq/app-yolo-factory/server/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/server/factory/events"
 	"github.com/yolo-hq/app-yolo-factory/server/factory/inputs"
 	"github.com/yolo-hq/app-yolo-factory/server/factory/services"
 )
@@ -336,6 +337,16 @@ func updatePRDCounters(
 			Exec(ctx); err != nil {
 			return fmt.Errorf("update PRD status %s: %w", prdID, err)
 		}
+
+		eventType := events.PRDCompleted
+		if failed > 0 {
+			eventType = events.PRDFailed
+		}
+		events.Emit(eventType, events.PRDPayload{
+			PRDID:        prdID,
+			TaskCount:    total,
+			TotalCostUSD: totalCost,
+		})
 	}
 	return nil
 }
