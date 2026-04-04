@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -42,6 +43,7 @@ type OrchestratorOutput struct {
 	Run          entities.Run
 	Steps        []entities.Step
 	Review       *entities.Review
+	Questions    []entities.Question
 	Status       string // "completed" or "failed"
 	CostUSD      float64
 	CommitHash   string
@@ -78,10 +80,29 @@ type StepResult struct {
 func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput) (OrchestratorOutput, error) {
 	out := OrchestratorOutput{Status: entities.RunFailed}
 
+	// 0. Budget enforcement — check before any work.
+	if err := checkBudget(in.Project); err != nil {
+		out.Summary = err.Error()
+		return out, nil
+	}
+
+	// 0b. Budget warning — log if approaching limit.
+	if in.Project.BudgetMonthlyUSD > 0 && in.Project.BudgetWarningAt > 0 {
+		ratio := in.Project.SpentThisMonthUSD / in.Project.BudgetMonthlyUSD
+		if ratio >= in.Project.BudgetWarningAt {
+			slog.Warn("budget warning",
+				"project", in.Project.Name,
+				"spent", in.Project.SpentThisMonthUSD,
+				"limit", in.Project.BudgetMonthlyUSD,
+				"pct", fmt.Sprintf("%.0f%%", ratio*100),
+			)
+		}
+	}
+
 	// 1. Determine working directory.
 	workDir := workingDir(in.Project, in.Task.ID)
 
-	// 2. Determine model.
+	// 2. Determine model (with escalation support).
 	model := determineModel(in.Task, in.Project)
 
 	// 3. Read CLAUDE.md from working dir.
@@ -134,6 +155,11 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 		SessionName: fmt.Sprintf("factory:task-%s", in.Task.ID),
 	}
 	run.ID = runID
+
+	// Track escalation.
+	if task := in.Task; task.RunCount >= in.Project.EscalationAfterRetries && in.Project.EscalationModel != "" && task.Model == "" {
+		run.EscalatedModel = model
+	}
 
 	var steps []entities.Step
 	var totalCost float64
@@ -190,6 +216,11 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 		return out, fmt.Errorf("build implement context: %w", err)
 	}
 
+	implBudget := 2.0
+	if in.Project.BudgetPerTaskUSD > 0 {
+		implBudget = in.Project.BudgetPerTaskUSD
+	}
+
 	implResult, err := s.executeStep(ctx, StepParams{
 		RunID:    runID,
 		TaskID:   in.Task.ID,
@@ -201,7 +232,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 			Model:          model,
 			AllowedTools:   []string{"Read", "Edit", "Write", "Bash", "Glob", "Grep"},
 			Bare:           true,
-			BudgetUSD:      2.0,
+			BudgetUSD:      implBudget,
 			PermissionMode: "auto",
 			Effort:         "high",
 			CWD:            workDir,
@@ -217,6 +248,12 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	totalCost += implResult.Step.CostUSD
 	if implResult.Failed {
 		return s.buildOutput(run, steps, nil, totalCost, entities.RunFailed, implResult), nil
+	}
+
+	// 7b. Detect questions in implementation output.
+	var questions []entities.Question
+	if q := detectQuestion(implResult.Output, in.Task, runID); q != nil {
+		questions = append(questions, *q)
 	}
 
 	// 8. Step 3: TEST — shell commands, not an agent.
@@ -422,6 +459,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 		Run:          run,
 		Steps:        steps,
 		Review:       review,
+		Questions:    questions,
 		Status:       entities.RunCompleted,
 		CostUSD:      totalCost,
 		CommitHash:   commitHash,
@@ -573,15 +611,55 @@ func workingDir(project entities.Project, taskID string) string {
 	return project.LocalPath
 }
 
-// determineModel returns the model to use: task override > project default > "sonnet".
+// determineModel returns the model to use:
+// task override > escalation (after retries) > project default > "sonnet".
 func determineModel(task entities.Task, project entities.Project) string {
 	if task.Model != "" {
 		return task.Model
+	}
+	if task.RunCount >= project.EscalationAfterRetries && project.EscalationModel != "" {
+		return project.EscalationModel
 	}
 	if project.DefaultModel != "" {
 		return project.DefaultModel
 	}
 	return "sonnet"
+}
+
+// checkBudget verifies the project has not exceeded its monthly budget.
+func checkBudget(project entities.Project) error {
+	if project.BudgetMonthlyUSD > 0 && project.SpentThisMonthUSD >= project.BudgetMonthlyUSD {
+		return fmt.Errorf("monthly budget exceeded: spent $%.2f of $%.2f limit",
+			project.SpentThisMonthUSD, project.BudgetMonthlyUSD)
+	}
+	return nil
+}
+
+// detectQuestion scans agent output for "QUESTION:" prefix and extracts the question.
+func detectQuestion(resultText string, task entities.Task, runID string) *entities.Question {
+	upper := strings.ToUpper(resultText)
+	idx := strings.Index(upper, "QUESTION:")
+	if idx == -1 {
+		return nil
+	}
+	questionText := strings.TrimSpace(resultText[idx+9:])
+	if nl := strings.Index(questionText, "\n"); nl > 0 {
+		questionText = questionText[:nl]
+	}
+	if questionText == "" {
+		return nil
+	}
+
+	q := &entities.Question{
+		TaskID:     task.ID,
+		RunID:      runID,
+		Body:       questionText,
+		Context:    "Detected during implementation step",
+		Confidence: entities.ConfidenceMedium,
+		Status:     entities.QuestionOpen,
+	}
+	q.ID = ulid.Make().String()
+	return q
 }
 
 // parseTestCommands parses the project's test_commands JSON array.

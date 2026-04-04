@@ -162,3 +162,90 @@ func TestParseReviewOutput_Empty(t *testing.T) {
 	assert.False(t, failed)
 	assert.Empty(t, errMsg)
 }
+
+// --- determineModel escalation tests ---
+
+func TestDetermineModel_Default(t *testing.T) {
+	task := entities.Task{}
+	project := entities.Project{}
+	got := determineModel(task, project)
+	assert.Equal(t, "sonnet", got)
+}
+
+func TestDetermineModel_Escalation(t *testing.T) {
+	task := entities.Task{RunCount: 3}
+	project := entities.Project{
+		DefaultModel:           "sonnet",
+		EscalationModel:        "opus",
+		EscalationAfterRetries: 2,
+	}
+	got := determineModel(task, project)
+	assert.Equal(t, "opus", got)
+}
+
+func TestDetermineModel_NoEscalationBeforeThreshold(t *testing.T) {
+	task := entities.Task{RunCount: 1}
+	project := entities.Project{
+		DefaultModel:           "sonnet",
+		EscalationModel:        "opus",
+		EscalationAfterRetries: 2,
+	}
+	got := determineModel(task, project)
+	assert.Equal(t, "sonnet", got)
+}
+
+// --- checkBudget tests ---
+
+func TestCheckBudget_WithinLimit(t *testing.T) {
+	project := entities.Project{BudgetMonthlyUSD: 200, SpentThisMonthUSD: 100}
+	err := checkBudget(project)
+	assert.NoError(t, err)
+}
+
+func TestCheckBudget_Exceeded(t *testing.T) {
+	project := entities.Project{BudgetMonthlyUSD: 200, SpentThisMonthUSD: 200}
+	err := checkBudget(project)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "monthly budget exceeded")
+}
+
+func TestCheckBudget_NoLimit(t *testing.T) {
+	project := entities.Project{BudgetMonthlyUSD: 0, SpentThisMonthUSD: 9999}
+	err := checkBudget(project)
+	assert.NoError(t, err)
+}
+
+// --- detectQuestion tests ---
+
+func TestDetectQuestion_Found(t *testing.T) {
+	text := "I implemented the feature.\nQUESTION: Should I use X or Y?\nDone."
+	task := entities.Task{}
+	task.ID = "task-1"
+
+	q := detectQuestion(text, task, "run-1")
+	assert.NotNil(t, q)
+	assert.Equal(t, "Should I use X or Y?", q.Body)
+	assert.Equal(t, "task-1", q.TaskID)
+	assert.Equal(t, "run-1", q.RunID)
+	assert.Equal(t, entities.QuestionOpen, q.Status)
+	assert.Equal(t, entities.ConfidenceMedium, q.Confidence)
+	assert.NotEmpty(t, q.ID)
+}
+
+func TestDetectQuestion_NotFound(t *testing.T) {
+	text := "Everything looks good. No issues found."
+	task := entities.Task{}
+	task.ID = "task-1"
+
+	q := detectQuestion(text, task, "run-1")
+	assert.Nil(t, q)
+}
+
+func TestDetectQuestion_EmptyAfterPrefix(t *testing.T) {
+	text := "Some output\nQUESTION:"
+	task := entities.Task{}
+	task.ID = "task-1"
+
+	q := detectQuestion(text, task, "run-1")
+	assert.Nil(t, q)
+}
