@@ -464,17 +464,21 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	// 14. Git cleanup.
 	if in.Project.UseWorktrees {
 		wtPath := filepath.Join(in.Project.LocalPath, ".worktrees", "task-"+in.Task.ID)
-		_, _ = s.Git.Execute(ctx, GitInput{
+		if _, err := s.Git.Execute(ctx, GitInput{
 			Operation: "worktree_remove",
 			RepoPath:  in.Project.LocalPath,
 			Path:      wtPath,
-		})
+		}); err != nil {
+			slog.Warn("git worktree cleanup failed", "task_id", in.Task.ID, "error", err)
+		}
 	}
-	_, _ = s.Git.Execute(ctx, GitInput{
+	if _, err := s.Git.Execute(ctx, GitInput{
 		Operation:    "delete_branch",
 		RepoPath:     in.Project.LocalPath,
 		TaskID:       in.Task.ID,
-	})
+	}); err != nil {
+		slog.Warn("git branch cleanup failed", "task_id", in.Task.ID, "error", err)
+	}
 
 	// 15. TODO: Trigger integration review after every N completed tasks.
 	// Use ShouldRunIntegrationReview(completedCount, defaultIntegrationReviewEvery)
@@ -646,11 +650,13 @@ func (s *OrchestratorService) buildFailure(ctx context.Context, in OrchestratorI
 	})
 
 	if in.Project.PushFailedBranches && run.BranchName != "" {
-		_, _ = s.Git.Execute(ctx, GitInput{
+		if _, err := s.Git.Execute(ctx, GitInput{
 			Operation: "push",
 			RepoPath:  workingDir(in.Project, in.Task.ID),
 			Branch:    run.BranchName,
-		})
+		}); err != nil {
+			slog.Warn("push failed branch failed", "task_id", in.Task.ID, "branch", run.BranchName, "error", err)
+		}
 	}
 
 	return OrchestratorOutput{

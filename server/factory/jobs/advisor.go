@@ -18,6 +18,7 @@ type AdvisorJob struct {
 	jobs.Base
 	Advisor         *services.AdvisorService
 	ProjectRead     entity.ReadRepository[entities.Project]
+	TaskRead        entity.ReadRepository[entities.Task]
 	RunRead         entity.ReadRepository[entities.Run]
 	SuggestionWrite entity.WriteRepository[entities.Suggestion]
 }
@@ -52,8 +53,31 @@ func (j *AdvisorJob) Handle(ctx context.Context, payload []byte) error {
 		return fmt.Errorf("project %s not found", p.ProjectID)
 	}
 
-	// Load recent runs.
+	// Load tasks for this project.
+	taskResult, err := j.TaskRead.FindMany(ctx, entity.FindOptions{
+		Filters: []entity.FilterCondition{
+			{Field: "project_id", Operator: entity.OpEq, Value: p.ProjectID},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("load tasks: %w", err)
+	}
+
+	// Collect task IDs to scope runs to this project.
+	taskIDs := make([]any, len(taskResult.Data))
+	for i, t := range taskResult.Data {
+		taskIDs[i] = t.ID
+	}
+	if len(taskIDs) == 0 {
+		// No tasks means no runs to analyze.
+		return nil
+	}
+
+	// Load recent runs scoped to this project's tasks.
 	runResult, err := j.RunRead.FindMany(ctx, entity.FindOptions{
+		Filters: []entity.FilterCondition{
+			{Field: "task_id", Operator: entity.OpIn, Value: taskIDs},
+		},
 		Pagination: &entity.PaginationParams{Limit: 20},
 		Sort:       &entity.SortParams{Field: "created_at", Order: "desc"},
 	})

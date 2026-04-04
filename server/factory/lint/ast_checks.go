@@ -27,7 +27,7 @@ func walkGoFiles(opts Options, fn func(fset *token.FileSet, file *ast.File, path
 		}
 		if info.IsDir() {
 			base := info.Name()
-			if base == "vendor" || base == "testdata" {
+			if base == "vendor" || base == "testdata" || strings.HasPrefix(base, ".") {
 				return filepath.SkipDir
 			}
 			return nil

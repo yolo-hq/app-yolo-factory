@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/yolo-hq/yolo/core/entity"
@@ -68,10 +69,12 @@ func (j *PlanPRDJob) Handle(ctx context.Context, payload []byte) error {
 	})
 	if err != nil {
 		// Mark PRD as failed on planner error.
-		_, _ = j.PRDWrite.Update(ctx).
+		if _, uerr := j.PRDWrite.Update(ctx).
 			WhereID(prd.ID).
 			Set("status", entities.PRDFailed).
-			Exec(ctx)
+			Exec(ctx); uerr != nil {
+			slog.Error("failed to mark PRD as failed", "prd_id", prd.ID, "error", uerr)
+		}
 		return fmt.Errorf("planner: %w", err)
 	}
 
