@@ -15,6 +15,7 @@ import (
 	"github.com/yolo-hq/yolo/core/service"
 
 	"github.com/yolo-hq/app-yolo-factory/server/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/server/factory/lint"
 	"github.com/yolo-hq/app-yolo-factory/server/factory/skills"
 )
 
@@ -26,6 +27,7 @@ type OrchestratorService struct {
 	Git        *GitService
 	Context    *ContextService
 	Dependency *DependencyService
+	Linter     *LinterService
 }
 
 // OrchestratorInput holds the data needed to execute a task workflow.
@@ -239,7 +241,17 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 		return s.buildOutput(run, steps, nil, totalCost, entities.RunFailed, testResult), nil
 	}
 
-	// 9. Step 4: AUDIT — Sonnet, read+bash.
+	// 9. Step 4: LINT — zero-token static analysis.
+	lintResult, err := s.executeLintStep(ctx, in.Task, &run, in.Project, workDir, runID)
+	if err != nil {
+		return out, fmt.Errorf("lint step: %w", err)
+	}
+	steps = append(steps, lintResult.Step)
+	if lintResult.Failed {
+		return s.buildOutput(run, steps, nil, totalCost, entities.RunFailed, lintResult), nil
+	}
+
+	// 10. Step 5: AUDIT — Sonnet, read+bash.
 	// Get changed files for audit context.
 	diffOut, _ := s.Git.Execute(ctx, GitInput{
 		Operation: "diff_files",
@@ -683,4 +695,64 @@ func parseReviewOutput(raw json.RawMessage, runID, taskID string, result *claude
 		return review, true, fmt.Sprintf("review failed: %s", strings.Join(out.Reasons, "; "))
 	}
 	return review, false, ""
+}
+
+// executeLintStep runs zero-token static analysis checks on the project code.
+func (s *OrchestratorService) executeLintStep(ctx context.Context, task entities.Task, run *entities.Run, project entities.Project, workDir string, runID string) (*StepResult, error) {
+	stepID := ulid.Make().String()
+	startedAt := time.Now()
+
+	step := entities.Step{
+		RunID:     runID,
+		Phase:     entities.PhaseLint,
+		Skill:     "factory-lint",
+		Status:    entities.StepRunning,
+		Model:     "",
+		StartedAt: startedAt,
+	}
+	step.ID = stepID
+
+	// Get changed files for targeted lint.
+	diffOut, _ := s.Git.Execute(ctx, GitInput{
+		Operation: "diff_files",
+		RepoPath:  workDir,
+	})
+
+	lintOut, err := s.Linter.Execute(ctx, LinterInput{
+		ProjectPath:  workDir,
+		ChangedFiles: diffOut.FilesChanged,
+	})
+	if err != nil {
+		completedAt := time.Now()
+		step.Status = entities.StepFailed
+		step.CompletedAt = &completedAt
+		step.DurationMs = int(completedAt.Sub(startedAt).Milliseconds())
+		step.OutputSummary = Truncate(err.Error(), 500)
+		return &StepResult{Step: step, Failed: true, Error: err.Error()}, nil
+	}
+
+	completedAt := time.Now()
+	step.CompletedAt = &completedAt
+	step.DurationMs = int(completedAt.Sub(startedAt).Milliseconds())
+
+	summary := fmt.Sprintf("checks=%d passed=%d failed=%d findings=%d",
+		lintOut.ChecksRun, lintOut.ChecksPassed, lintOut.ChecksFailed, len(lintOut.Findings))
+
+	if !lintOut.Passed {
+		// Build error text from findings.
+		var errParts []string
+		for _, f := range lintOut.Findings {
+			if f.Severity == lint.SeverityError {
+				errParts = append(errParts, fmt.Sprintf("%s:%d: %s", f.File, f.Line, f.Message))
+			}
+		}
+		errText := strings.Join(errParts, "\n")
+		step.Status = entities.StepFailed
+		step.OutputSummary = Truncate(summary+"\n"+errText, 500)
+		return &StepResult{Step: step, Failed: true, Error: errText, Output: summary}, nil
+	}
+
+	step.Status = entities.StepCompleted
+	step.OutputSummary = summary
+	return &StepResult{Step: step, Output: summary}, nil
 }
