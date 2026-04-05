@@ -1,8 +1,12 @@
 package entities
 
-import "github.com/yolo-hq/yolo/core/entity"
+import (
+	"github.com/uptrace/bun"
+	"github.com/yolo-hq/yolo/core/entity"
+)
 
 type Review struct {
+	bun.BaseModel `bun:"table:factory_reviews"`
 	entity.BaseEntity
 	RunID           string  `json:"runId" bun:"run_id,notnull" fake:"rel:Run"`
 	TaskID          string  `json:"taskId" bun:"task_id,notnull" fake:"rel:Task"`

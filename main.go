@@ -16,11 +16,20 @@ import (
 
 func main() {
 	// Entities
-	registry.Register(entities.Question{}, entities.Review{}, entities.Run{}, entities.Step{}, entities.Task{}, entities.Insight{}, entities.LintResult{}, entities.PRD{}, entities.Project{}, entities.Suggestion{})
+	registry.Register(entities.PRD{}, entities.Project{}, entities.Question{}, entities.Insight{}, entities.Review{}, entities.Run{}, entities.Step{}, entities.Suggestion{}, entities.Task{}, entities.LintResult{})
 
 	// Repositories
+	registry.RegisterRepoFactory("PRD", func(db any) (any, any) {
+		return bunrepo.NewReadRepository[entities.PRD](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.PRD](db.(*bun.DB))
+	})
+	registry.RegisterRepoFactory("Project", func(db any) (any, any) {
+		return bunrepo.NewReadRepository[entities.Project](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Project](db.(*bun.DB))
+	})
 	registry.RegisterRepoFactory("Question", func(db any) (any, any) {
 		return bunrepo.NewReadRepository[entities.Question](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Question](db.(*bun.DB))
+	})
+	registry.RegisterRepoFactory("Insight", func(db any) (any, any) {
+		return bunrepo.NewReadRepository[entities.Insight](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Insight](db.(*bun.DB))
 	})
 	registry.RegisterRepoFactory("Review", func(db any) (any, any) {
 		return bunrepo.NewReadRepository[entities.Review](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Review](db.(*bun.DB))
@@ -31,48 +40,38 @@ func main() {
 	registry.RegisterRepoFactory("Step", func(db any) (any, any) {
 		return bunrepo.NewReadRepository[entities.Step](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Step](db.(*bun.DB))
 	})
+	registry.RegisterRepoFactory("Suggestion", func(db any) (any, any) {
+		return bunrepo.NewReadRepository[entities.Suggestion](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Suggestion](db.(*bun.DB))
+	})
 	registry.RegisterRepoFactory("Task", func(db any) (any, any) {
 		return bunrepo.NewReadRepository[entities.Task](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Task](db.(*bun.DB))
-	})
-	registry.RegisterRepoFactory("Insight", func(db any) (any, any) {
-		return bunrepo.NewReadRepository[entities.Insight](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Insight](db.(*bun.DB))
 	})
 	registry.RegisterRepoFactory("LintResult", func(db any) (any, any) {
 		return bunrepo.NewReadRepository[entities.LintResult](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.LintResult](db.(*bun.DB))
 	})
-	registry.RegisterRepoFactory("PRD", func(db any) (any, any) {
-		return bunrepo.NewReadRepository[entities.PRD](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.PRD](db.(*bun.DB))
-	})
-	registry.RegisterRepoFactory("Project", func(db any) (any, any) {
-		return bunrepo.NewReadRepository[entities.Project](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Project](db.(*bun.DB))
-	})
-	registry.RegisterRepoFactory("Suggestion", func(db any) (any, any) {
-		return bunrepo.NewReadRepository[entities.Suggestion](db.(*bun.DB)), bunrepo.NewWriteRepository[entities.Suggestion](db.(*bun.DB))
-	})
 
 	// Filters
+	registry.RegisterFilter("LintResult", filters.LintResultFilter{})
 	registry.RegisterFilter("PRD", filters.PRDFilter{})
-	registry.RegisterFilter("Question", filters.QuestionFilter{})
-	registry.RegisterFilter("Review", filters.ReviewFilter{})
 	registry.RegisterFilter("Run", filters.RunFilter{})
 	registry.RegisterFilter("Step", filters.StepFilter{})
+	registry.RegisterFilter("Suggestion", filters.SuggestionFilter{})
 	registry.RegisterFilter("Task", filters.TaskFilter{})
 	registry.RegisterFilter("Insight", filters.InsightFilter{})
-	registry.RegisterFilter("LintResult", filters.LintResultFilter{})
 	registry.RegisterFilter("Project", filters.ProjectFilter{})
-	registry.RegisterFilter("Suggestion", filters.SuggestionFilter{})
+	registry.RegisterFilter("Question", filters.QuestionFilter{})
+	registry.RegisterFilter("Review", filters.ReviewFilter{})
 
 	// Actions
-	registry.RegisterActions("Question", &actions.AnswerQuestionAction{})
-	registry.RegisterActions("Insight", &actions.AcknowledgeInsightAction{}, &actions.DismissInsightAction{}, &actions.ApplyInsightAction{})
+	registry.RegisterActions("Suggestion", &actions.RejectSuggestionAction{}, &actions.ApproveSuggestionAction{})
+	registry.RegisterActions("Insight", &actions.DismissInsightAction{}, &actions.ApplyInsightAction{}, &actions.AcknowledgeInsightAction{})
+	registry.RegisterActions("PRD", &actions.SubmitPRDAction{}, &actions.ApprovePRDAction{}, &actions.ExecutePRDAction{})
 	registry.RegisterActions("Project", &actions.PauseProjectAction{}, &actions.UpdateProjectAction{}, &actions.ResumeProjectAction{}, &actions.CreateProjectAction{})
-	registry.RegisterActions("Task", &actions.CancelTaskAction{}, &actions.RetryTaskAction{})
-	registry.RegisterActions("Suggestion", &actions.ApproveSuggestionAction{}, &actions.RejectSuggestionAction{})
-	registry.RegisterActions("PRD", &actions.ExecutePRDAction{}, &actions.ApprovePRDAction{}, &actions.SubmitPRDAction{})
 	registry.RegisterActions("Run", &actions.CompleteRunAction{})
+	registry.RegisterActions("Question", &actions.AnswerQuestionAction{})
+	registry.RegisterActions("Task", &actions.CancelTaskAction{}, &actions.RetryTaskAction{})
 
 	// Commands
-	command.Register(&commands.Status{})
 	command.Register(&commands.AdvisorRun{})
 	command.Register(&commands.Backup{})
 	command.Register(&commands.Recover{})
@@ -81,6 +80,7 @@ func main() {
 	command.Register(&commands.InsightAcknowledge{})
 	command.Register(&commands.InsightApply{})
 	command.Register(&commands.InsightDismiss{})
+	command.Register(&commands.PRDDiff{})
 	command.Register(&commands.ProjectAdd{})
 	command.Register(&commands.ProjectList{})
 	command.Register(&commands.ProjectGet{})
@@ -88,21 +88,23 @@ func main() {
 	command.Register(&commands.ProjectPause{})
 	command.Register(&commands.ProjectResume{})
 	command.Register(&commands.ProjectArchive{})
-	command.Register(&commands.SentinelRun{})
+	command.Register(&commands.QuestionList{})
+	command.Register(&commands.QuestionAnswer{})
 	command.Register(&commands.SuggestionList{})
 	command.Register(&commands.SuggestionApprove{})
 	command.Register(&commands.SuggestionReject{})
-	command.Register(&commands.TaskList{})
-	command.Register(&commands.TaskGet{})
-	command.Register(&commands.TaskCancel{})
-	command.Register(&commands.TaskRetry{})
 	command.Register(&commands.PRDSubmit{})
 	command.Register(&commands.PRDList{})
 	command.Register(&commands.PRDGet{})
 	command.Register(&commands.PRDApprove{})
 	command.Register(&commands.PRDExecute{})
-	command.Register(&commands.QuestionList{})
-	command.Register(&commands.QuestionAnswer{})
+	command.Register(&commands.ProjectScan{})
+	command.Register(&commands.SentinelRun{})
+	command.Register(&commands.Status{})
+	command.Register(&commands.TaskList{})
+	command.Register(&commands.TaskGet{})
+	command.Register(&commands.TaskCancel{})
+	command.Register(&commands.TaskRetry{})
 
 	yolo.MustRunBinary()
 }

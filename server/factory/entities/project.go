@@ -1,8 +1,12 @@
 package entities
 
-import "github.com/yolo-hq/yolo/core/entity"
+import (
+	"github.com/uptrace/bun"
+	"github.com/yolo-hq/yolo/core/entity"
+)
 
 type Project struct {
+	bun.BaseModel `bun:"table:factory_projects"`
 	entity.BaseEntity
 	Name                 string  `json:"name" bun:"name,notnull,unique" fake:"name"`
 	Status               string  `json:"status" bun:"status,notnull,default:'active'" fake:"oneof:active,archived,paused"`

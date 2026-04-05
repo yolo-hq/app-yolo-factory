@@ -1,8 +1,12 @@
 package entities
 
-import "github.com/yolo-hq/yolo/core/entity"
+import (
+	"github.com/uptrace/bun"
+	"github.com/yolo-hq/yolo/core/entity"
+)
 
 type Insight struct {
+	bun.BaseModel `bun:"table:factory_insights"`
 	entity.BaseEntity
 	ProjectID      string `json:"projectId" bun:"project_id" fake:"rel:Project"`
 	Category       string `json:"category" bun:"category,notnull" fake:"oneof:retry_rate,cost_optimization,model_selection,spec_quality,gate_effectiveness,workflow_optimization"`

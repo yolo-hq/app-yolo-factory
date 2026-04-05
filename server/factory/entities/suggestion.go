@@ -1,8 +1,12 @@
 package entities
 
-import "github.com/yolo-hq/yolo/core/entity"
+import (
+	"github.com/uptrace/bun"
+	"github.com/yolo-hq/yolo/core/entity"
+)
 
 type Suggestion struct {
+	bun.BaseModel `bun:"table:factory_suggestions"`
 	entity.BaseEntity
 	ProjectID       string `json:"projectId" bun:"project_id,notnull" fake:"rel:Project"`
 	Source          string `json:"source" bun:"source,notnull" fake:"oneof:review,sentinel,advisor,manual"`

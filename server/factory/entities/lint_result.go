@@ -1,8 +1,12 @@
 package entities
 
-import "github.com/yolo-hq/yolo/core/entity"
+import (
+	"github.com/uptrace/bun"
+	"github.com/yolo-hq/yolo/core/entity"
+)
 
 type LintResult struct {
+	bun.BaseModel `bun:"table:factory_lint_results"`
 	entity.BaseEntity
 	RunID         string `json:"runId" bun:"run_id,notnull" fake:"rel:Run"`
 	TaskID        string `json:"taskId" bun:"task_id,notnull" fake:"rel:Task"`

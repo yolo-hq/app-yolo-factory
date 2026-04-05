@@ -15,14 +15,14 @@ server/{domain}/entities/, actions/, inputs/, queries/
 
 ## Entities
 - Insight — server/factory/entities/insight.go
+- PRD — server/factory/entities/prd.go
+- Step — server/factory/entities/step.go
 - LintResult — server/factory/entities/lintresult.go
 - Project — server/factory/entities/project.go
 - Question — server/factory/entities/question.go
 - Review — server/factory/entities/review.go
-- Step — server/factory/entities/step.go
-- Suggestion — server/factory/entities/suggestion.go
-- PRD — server/factory/entities/prd.go
 - Run — server/factory/entities/run.go
+- Suggestion — server/factory/entities/suggestion.go
 - Task — server/factory/entities/task.go
 
 ## Reference

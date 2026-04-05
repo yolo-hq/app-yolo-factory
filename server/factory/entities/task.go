@@ -3,10 +3,12 @@ package entities
 import (
 	"time"
 
+	"github.com/uptrace/bun"
 	"github.com/yolo-hq/yolo/core/entity"
 )
 
 type Task struct {
+	bun.BaseModel `bun:"table:factory_tasks"`
 	entity.BaseEntity
 	PrdID              string     `json:"prdId" bun:"prd_id" fake:"rel:PRD"`
 	ProjectID          string     `json:"projectId" bun:"project_id" fake:"rel:Project"`
