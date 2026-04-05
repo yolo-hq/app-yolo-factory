@@ -149,4 +149,6 @@ func setup() {
 	command.Register(&commands.InsightAcknowledge{})
 	command.Register(&commands.InsightApply{})
 	command.Register(&commands.InsightDismiss{})
+	command.Register(&commands.ProjectScan{})
+	command.Register(&commands.PRDDiff{})
 }

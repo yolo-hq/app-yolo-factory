@@ -13,225 +13,273 @@
 ### 1. Database
 
 ```bash
-# PostgreSQL
 createdb yolo_factory
 export DATABASE_URL="postgresql://postgres@localhost:5432/yolo_factory?sslmode=disable"
-
-# Run migrations
 yolo migrate up
 ```
 
 ### 2. Start Factory
 
 ```bash
-# Start API server (port 9000) + MCP (port 3001)
-yolo run api
-
-# Start worker (processes jobs)
-yolo run worker
-
-# Start admin UI (port 3000)
-yolo run admin
-```
-
-Or all at once:
-
-```bash
 yolo dev
 ```
 
----
+This starts the API server (port 9000), MCP server (port 3001), worker, and admin UI (port 3000).
 
-## Quick Start
-
-### Register a project
+### 3. Set up the alias
 
 ```bash
-factory project add \
-  --name plugin-webhooks \
-  --repo git@github.com:yolo-hq/plugin-webhooks.git \
-  --path /repos/plugin-webhooks \
-  --branch main \
-  --model sonnet
+alias yf="yolo run factory"
 ```
 
-### Submit a PRD
+Add this to your `.zshrc` or `.bashrc`.
+
+### 4. Connecting Claude Code (MCP)
+
+Add Factory as an MCP server so Claude Code can interact with it directly:
+
+```bash
+claude mcp add factory --transport sse --url http://localhost:3001/mcp
+```
+
+Then in any Claude Code session you can ask "What's Factory working on?" or use `/factory:submit` to send PRDs.
+
+---
+
+## Register Projects
+
+### Scan a directory
+
+```bash
+# Preview what would be registered
+yf project:scan --dir ~/projects/yolo-hq --dry-run
+
+# Register all repos
+yf project:scan --dir ~/projects/yolo-hq
+```
+
+This finds all directories with both `.git/` and `go.mod`, and registers them as Factory projects.
+
+### Add a single project
+
+```bash
+yf project:add \
+  --name plugin-webhooks \
+  --repo git@github.com:yolo-hq/plugin-webhooks.git \
+  --path ~/projects/yolo-hq/plugin-webhooks
+```
+
+### Configure a project
+
+```bash
+yf project:update <id> --model sonnet --budget 300 --retries 3
+```
+
+---
+
+## How PRDs Become Tasks
+
+```
+You write a PRD
+  │
+  ▼
+yf prd:submit → PRD created (draft)
+  │
+  ▼
+yf prd:execute → Planner agent (Opus) reads PRD + codebase
+  │               breaks it into ordered tasks
+  ▼
+Tasks execute sequentially:
+  Plan → Implement → Test → Lint → Audit → Review
+  │
+  ▼
+Each passing task merges to target branch
+  │
+  ▼
+All tasks done → PRD complete
+```
+
+---
+
+## Submit a PRD
 
 From a file:
 ```bash
-factory prd submit \
-  --project plugin-webhooks \
-  --file ./prd-webhook-retry.md
+yf prd:submit --project plugin-webhooks --file ./prd.md --title "Webhook retry"
 ```
 
-Or inline:
+Inline:
 ```bash
-factory prd submit \
+yf prd:submit \
   --project plugin-webhooks \
   --title "Webhook retry with exponential backoff" \
   --body "Add retry logic for failed webhook deliveries..." \
-  --criteria "Retries up to configured max" \
-  --criteria "Exponential backoff between retries"
+  --criteria "Retries up to configured max"
 ```
 
-### Execute the PRD
-
-```bash
-# 1. Approve the PRD
-factory prd approve <prd-id>
-
-# 2. Execute (triggers planning → task creation → execution)
-factory prd execute <prd-id>
+From Claude Code (after `/grill-me`):
+```
+/factory:submit
 ```
 
-If the project has `auto_start: true`, approving the PRD automatically triggers execution.
+### Writing good PRDs
 
-### Watch progress
+- **Acceptance criteria are key.** More criteria = higher success rate. Minimum 3.
+- **Criteria must be code-verifiable.** The review agent checks with file:line evidence.
+- **Include file paths** if you know them.
+- **Include code patterns** to follow.
+- **Keep it concise.** Agents read it — long specs waste tokens.
+
+---
+
+## Execute and Monitor
 
 ```bash
-factory status
+# Execute a PRD (triggers planning → tasks → execution)
+yf prd:execute <prd-id>
 
-# Output:
-# Factory Status
-# ──────────────
-# Running:  1 task (plugin-webhooks:task-003)
-# Queued:   3 tasks
-# Done:     2 tasks
-# Today:    $1.84 spent
+# Watch progress
+yf status
+
+# View tasks for a PRD
+yf task:list --prd <prd-id>
+
+# View a specific task
+yf task:get <task-id>
+
+# See what Factory changed
+yf prd:diff --id <prd-id>
 ```
 
 ---
 
-## The Workflow
+## Interact
 
-When you execute a PRD, Factory does this:
+### Answer questions
 
+When an agent gets confused, it creates a question. Answer it to unblock:
+
+```bash
+yf questions:list
+yf questions:answer <id> "Use context.Context for cancellation"
 ```
-1. PLANNING
-   Planner agent (Opus) reads your PRD + codebase
-   → Creates ordered tasks with dependencies
 
-2. PER TASK (sequential):
-   a. Plan    — Opus reads code, outputs implementation plan
-   b. Implement — Sonnet writes code via TDD (resumes plan session)
-   c. Test    — go build + go test (shell, zero tokens)
-   d. Lint    — factory lint checks (AST + grep, zero tokens)
-   e. Audit   — Sonnet checks YOLO conventions
-   f. Review  — Sonnet verifies acceptance criteria with evidence
-   
-   If any step fails → retry with error feedback
-   After N retries → escalate model (Sonnet → Opus)
-   After max retries → fail task, notify
+### Review suggestions
 
-3. COMPLETION
-   Merge to target branch, push, unblock dependent tasks
-   After all tasks → PRD alignment review
+Sentinel and Advisor create suggestions. Review and promote:
+
+```bash
+yf suggestions:list
+yf suggestions:approve <id>
+yf suggestions:reject <id> --reason "Not needed"
+```
+
+### Process insights
+
+After 20+ completed tasks, the Process Advisor generates data-backed insights:
+
+```bash
+yf insight:list
+yf insight:acknowledge <id>
+yf insight:apply <id>
+```
+
+---
+
+## Control Execution
+
+```bash
+# Pause/resume a project
+yf project:pause <id>
+yf project:resume <id>
+
+# Cancel a task
+yf task:cancel <id>
+
+# Retry a failed task (optionally with a stronger model)
+yf task:retry <id> --model opus
+
+# Cost report
+yf cost --period month --project plugin-webhooks
+```
+
+---
+
+## Background Systems
+
+### Sentinel (auto-healing)
+Runs daily. Checks build health, test health, security, convention drift, orphaned runs. High-trust issues get auto-fix tasks. Medium-trust issues become suggestions.
+
+```bash
+yf sentinel:run  # run manually
+```
+
+### Advisor (optimization)
+Runs weekly. Suggests pattern extraction, refactoring, code quality improvements.
+
+```bash
+yf advisor:run  # run manually
 ```
 
 ---
 
 ## CLI Reference
 
-### Projects
-
 ```bash
-factory project add --name X --repo X --path X [--branch main] [--model sonnet]
-factory project list [--status active]
-factory project get <id-or-name>
-factory project update <id> [--auto-merge true] [--budget-monthly 300]
-factory project pause <id>
-factory project resume <id>
-factory project archive <id>
-```
+# Projects
+yf project:scan --dir <path> [--dry-run] [--branch main] [--model sonnet]
+yf project:add --name X --repo X --path X [--branch main] [--model sonnet]
+yf project:list
+yf project:get <id-or-name>
+yf project:update <id> [--model X] [--budget X] [--retries X]
+yf project:pause <id>
+yf project:resume <id>
+yf project:archive <id>
 
-### PRDs
+# PRDs
+yf prd:submit --project X --file prd.md [--title X]
+yf prd:submit --project X --title X --body X --criteria "X"
+yf prd:list [--project X] [--status in_progress]
+yf prd:get <id>
+yf prd:approve <id>
+yf prd:execute <id>
+yf prd:diff --id <id>
 
-```bash
-factory prd submit --project X --file ./prd.md
-factory prd submit --project X --title X --body X --criteria "X"
-factory prd list [--project X] [--status in_progress]
-factory prd get <id>
-factory prd approve <id>
-factory prd execute <id>
-```
+# Tasks
+yf task:list [--prd X] [--project X] [--status queued]
+yf task:get <id>
+yf task:cancel <id>
+yf task:retry <id> [--model opus]
 
-### Tasks
+# Status & Cost
+yf status
+yf cost [--period month] [--project X]
 
-```bash
-factory task list [--prd X] [--project X] [--status queued]
-factory task get <id>
-factory task cancel <id>
-factory task retry <id> [--model opus]
-```
+# Questions
+yf questions:list [--status open]
+yf questions:answer <id> "answer"
 
-### Status & Cost
+# Suggestions
+yf suggestions:list [--project X]
+yf suggestions:approve <id>
+yf suggestions:reject <id> --reason "..."
 
-```bash
-factory status
-factory cost [--period month] [--project X]
-```
+# Insights
+yf insight:list [--category cost_optimization]
+yf insight:acknowledge <id>
+yf insight:apply <id>
+yf insight:dismiss <id> --reason "..."
 
-### Questions
-
-When an agent gets confused, it creates a question. Answer it to unblock:
-
-```bash
-factory questions list [--status open]
-factory questions answer <id> "Use context.Context for cancellation"
-```
-
-### Suggestions
-
-Sentinel and Advisor create suggestions. Review and promote:
-
-```bash
-factory suggestions list [--project X] [--category optimization]
-factory suggestions approve <id> [--prd X]
-factory suggestions reject <id> --reason "Not needed"
-```
-
-### Insights
-
-Process Advisor generates insights from execution history:
-
-```bash
-factory insight list [--category cost_optimization]
-factory insight acknowledge <id>
-factory insight apply <id>
-factory insight dismiss <id> --reason "Not applicable"
-```
-
-### Background Agents
-
-```bash
-# Run health checks manually
-factory sentinel run [--project X]
-
-# Run optimization analysis manually
-factory advisor run [--project X]
-
-# Manual backup
-factory backup
-
-# Recover from backup
-factory recover --from /path/to/factory-state
+# Background
+yf sentinel:run [--project X]
+yf advisor:run [--project X]
+yf backup
+yf recover --from /path/to/factory-state
 ```
 
 ---
 
-## Project Configuration
-
-```bash
-factory project add --name my-project --repo git@github.com:org/repo.git --path /repos/repo
-factory project update <id> \
-  --auto-merge true \          # merge on success (default: true)
-  --auto-start false \         # auto-execute on PRD approval (default: false)
-  --budget-monthly 200 \       # monthly cost cap in USD
-  --model sonnet \             # default model
-  --max-retries 3              # retries before failing
-```
-
-### Key settings
+## Project Settings
 
 | Setting | Default | Description |
 |---------|---------|-------------|
@@ -240,169 +288,7 @@ factory project update <id> \
 | `escalation_after_retries` | 2 | When to escalate |
 | `budget_per_task_usd` | 2.00 | Max cost per task |
 | `budget_monthly_usd` | 200.00 | Monthly cap |
-| `budget_warning_at` | 0.8 | Warn at 80% |
 | `auto_merge` | true | Merge on success |
 | `auto_start` | false | Auto-execute on PRD approval |
 | `max_retries` | 3 | Max retries per task |
 | `timeout_secs` | 600 | Task timeout (10 min) |
-| `use_worktrees` | false | Git worktrees (off for linked modules) |
-| `push_failed_branches` | false | Push branches on failure |
-
----
-
-## Writing PRDs for Factory
-
-A good PRD has:
-
-```markdown
-## Title
-Short, descriptive
-
-## Body
-What to build and why. Include:
-- Context the agent needs
-- Constraints and boundaries
-- What NOT to do
-
-## Acceptance Criteria
-Specific, testable conditions:
-- "RetryPolicy interface exists in core/retry/"
-- "Exponential backoff with jitter in default implementation"
-- "Integration test covers retry with failing endpoint"
-
-## Design Decisions (optional)
-- "RetryPolicy in core, not plugin — reusable"
-- "Exponential backoff — prevents thundering herd"
-```
-
-**Tips:**
-- More acceptance criteria = higher success rate
-- Criteria should be verifiable by reading code (the review agent checks)
-- Include file paths if you know them
-- Include code patterns to follow
-- Keep each task small — Factory breaks PRDs into tasks, smaller tasks succeed more
-
----
-
-## Quality Gates
-
-Every task passes through 6 gates:
-
-| Gate | Type | Cost | What it checks |
-|------|------|------|---------------|
-| **Plan** | Agent (Opus) | ~$0.40 | Creates implementation plan |
-| **Implement** | Agent (Sonnet) | ~$0.30 | Writes code via TDD |
-| **Test** | Program | $0 | `go build` + `go test` |
-| **Lint** | Program | $0 | Swallowed errors, shell injection, status literals, stubs, duplicates |
-| **Audit** | Agent (Sonnet) | ~$0.08 | YOLO conventions |
-| **Review** | Agent (Sonnet) | ~$0.15 | Acceptance criteria with file:line evidence |
-
-**Cost per task: ~$0.93**
-
-Program gates catch 80% of issues at zero token cost. Agent gates handle judgment calls.
-
----
-
-## Background Systems
-
-### Sentinel (auto-healing)
-Runs daily. Checks:
-- Build health (`go build`)
-- Test health (`go test`)
-- Security (`govulncheck`)
-- Convention drift (`yolo audit`)
-- Orphaned runs (stuck tasks)
-
-High-trust issues (broken build) → auto-creates fix tasks.
-Medium-trust issues (conventions) → creates suggestions for review.
-
-### Advisor (optimization)
-Runs weekly. Suggests:
-- Pattern extraction ("this retry logic could be shared")
-- Code quality trends
-- Refactoring opportunities
-
-### Process Advisor (self-improvement)
-Runs weekly after 20+ completed tasks. Analyzes:
-- Retry rates by project/model
-- Cost per step type
-- Model effectiveness (Opus vs Sonnet success rates)
-- Gate effectiveness (which gates catch real issues)
-- Spec quality correlation (more criteria = more success?)
-
-Creates Insight entities with data-backed recommendations.
-
----
-
-## Backup & Recovery
-
-Factory auto-backs up state to a git repository:
-
-```
-factory-state/
-├── projects/plugin-webhooks.yml
-├── prds/prd-001.yml
-├── tasks/task-001.yml     # includes nested runs/steps/reviews
-├── questions/
-├── suggestions/
-└── snapshots/2026-04-04.yml
-```
-
-- Every state change → YAML file + git commit
-- Daily → full snapshot
-- Recovery: `factory recover --from ./factory-state`
-
----
-
-## MCP Access
-
-Factory exposes MCP tools on port 3001. From any Claude Code session:
-
-```
-# In your Claude Code MCP config, add Factory:
-{
-  "factory": {
-    "url": "http://localhost:3001"
-  }
-}
-```
-
-Then in Claude Code:
-```
-> What's Factory working on?
-(Claude calls factory_status tool)
-
-> Submit this PRD to Factory
-(Claude calls factory_submit_prd tool)
-
-> Are there any open questions?
-(Claude calls factory_list_questions tool)
-```
-
----
-
-## Troubleshooting
-
-### Task keeps failing
-```bash
-factory task get <id>          # check error message
-factory task retry <id> --model opus  # retry with stronger model
-```
-
-### Budget exceeded
-```bash
-factory cost --project X       # check spending
-factory project update <id> --budget-monthly 500  # increase limit
-```
-
-### Agent asked a question
-```bash
-factory questions list --status open
-factory questions answer <id> "Your answer here"
-```
-
-### Factory stuck
-```bash
-factory status                 # check running tasks
-factory sentinel run --all     # check for orphaned runs
-```
