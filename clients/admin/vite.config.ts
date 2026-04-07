@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'path'
 
-const port = parseInt(process.env.PORT || '3000', 10)
+const port = parseInt(process.env.PORT || '3100', 10)
 const apiPort = parseInt(process.env.YOLO_API_PORT || '9000', 10)
 
 // Resolve @yolo-hq/view to source for HMR during dev

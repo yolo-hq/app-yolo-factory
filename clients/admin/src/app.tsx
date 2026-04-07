@@ -1,5 +1,4 @@
 import { YoloApp, parseClientConfig, parseBlockPage } from '@yolo-hq/view'
-import { YoloProvider } from '@yolo-hq/sdk'
 import { PRDDetail } from './custom/PRDDetail'
 import { QuestionSheet } from './custom/QuestionSheet'
 import type { PageBlock } from '@yolo-hq/view'
@@ -11,33 +10,32 @@ import prdDetailYml from '../config/pages/prds/[id].page.yml?raw'
 
 // ── Parse configs ──
 
-const { data: config } = parseClientConfig(clientYml)
-if (!config) throw new Error('Invalid client.ui.yml')
+const { data: config, errors } = parseClientConfig(clientYml)
+if (!config) throw new Error(`Invalid client.ui.yml: ${errors.map(e => e.message).join(', ')}`)
 
-function loadPage(yml: string): PageBlock {
+function loadPage(yml: string, name: string): PageBlock {
   const { data, errors } = parseBlockPage(yml)
-  if (!data) throw new Error(`Invalid page: ${errors[0]?.message}`)
+  if (!data) throw new Error(`Invalid ${name}: ${errors[0]?.message}`)
   return data
 }
 
 const pages: Record<string, PageBlock> = {
-  '/dashboard': loadPage(dashboardYml),
-  '/prds/$id': loadPage(prdDetailYml),
+  '/dashboard': loadPage(dashboardYml, 'dashboard.page.yml'),
+  '/prds/$id': loadPage(prdDetailYml, 'prds/[id].page.yml'),
 }
 
 // ── App ──
 
 export default function App() {
   return (
-    <YoloProvider config={{ baseUrl: '/api/v1', realtime: true }}>
-      <YoloApp
-        client="admin"
-        config={config}
-        components={{ PRDDetail, QuestionSheet }}
-        pages={pages}
-        user={{ id: '1', role: 'admin', name: 'Admin' }}
-        defaultPath="/dashboard"
-      />
-    </YoloProvider>
+    <YoloApp
+      client="admin"
+      config={config}
+      sdk={{ baseUrl: 'http://localhost:9000', realtime: true }}
+      components={{ PRDDetail, QuestionSheet }}
+      pages={pages}
+      user={{ id: '1', role: 'admin', name: 'Admin' }}
+      defaultPath="/dashboard"
+    />
   )
 }

@@ -64,7 +64,7 @@ apps:
                 actions: [approve, reject]
                 queries: [list]
     cors:
-      origins: ["http://localhost:3000"]
+      origins: ["http://localhost:3100"]
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
       headers: ["*"]
     domains:
@@ -112,4 +112,4 @@ apps:
 
 clients:
   admin:
-    port: 3000
+    port: 3100
