@@ -1,0 +1,5 @@
+type: custom
+source: factory.prd
+id: $route.id
+props:
+  component: PRDDetail

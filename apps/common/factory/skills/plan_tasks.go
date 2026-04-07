@@ -1,0 +1,34 @@
+package skills
+
+// PlanTasksTemplate is the prompt template for breaking a PRD into implementation tasks.
+const PlanTasksTemplate = `You are a software architect breaking a PRD into implementation tasks.
+
+## Project
+Name: {{.ProjectName}}
+Branch: {{.Branch}}
+
+## Framework Conventions
+{{.CLAUDEMDContent}}
+
+## PRD
+Title: {{.PRDTitle}}
+
+{{.PRDBody}}
+
+## Acceptance Criteria
+{{.AcceptanceCriteria}}
+
+## Design Decisions
+{{.DesignDecisions}}
+
+## Instructions
+Break this PRD into ordered tasks. Each task must:
+1. Target ONE repository and ONE branch
+2. Be independently testable (build + tests pass after just this task)
+3. Have specific, verifiable acceptance criteria
+4. List dependencies on other tasks by sequence number
+5. Be small enough to complete in one agent session
+
+Cross-project dependencies use format: "project-name:sequence"
+
+Output the task list as structured JSON.`

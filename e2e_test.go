@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/yolo-hq/yolo/core/pkg/claude"
 
-	"github.com/yolo-hq/app-yolo-factory/server/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/server/factory/services"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/services"
 )
 
 func testdataPath(name string) string {

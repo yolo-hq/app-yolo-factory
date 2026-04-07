@@ -44,10 +44,25 @@ apps:
           - cors
           - logging
           - recovery
-      # MCP not yet supported by framework — enable when available
-      # - protocol: mcp
-      #   transport: sse
-      #   addr: ":3001"
+      - protocol: mcp
+        transport: sse
+        addr: ":3001"
+        domains:
+          factory:
+            entities:
+              Project:
+                queries: [list, get]
+              PRD:
+                actions: [submit, approve, execute]
+                queries: [list, get]
+              Task:
+                queries: [list, get]
+              Question:
+                actions: [answer]
+                queries: [list]
+              Suggestion:
+                actions: [approve, reject]
+                queries: [list]
     cors:
       origins: ["http://localhost:3000"]
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
@@ -80,8 +95,8 @@ apps:
       - default
       - execution
     schedule:
-      check-timeouts: "*/5 * * * *"
-      reset-monthly-budgets: "0 0 1 * *"
+      factory.check-timeouts: "*/5 * * * *"
+      factory.reset-monthly-budgets: "0 0 1 * *"
     health:
       addr: ":9001"
     shutdown:

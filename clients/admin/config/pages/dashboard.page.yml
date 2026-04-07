@@ -1,0 +1,33 @@
+type: stack
+props:
+  gap: lg
+children:
+  # Stats row
+  - type: stats
+    source: factory~dashboard_stats
+    props:
+      items:
+        - { field: running_tasks, label: Running Tasks, variant: accent }
+        - { field: open_questions, label: Open Questions, variant: warning }
+        - { field: spend_today, label: Spend Today, format: currency }
+        - { field: active_prds, label: Active PRDs, variant: success }
+
+  # Two-column: PRDs + Runs
+  - type: split
+    props:
+      sizes: { _: [1], md: [60, 40] }
+    children:
+      - type: table
+        label: Active PRDs
+        source: factory.prd
+        props:
+          columns: [title, status, completed_tasks, total_tasks, total_cost_usd]
+          limit: 5
+          compact: true
+      - type: table
+        label: Recent Runs
+        source: factory.run
+        props:
+          columns: [agent_type, model, status, cost_usd, started_at]
+          limit: 5
+          compact: true

@@ -38,5 +38,8 @@ tmp/
 node_modules/
 dist/
 
-# Generated code
-generated/
+# YOLO runtime artifacts
+.yolo/
+
+# Local env overrides
+.env.local

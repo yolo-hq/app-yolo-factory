@@ -1,0 +1,65 @@
+version: 1
+
+app:
+  name: YOLO Factory
+  auth: required
+
+theme:
+  tokens:
+    colors:
+      primary: "#6366f1"
+      accent: "#8b5cf6"
+      sidebar: "#0f0a1e"
+    density: compact
+    radius: md
+    motion: subtle
+  dark: auto
+
+layout:
+  mode: sidebar
+  sidebar:
+    style: single
+    collapsible: true
+    width: 220
+  header:
+    sticky: true
+    search: true
+    breadcrumbs: true
+  mobile:
+    nav: hamburger
+  footer:
+    text: "YOLO Factory — Autonomous Dev Engine"
+
+navigation:
+  - group: Mission Control
+    icon: radar
+    items:
+      - path: /dashboard
+        label: Dashboard
+        icon: layout-dashboard
+      - entity: Question
+        icon: message-circle
+  - group: Work
+    icon: file-text
+    items:
+      - entity: PRD
+        icon: file-text
+      - entity: Task
+        icon: square-check
+  - group: Execution
+    icon: play
+    items:
+      - entity: Run
+        icon: play-circle
+  - group: Intelligence
+    icon: brain
+    items:
+      - entity: Suggestion
+        icon: lightbulb
+      - entity: Insight
+        icon: brain
+  - group: Platform
+    icon: settings
+    items:
+      - entity: Project
+        icon: folder-git-2
