@@ -343,20 +343,15 @@ func updatePRDCounters(
 			return fmt.Errorf("update PRD status %s: %w", prdID, err)
 		}
 
-		eventType := events.PRDCompletedName
 		if failed > 0 {
-			eventType = events.PRDFailedName
+			service.EmitEvent(ctx, service.PendingEvent{
+				EntityType: "PRD",
+				EntityID:   prdID,
+				Name:       events.PRDFailedName,
+			})
+		} else {
+			events.PRDCompleted.Emit(ctx, prdID)
 		}
-		service.EmitEvent(ctx, service.PendingEvent{
-			EntityType: "PRD",
-			EntityID:   prdID,
-			Name:       eventType,
-			Data: events.PRDPayload{
-				PRDID:        prdID,
-				TaskCount:    total,
-				TotalCostUSD: totalCost,
-			},
-		})
 	}
 	return nil
 }

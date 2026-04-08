@@ -10,21 +10,25 @@ import (
 var BudgetExceeded = &BudgetExceededEvent{}
 var BudgetWarning = &BudgetWarningEvent{}
 var PRDCompleted = &PRDCompletedEvent{}
+var PRDFailed = &PRDFailedEvent{}
 var PRDPlanningComplete = &PRDPlanningCompleteEvent{}
 var QuestionNeedsHuman = &QuestionNeedsHumanEvent{}
 var SentinelBuildBroken = &SentinelBuildBrokenEvent{}
 var SentinelSecurityVuln = &SentinelSecurityVulnEvent{}
 var TaskCompleted = &TaskCompletedEvent{}
+var TaskFailed = &TaskFailedEvent{}
 var TaskStarted = &TaskStartedEvent{}
 
 const BudgetExceededName = "budget.exceeded"
 const BudgetWarningName = "budget.warning"
 const PRDCompletedName = "prd.completed"
+const PRDFailedName = "prd.failed"
 const PRDPlanningCompleteName = "prd.planning-complete"
 const QuestionNeedsHumanName = "question.needs-human"
 const SentinelBuildBrokenName = "sentinel.build.broken"
 const SentinelSecurityVulnName = "sentinel.security.vuln"
 const TaskCompletedName = "task.completed"
+const TaskFailedName = "task.failed"
 const TaskStartedName = "task.started"
 
 func (e *BudgetExceededEvent) Emit(ctx context.Context, payload BudgetExceededPayload) {
@@ -44,6 +48,14 @@ func (e *BudgetWarningEvent) Emit(ctx context.Context, payload BudgetWarningPayl
 func (e *PRDCompletedEvent) Emit(ctx context.Context, entityID string) {
 	service.EmitEvent(ctx, service.PendingEvent{
 		Name:       "prd.completed",
+		EntityType: "PRD",
+		EntityID:   entityID,
+	})
+}
+
+func (e *PRDFailedEvent) Emit(ctx context.Context, entityID string) {
+	service.EmitEvent(ctx, service.PendingEvent{
+		Name:       "prd.failed",
 		EntityType: "PRD",
 		EntityID:   entityID,
 	})
@@ -82,6 +94,14 @@ func (e *SentinelSecurityVulnEvent) Emit(ctx context.Context, payload SentinelPa
 func (e *TaskCompletedEvent) Emit(ctx context.Context, entityID string) {
 	service.EmitEvent(ctx, service.PendingEvent{
 		Name:       "task.completed",
+		EntityType: "Task",
+		EntityID:   entityID,
+	})
+}
+
+func (e *TaskFailedEvent) Emit(ctx context.Context, entityID string) {
+	service.EmitEvent(ctx, service.PendingEvent{
+		Name:       "task.failed",
 		EntityType: "Task",
 		EntityID:   entityID,
 	})

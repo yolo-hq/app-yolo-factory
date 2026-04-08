@@ -58,17 +58,7 @@ func (s *QuestionResolverService) Execute(ctx context.Context, in QuestionResolv
 	}
 
 	// 3. Needs human — emit event.
-	service.EmitEvent(ctx, service.PendingEvent{
-		EntityType: "Question",
-		EntityID:   in.Question.ID,
-		Name:       events.QuestionNeedsHumanName,
-		Data: events.QuestionPayload{
-			QuestionID: in.Question.ID,
-			TaskID:     in.Question.TaskID,
-			Body:       in.Question.Body,
-			Context:    in.Question.Context,
-		},
-	})
+	events.QuestionNeedsHuman.Emit(ctx, in.Question.ID)
 	return QuestionResolverOutput{
 		Resolved: false,
 	}, nil

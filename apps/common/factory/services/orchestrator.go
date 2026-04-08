@@ -144,14 +144,11 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 
 	// 0c. Budget enforcement — check before any work.
 	if err := checkBudget(inProject); err != nil {
-		service.EmitEvent(ctx, service.PendingEvent{
-			Name: events.BudgetExceededName,
-			Data: events.BudgetPayload{
-				ProjectName: inProject.Name,
-				Spent:       inProject.SpentThisMonthUSD,
-				Limit:       inProject.BudgetMonthlyUSD,
-				Percentage:  100,
-			},
+		events.BudgetExceeded.Emit(ctx, events.BudgetExceededPayload{
+			ProjectID:  inProject.ID,
+			Spent:      inProject.SpentThisMonthUSD,
+			Limit:      inProject.BudgetMonthlyUSD,
+			Percentage: 100,
 		})
 		out.Summary = err.Error()
 		return out, nil
@@ -161,14 +158,11 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	if inProject.BudgetMonthlyUSD > 0 && inProject.BudgetWarningAt > 0 {
 		ratio := inProject.SpentThisMonthUSD / inProject.BudgetMonthlyUSD
 		if ratio >= inProject.BudgetWarningAt {
-			service.EmitEvent(ctx, service.PendingEvent{
-				Name: events.BudgetWarningName,
-				Data: events.BudgetPayload{
-					ProjectName: inProject.Name,
-					Spent:       inProject.SpentThisMonthUSD,
-					Limit:       inProject.BudgetMonthlyUSD,
-					Percentage:  ratio * 100,
-				},
+			events.BudgetWarning.Emit(ctx, events.BudgetWarningPayload{
+				ProjectID:  inProject.ID,
+				Spent:      inProject.SpentThisMonthUSD,
+				Limit:      inProject.BudgetMonthlyUSD,
+				Percentage: ratio * 100,
 			})
 			slog.Warn("budget warning",
 				"project", inProject.Name,
@@ -180,16 +174,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	}
 
 	// 0c. Emit task started event.
-	service.EmitEvent(ctx, service.PendingEvent{
-		EntityType: "Task",
-		EntityID:   inTask.ID,
-		Name:       events.TaskStartedName,
-		Data: events.TaskPayload{
-			TaskID:      inTask.ID,
-			Title:       inTask.Title,
-			ProjectName: inProject.Name,
-		},
-	})
+	events.TaskStarted.Emit(ctx, inTask.ID)
 
 	// 1. Determine working directory.
 	workDir := workingDir(inProject, inTask.ID)
@@ -558,17 +543,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	// IntegrationReviewService.Execute with the combined diff from recent tasks.
 
 	// 16. Emit task completed event.
-	service.EmitEvent(ctx, service.PendingEvent{
-		EntityType: "Task",
-		EntityID:   inTask.ID,
-		Name:       events.TaskCompletedName,
-		Data: events.TaskPayload{
-			TaskID:      inTask.ID,
-			Title:       inTask.Title,
-			ProjectName: inProject.Name,
-			CostUSD:     totalCost,
-		},
-	})
+	events.TaskCompleted.Emit(ctx, inTask.ID)
 
 	// 17. Build final output.
 	completedAt := time.Now()
