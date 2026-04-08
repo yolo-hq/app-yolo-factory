@@ -342,9 +342,9 @@ func updatePRDCounters(
 			return fmt.Errorf("update PRD status %s: %w", prdID, err)
 		}
 
-		eventType := events.PRDCompleted
+		eventType := events.PRDCompletedName
 		if failed > 0 {
-			eventType = events.PRDFailed
+			eventType = events.PRDFailedName
 		}
 		service.EmitEvent(ctx, service.PendingEvent{
 			EntityType: "PRD",

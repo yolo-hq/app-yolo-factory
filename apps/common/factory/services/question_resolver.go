@@ -61,7 +61,7 @@ func (s *QuestionResolverService) Execute(ctx context.Context, in QuestionResolv
 	service.EmitEvent(ctx, service.PendingEvent{
 		EntityType: "Question",
 		EntityID:   in.Question.ID,
-		Name:       events.QuestionNeedsHuman,
+		Name:       events.QuestionNeedsHumanName,
 		Data: events.QuestionPayload{
 			QuestionID: in.Question.ID,
 			TaskID:     in.Question.TaskID,

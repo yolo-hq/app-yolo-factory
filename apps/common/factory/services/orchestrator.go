@@ -85,7 +85,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	// 0. Budget enforcement — check before any work.
 	if err := checkBudget(in.Project); err != nil {
 		service.EmitEvent(ctx, service.PendingEvent{
-			Name: events.BudgetExceeded,
+			Name: events.BudgetExceededName,
 			Data: events.BudgetPayload{
 				ProjectName: in.Project.Name,
 				Spent:       in.Project.SpentThisMonthUSD,
@@ -102,7 +102,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 		ratio := in.Project.SpentThisMonthUSD / in.Project.BudgetMonthlyUSD
 		if ratio >= in.Project.BudgetWarningAt {
 			service.EmitEvent(ctx, service.PendingEvent{
-				Name: events.BudgetWarning,
+				Name: events.BudgetWarningName,
 				Data: events.BudgetPayload{
 					ProjectName: in.Project.Name,
 					Spent:       in.Project.SpentThisMonthUSD,
@@ -123,7 +123,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	service.EmitEvent(ctx, service.PendingEvent{
 		EntityType: "Task",
 		EntityID:   in.Task.ID,
-		Name:       events.TaskStarted,
+		Name:       events.TaskStartedName,
 		Data: events.TaskPayload{
 			TaskID:      in.Task.ID,
 			Title:       in.Task.Title,
@@ -501,7 +501,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	service.EmitEvent(ctx, service.PendingEvent{
 		EntityType: "Task",
 		EntityID:   in.Task.ID,
-		Name:       events.TaskCompleted,
+		Name:       events.TaskCompletedName,
 		Data: events.TaskPayload{
 			TaskID:      in.Task.ID,
 			Title:       in.Task.Title,
@@ -661,7 +661,7 @@ func (s *OrchestratorService) buildFailure(ctx context.Context, in OrchestratorI
 	service.EmitEvent(ctx, service.PendingEvent{
 		EntityType: "Task",
 		EntityID:   run.TaskID,
-		Name:       events.TaskFailed,
+		Name:       events.TaskFailedName,
 		Data: events.TaskPayload{
 			TaskID:      run.TaskID,
 			Title:       in.Task.Title,

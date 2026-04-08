@@ -66,7 +66,7 @@ func (s *SentinelService) Execute(ctx context.Context, in SentinelInput) (Sentin
 		switch {
 		case f.Watch == "build_health" && f.Severity == "critical":
 			service.EmitEvent(ctx, service.PendingEvent{
-				Name: events.SentinelBuildBroken,
+				Name: events.SentinelBuildBrokenName,
 				Data: events.SentinelPayload{
 					ProjectID: in.Project.ID,
 					Error:       f.Message,
@@ -75,7 +75,7 @@ func (s *SentinelService) Execute(ctx context.Context, in SentinelInput) (Sentin
 			})
 		case f.Watch == "security" && f.Severity == "critical":
 			service.EmitEvent(ctx, service.PendingEvent{
-				Name: events.SentinelSecurityVuln,
+				Name: events.SentinelSecurityVulnName,
 				Data: events.SentinelPayload{
 					ProjectID: in.Project.ID,
 					Error:       f.Message,
