@@ -1,0 +1,26 @@
+id,prd_id,project_id,title,status,branch,model,sequence,run_count,max_retries,cost_usd
+task_auth1,prd_auth,proj_yolo,Add JWT validation middleware,completed,feat/jwt-validation,sonnet,1,1,3,1.85
+task_auth2,prd_auth,proj_yolo,Implement refresh token flow,completed,feat/refresh-tokens,sonnet,2,2,3,2.10
+task_auth3,prd_auth,proj_yolo,Add OAuth2 scopes and permissions,completed,feat/oauth-scopes,sonnet,3,1,3,1.55
+task_auth4,prd_auth,proj_yolo,Write auth integration tests,completed,feat/auth-tests,haiku,4,1,3,0.92
+task_auth5,prd_auth,proj_yolo,Update auth documentation,completed,feat/auth-docs,haiku,5,1,3,0.45
+task_mig1,prd_migration,proj_yolo,Auto-generate migration files,completed,feat/auto-migrate,sonnet,1,1,3,1.20
+task_mig2,prd_migration,proj_yolo,Implement safe apply for production,completed,feat/safe-apply,opus,2,3,3,2.45
+task_mig3,prd_migration,proj_yolo,Add rollback support,failed,feat/rollback,sonnet,3,3,3,1.80
+task_mig4,prd_migration,proj_yolo,PostgreSQL-specific safety checks,pending,feat/pg-safety,sonnet,4,0,3,0.00
+task_rt1,prd_realtime,proj_yolo,WebSocket server with room system,completed,feat/ws-rooms,sonnet,1,1,3,1.50
+task_rt2,prd_realtime,proj_yolo,Automatic invalidation on mutation,in_progress,feat/auto-invalidate,sonnet,2,1,3,0.80
+task_rt3,prd_realtime,proj_yolo,Client SDK WebSocket integration,pending,,sonnet,3,0,3,0.00
+task_blk1,prd_block,proj_view,Block renderer and type system,completed,feat/block-renderer,sonnet,1,1,2,0.95
+task_blk2,prd_block,proj_view,Source parsing and resolution,completed,feat/source-parse,sonnet,2,1,2,0.85
+task_blk3,prd_block,proj_view,Schema-to-blocks auto generation,completed,feat/schema-blocks,sonnet,3,2,2,1.40
+task_blk4,prd_block,proj_view,Layout blocks (stack/split/grid/tabs),in_progress,feat/layout-blocks,sonnet,4,1,2,0.90
+task_blk5,prd_block,proj_view,Entity blocks (table/form/fields),in_progress,feat/entity-blocks,sonnet,5,1,2,1.10
+task_blk6,prd_block,proj_view,Page state and expressions,pending,,sonnet,6,0,2,0.00
+task_e2e1,prd_e2e,proj_factory,Setup yolotest harness,completed,feat/yolotest-setup,sonnet,1,1,3,0.75
+task_e2e2,prd_e2e,proj_factory,PRD lifecycle e2e tests,in_progress,feat/prd-e2e,sonnet,2,2,3,1.65
+task_e2e3,prd_e2e,proj_factory,Task execution pipeline e2e,pending,,sonnet,3,0,3,0.00
+task_e2e4,prd_e2e,proj_factory,Run and step tracking e2e,pending,,sonnet,4,0,3,0.00
+task_sdk1,prd_sdk_types,proj_sdk,Generate types from schema API,completed,feat/codegen-types,sonnet,1,1,2,1.20
+task_sdk2,prd_sdk_types,proj_sdk,Type-safe useQuery hook,completed,feat/typed-query,sonnet,2,1,2,1.05
+task_sdk3,prd_sdk_types,proj_sdk,Type-safe useAction hook,completed,feat/typed-action,haiku,3,1,2,0.60

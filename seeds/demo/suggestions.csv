@@ -1,0 +1,7 @@
+id,project_id,source,category,title,body,priority,status
+sug_1,proj_yolo,lint,performance,Add index on migrations.applied_at,The migrations table is queried by applied_at frequently but has no index. Adding one would improve lookup performance.,medium,open
+sug_2,proj_yolo,review,security,Rate limit auth endpoints,The OAuth2 endpoints have no rate limiting. Add middleware to prevent brute force attacks.,high,open
+sug_3,proj_view,lint,code_quality,Remove unused CSS custom properties,Found 12 unused CSS custom properties in tokens.css that can be cleaned up.,low,dismissed
+sug_4,proj_factory,review,architecture,Extract task orchestrator to separate service,The task execution pipeline is tightly coupled with the API server. Extracting it would improve scalability.,medium,converted
+sug_5,proj_sdk,review,dx,Add error boundary to useQuery hook,SDK useQuery should catch and surface errors better instead of silently failing.,high,open
+sug_6,proj_yolo,lint,testing,Increase test coverage for seed package,The seed package has 62% coverage. Critical paths like CSV parsing and faker generation need more tests.,medium,open

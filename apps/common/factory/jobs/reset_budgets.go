@@ -29,10 +29,6 @@ func (j *ResetBudgetsJob) Config() jobs.Config {
 }
 
 func (j *ResetBudgetsJob) Handle(ctx context.Context, _ []byte) error {
-	if j.ProjectRead == nil {
-		return fmt.Errorf("factory.reset-monthly-budgets: dependencies not injected")
-	}
-
 	result, err := j.ProjectRead.FindMany(ctx, entity.FindOptions{
 		Filters: []entity.FilterCondition{
 			{Field: "status", Operator: entity.OpEq, Value: entities.ProjectActive},

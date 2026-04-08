@@ -13,6 +13,7 @@ import (
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/commands"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/filters"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/services"
 	"github.com/yolo-hq/yolo/core/command"
 	"github.com/yolo-hq/yolo/core/jobs"
 	"github.com/yolo-hq/yolo/core/registry"
@@ -21,6 +22,32 @@ import (
 )
 
 func main() {
+	// Wirable instances
+	var (
+		svcAdvisorService = &services.AdvisorService{}
+		svcBackupService = &services.BackupService{}
+		svcContextService = &services.ContextService{}
+		svcDependencyService = &services.DependencyService{}
+		svcGitService = &services.GitService{}
+		svcIntegrationReviewService = &services.IntegrationReviewService{}
+		svcLinterService = &services.LinterService{}
+		svcOrchestratorService = &services.OrchestratorService{}
+		svcPlannerService = &services.PlannerService{}
+		svcProcessAdvisorService = &services.ProcessAdvisorService{}
+		svcSentinelService = &services.SentinelService{}
+		actApprovePRDAction = &actions.ApprovePRDAction{}
+		actCompleteRunAction = &actions.CompleteRunAction{}
+		actExecutePRDAction = &actions.ExecutePRDAction{}
+		jobAdvisorJob = &domjobs.AdvisorJob{}
+		jobBackupSnapshotJob = &domjobs.BackupSnapshotJob{}
+		jobCheckTimeoutsJob = &domjobs.CheckTimeoutsJob{}
+		jobExecuteWorkflowJob = &domjobs.ExecuteWorkflowJob{}
+		jobPlanPRDJob = &domjobs.PlanPRDJob{}
+		jobProcessAdvisorJob = &domjobs.ProcessAdvisorJob{}
+		jobResetBudgetsJob = &domjobs.ResetBudgetsJob{}
+		jobSentinelJob = &domjobs.SentinelJob{}
+	)
+
 	// Entities
 	registry.Register(
 		entities.Insight{},
@@ -74,8 +101,8 @@ func main() {
 		&actions.DismissInsightAction{},
 	)
 	registry.RegisterActions("PRD",
-		&actions.ApprovePRDAction{},
-		&actions.ExecutePRDAction{},
+		actApprovePRDAction,
+		actExecutePRDAction,
 		&actions.SubmitPRDAction{},
 	)
 	registry.RegisterActions("Project",
@@ -88,7 +115,7 @@ func main() {
 		&actions.AnswerQuestionAction{},
 	)
 	registry.RegisterActions("Run",
-		&actions.CompleteRunAction{},
+		actCompleteRunAction,
 	)
 	registry.RegisterActions("Suggestion",
 		&actions.ApproveSuggestionAction{},
@@ -112,14 +139,14 @@ func main() {
 	registry.RegisterFilter("Task", &filters.TaskFilter{})
 
 	// Jobs
-	jobs.RegisterHandler(&domjobs.AdvisorJob{})
-	jobs.RegisterHandler(&domjobs.BackupSnapshotJob{})
-	jobs.RegisterHandler(&domjobs.CheckTimeoutsJob{})
-	jobs.RegisterHandler(&domjobs.ExecuteWorkflowJob{})
-	jobs.RegisterHandler(&domjobs.PlanPRDJob{})
-	jobs.RegisterHandler(&domjobs.ProcessAdvisorJob{})
-	jobs.RegisterHandler(&domjobs.ResetBudgetsJob{})
-	jobs.RegisterHandler(&domjobs.SentinelJob{})
+	jobs.RegisterHandler(jobAdvisorJob)
+	jobs.RegisterHandler(jobBackupSnapshotJob)
+	jobs.RegisterHandler(jobCheckTimeoutsJob)
+	jobs.RegisterHandler(jobExecuteWorkflowJob)
+	jobs.RegisterHandler(jobPlanPRDJob)
+	jobs.RegisterHandler(jobProcessAdvisorJob)
+	jobs.RegisterHandler(jobResetBudgetsJob)
+	jobs.RegisterHandler(jobSentinelJob)
 
 	// Commands
 	command.Register(&commands.AdvisorRun{})
@@ -155,6 +182,78 @@ func main() {
 	command.Register(&commands.TaskGet{})
 	command.Register(&commands.TaskList{})
 	command.Register(&commands.TaskRetry{})
+
+	// Dependency injection — runs after DB is initialized
+	registry.RegisterWireFunc(func(db any, repos map[string]*registry.RepoSet) {
+		bunDB := db.(*bun.DB)
+		_ = bunDB
+		// TODO: wire svcAdvisorService.Claude (*claude.Client) — requires config
+		svcAdvisorService.Context = svcContextService
+		svcDependencyService.TaskRead = bunrepo.NewReadRepository[entities.Task](db.(*bun.DB))
+		svcDependencyService.TaskWrite = bunrepo.NewWriteRepository[entities.Task](db.(*bun.DB))
+		// TODO: wire svcIntegrationReviewService.Claude (*claude.Client) — requires config
+		svcIntegrationReviewService.Context = svcContextService
+		// TODO: wire svcOrchestratorService.Claude (*claude.Client) — requires config
+		svcOrchestratorService.Git = svcGitService
+		svcOrchestratorService.Context = svcContextService
+		svcOrchestratorService.Dependency = svcDependencyService
+		svcOrchestratorService.Linter = svcLinterService
+		// TODO: wire svcPlannerService.Claude (*claude.Client) — requires config
+		svcPlannerService.Context = svcContextService
+		svcPlannerService.Dependency = svcDependencyService
+		// TODO: wire svcProcessAdvisorService.Claude (*claude.Client) — requires config
+		// TODO: wire .Claude (*claude.Client) — requires config
+		// TODO: wire svcSentinelService.Claude (*claude.Client) — requires config
+		actApprovePRDAction.JobClient = jobs.GlobalClient()
+		actApprovePRDAction.PlanPRDJob = jobPlanPRDJob
+		actCompleteRunAction.JobClient = jobs.GlobalClient()
+		actCompleteRunAction.WorkflowJob = jobExecuteWorkflowJob
+		actExecutePRDAction.JobClient = jobs.GlobalClient()
+		actExecutePRDAction.PlanJob = jobPlanPRDJob
+		jobAdvisorJob.Advisor = svcAdvisorService
+		jobAdvisorJob.ProjectRead = bunrepo.NewReadRepository[entities.Project](db.(*bun.DB))
+		jobAdvisorJob.TaskRead = bunrepo.NewReadRepository[entities.Task](db.(*bun.DB))
+		jobAdvisorJob.RunRead = bunrepo.NewReadRepository[entities.Run](db.(*bun.DB))
+		jobAdvisorJob.SuggestionWrite = bunrepo.NewWriteRepository[entities.Suggestion](db.(*bun.DB))
+		jobBackupSnapshotJob.Backup = svcBackupService
+		jobBackupSnapshotJob.ProjectRead = bunrepo.NewReadRepository[entities.Project](db.(*bun.DB))
+		jobBackupSnapshotJob.PRDRead = bunrepo.NewReadRepository[entities.PRD](db.(*bun.DB))
+		jobBackupSnapshotJob.TaskRead = bunrepo.NewReadRepository[entities.Task](db.(*bun.DB))
+		jobBackupSnapshotJob.QuestionRead = bunrepo.NewReadRepository[entities.Question](db.(*bun.DB))
+		jobBackupSnapshotJob.SuggestionRead = bunrepo.NewReadRepository[entities.Suggestion](db.(*bun.DB))
+		jobCheckTimeoutsJob.RunRead = bunrepo.NewReadRepository[entities.Run](db.(*bun.DB))
+		jobCheckTimeoutsJob.RunWrite = bunrepo.NewWriteRepository[entities.Run](db.(*bun.DB))
+		jobCheckTimeoutsJob.TaskRead = bunrepo.NewReadRepository[entities.Task](db.(*bun.DB))
+		jobCheckTimeoutsJob.TaskWrite = bunrepo.NewWriteRepository[entities.Task](db.(*bun.DB))
+		jobCheckTimeoutsJob.ProjectRead = bunrepo.NewReadRepository[entities.Project](db.(*bun.DB))
+		jobExecuteWorkflowJob.Orchestrator = svcOrchestratorService
+		jobExecuteWorkflowJob.TaskRead = bunrepo.NewReadRepository[entities.Task](db.(*bun.DB))
+		jobExecuteWorkflowJob.TaskWrite = bunrepo.NewWriteRepository[entities.Task](db.(*bun.DB))
+		jobExecuteWorkflowJob.RunWrite = bunrepo.NewWriteRepository[entities.Run](db.(*bun.DB))
+		jobExecuteWorkflowJob.StepWrite = bunrepo.NewWriteRepository[entities.Step](db.(*bun.DB))
+		jobExecuteWorkflowJob.ReviewWrite = bunrepo.NewWriteRepository[entities.Review](db.(*bun.DB))
+		jobExecuteWorkflowJob.PRDRead = bunrepo.NewReadRepository[entities.PRD](db.(*bun.DB))
+		jobExecuteWorkflowJob.ProjectRead = bunrepo.NewReadRepository[entities.Project](db.(*bun.DB))
+		jobPlanPRDJob.Planner = svcPlannerService
+		jobPlanPRDJob.PRDRead = bunrepo.NewReadRepository[entities.PRD](db.(*bun.DB))
+		jobPlanPRDJob.PRDWrite = bunrepo.NewWriteRepository[entities.PRD](db.(*bun.DB))
+		jobPlanPRDJob.TaskWrite = bunrepo.NewWriteRepository[entities.Task](db.(*bun.DB))
+		jobPlanPRDJob.ProjectRead = bunrepo.NewReadRepository[entities.Project](db.(*bun.DB))
+		jobProcessAdvisorJob.Advisor = svcProcessAdvisorService
+		jobProcessAdvisorJob.ProjectRead = bunrepo.NewReadRepository[entities.Project](db.(*bun.DB))
+		jobProcessAdvisorJob.TaskRead = bunrepo.NewReadRepository[entities.Task](db.(*bun.DB))
+		jobProcessAdvisorJob.RunRead = bunrepo.NewReadRepository[entities.Run](db.(*bun.DB))
+		jobProcessAdvisorJob.StepRead = bunrepo.NewReadRepository[entities.Step](db.(*bun.DB))
+		jobProcessAdvisorJob.ReviewRead = bunrepo.NewReadRepository[entities.Review](db.(*bun.DB))
+		jobProcessAdvisorJob.LintResultRead = bunrepo.NewReadRepository[entities.LintResult](db.(*bun.DB))
+		jobProcessAdvisorJob.InsightWrite = bunrepo.NewWriteRepository[entities.Insight](db.(*bun.DB))
+		jobResetBudgetsJob.ProjectRead = bunrepo.NewReadRepository[entities.Project](db.(*bun.DB))
+		jobResetBudgetsJob.ProjectWrite = bunrepo.NewWriteRepository[entities.Project](db.(*bun.DB))
+		jobSentinelJob.Sentinel = svcSentinelService
+		jobSentinelJob.ProjectRead = bunrepo.NewReadRepository[entities.Project](db.(*bun.DB))
+		jobSentinelJob.TaskWrite = bunrepo.NewWriteRepository[entities.Task](db.(*bun.DB))
+		jobSentinelJob.SuggestionWrite = bunrepo.NewWriteRepository[entities.Suggestion](db.(*bun.DB))
+	})
 
 	yolo.MustServe("./app.yml")
 }

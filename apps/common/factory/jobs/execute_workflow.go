@@ -41,10 +41,6 @@ func (j *ExecuteWorkflowJob) Config() jobs.Config {
 }
 
 func (j *ExecuteWorkflowJob) Handle(ctx context.Context, payload []byte) error {
-	if j.Orchestrator == nil {
-		return fmt.Errorf("factory.execute-workflow: dependencies not injected")
-	}
-
 	// 1. Parse payload.
 	var p executeWorkflowPayload
 	if err := json.Unmarshal(payload, &p); err != nil {

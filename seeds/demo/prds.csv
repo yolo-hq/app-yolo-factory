@@ -1,0 +1,11 @@
+id,project_id,title,status,source,created_by,body,acceptance_criteria,total_tasks,completed_tasks,failed_tasks,total_cost_usd
+prd_auth,proj_yolo,Implement OAuth2 middleware,completed,manual,human,Add OAuth2 bearer token middleware with JWT validation and refresh token support.,All auth tests pass and middleware handles edge cases,5,5,0,8.42
+prd_migration,proj_yolo,Safe migration system,in_progress,manual,human,Build auto-migration in dev with safe apply in production. Support both SQL and Go migration files.,Migrations generate correctly and apply safely in CI,4,2,1,4.15
+prd_realtime,proj_yolo,WebSocket real-time invalidation,in_progress,suggestion,agent,Automatic cache invalidation via WebSocket rooms when entities are mutated.,Real-time updates propagate within 100ms,3,1,0,2.30
+prd_block,proj_view,Block model v2 implementation,in_progress,manual,human,Universal block tree with source resolution and SDK integration for config-driven pages.,All block types render correctly from YAML config,6,3,0,5.60
+prd_admin,proj_view,Admin redesign phase 1,approved,manual,human,ClickUp-inspired admin with two-panel sidebar and YAML-driven pages.,Dashboard and entity pages look production-ready,8,0,0,0.00
+prd_sdk_types,proj_sdk,Type-safe SDK hooks,completed,manual,human,Generate TypeScript types from entity schemas for fully typed useQuery/useAction hooks.,No any types in consuming code,3,3,0,3.20
+prd_seed,proj_yolo,Seeding system,completed,suggestion,agent,Three-layer seeding: initial/sample/demo with faker tags and CSV export.,Seed commands work for all entity types,2,2,0,1.80
+prd_jobs,proj_yolo,Job runtime and scheduling,draft,manual,human,Background job processing with retry logic and dead letter queue.,Jobs execute reliably with proper failure handling,0,0,0,0.00
+prd_e2e,proj_factory,End-to-end test framework,in_progress,manual,human,Integration test harness using yolotest package with real DB.,All critical paths covered with e2e tests,4,1,0,3.10
+prd_mcp,proj_factory,MCP adapter for factory,draft,suggestion,agent,Model Context Protocol adapter to expose factory actions as MCP tools.,Factory actions callable via MCP from any agent,0,0,0,0.00

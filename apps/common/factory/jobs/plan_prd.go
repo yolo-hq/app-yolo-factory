@@ -39,10 +39,6 @@ func (j *PlanPRDJob) Config() jobs.Config {
 }
 
 func (j *PlanPRDJob) Handle(ctx context.Context, payload []byte) error {
-	if j.Planner == nil {
-		return fmt.Errorf("factory.plan-prd: dependencies not injected")
-	}
-
 	var p planPRDPayload
 	if err := json.Unmarshal(payload, &p); err != nil {
 		return fmt.Errorf("parse payload: %w", err)

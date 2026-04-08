@@ -38,10 +38,6 @@ func (j *SentinelJob) Config() jobs.Config {
 }
 
 func (j *SentinelJob) Handle(ctx context.Context, payload []byte) error {
-	if j.Sentinel == nil {
-		return fmt.Errorf("factory.sentinel: dependencies not injected")
-	}
-
 	var p sentinelPayload
 	if err := json.Unmarshal(payload, &p); err != nil {
 		return fmt.Errorf("parse payload: %w", err)

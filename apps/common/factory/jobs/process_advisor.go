@@ -41,10 +41,6 @@ func (j *ProcessAdvisorJob) Config() jobs.Config {
 }
 
 func (j *ProcessAdvisorJob) Handle(ctx context.Context, payload []byte) error {
-	if j.Advisor == nil {
-		return fmt.Errorf("factory.process-advisor: dependencies not injected")
-	}
-
 	var p processAdvisorPayload
 	if err := json.Unmarshal(payload, &p); err != nil {
 		return fmt.Errorf("parse payload: %w", err)

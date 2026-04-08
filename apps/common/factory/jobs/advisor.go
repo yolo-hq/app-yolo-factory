@@ -39,10 +39,6 @@ func (j *AdvisorJob) Config() jobs.Config {
 }
 
 func (j *AdvisorJob) Handle(ctx context.Context, payload []byte) error {
-	if j.Advisor == nil {
-		return fmt.Errorf("factory.advisor: dependencies not injected")
-	}
-
 	var p advisorPayload
 	if err := json.Unmarshal(payload, &p); err != nil {
 		return fmt.Errorf("parse payload: %w", err)

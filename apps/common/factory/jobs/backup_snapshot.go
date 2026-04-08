@@ -34,10 +34,6 @@ func (j *BackupSnapshotJob) Config() jobs.Config {
 }
 
 func (j *BackupSnapshotJob) Handle(ctx context.Context, _ []byte) error {
-	if j.Backup == nil {
-		return fmt.Errorf("factory.backup-snapshot: dependencies not injected")
-	}
-
 	// Back up each entity type.
 	if err := j.backupAll(ctx, "project", j.ProjectRead); err != nil {
 		return fmt.Errorf("backup projects: %w", err)

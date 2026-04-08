@@ -31,7 +31,7 @@ export default function App() {
     <YoloApp
       client="admin"
       config={config}
-      sdk={{ baseUrl: 'http://localhost:9000', realtime: true }}
+      sdk={{ baseUrl: 'http://localhost:9000', realtime: false }}
       components={{ PRDDetail, QuestionSheet }}
       pages={pages}
       user={{ id: '1', role: 'admin', name: 'Admin' }}

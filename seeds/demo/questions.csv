@@ -1,0 +1,7 @@
+id,task_id,run_id,body,context,confidence,status,answer,answered_by
+q_1,task_mig2,run_m2r1,Should rollback use a separate migration table or reuse the main one?,Migration system design - separate tracking vs shared table,medium,answered,Use the main migrations table with a direction column (up/down),human
+q_2,task_mig3,run_m3r1,The rollback for ALTER COLUMN requires storing the previous column definition. Should we parse the up migration or require explicit down SQL?,Rollback implementation approach,low,answered,Require explicit down SQL in a paired file. Auto-reverse is too fragile for production.,human
+q_3,task_rt2,run_rt2r1,Should WebSocket rooms be hierarchical? e.g. subscribing to 'factory' also gets 'factory.task' events?,Room subscription granularity,high,open,,
+q_4,task_blk4,run_b3r2,The split block needs responsive sizing. Should we use CSS Grid or Flexbox for the two-column layout?,Layout implementation choice,high,answered,Flexbox with inline flex values. Grid is overkill for simple splits.,human
+q_5,task_e2e2,run_e2r1,The e2e tests need a running database. Should we use testcontainers or expect a local postgres?,Test infrastructure choice,medium,open,,
+q_6,task_mig3,run_m3r3,PostgreSQL doesn't support transactional DDL for all operations. Should we warn or block non-transactional migrations?,Migration safety level,low,open,,

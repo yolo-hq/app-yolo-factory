@@ -31,10 +31,6 @@ func (j *CheckTimeoutsJob) Config() jobs.Config {
 }
 
 func (j *CheckTimeoutsJob) Handle(ctx context.Context, _ []byte) error {
-	if j.RunRead == nil {
-		return fmt.Errorf("check-timeouts: repositories not injected")
-	}
-
 	// Find all running runs.
 	result, err := j.RunRead.FindMany(ctx, entity.FindOptions{
 		Filters: []entity.FilterCondition{
