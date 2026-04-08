@@ -19,7 +19,11 @@ type CancelTaskAction struct {
 func (a *CancelTaskAction) Description() string { return "Cancel a non-terminal task" }
 
 func (a *CancelTaskAction) Execute(ctx context.Context, actx *action.Context) action.Result {
-	return action.ExecUpdate[entities.Task](ctx, actx, write.Set{
+	if r := action.ExecUpdate[entities.Task](ctx, actx, write.Set{
 		write.NewField[string]("status").Value(entities.TaskCancelled),
-	})
+	}); r != nil {
+		return *r
+	}
+	actx.Resolve("Task", actx.EntityID)
+	return action.OK()
 }

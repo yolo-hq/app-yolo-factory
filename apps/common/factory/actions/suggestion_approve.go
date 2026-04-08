@@ -29,5 +29,9 @@ func (a *ApproveSuggestionAction) Execute(ctx context.Context, actx *action.Cont
 		set = append(set, write.NewField[string]("converted_task_id").Value(input.PRDID))
 	}
 
-	return action.ExecUpdate[entities.Suggestion](ctx, actx, set)
+	if r := action.ExecUpdate[entities.Suggestion](ctx, actx, set); r != nil {
+		return *r
+	}
+	actx.Resolve("Suggestion", actx.EntityID)
+	return action.OK()
 }

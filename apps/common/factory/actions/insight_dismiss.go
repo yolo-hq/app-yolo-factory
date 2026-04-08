@@ -23,7 +23,11 @@ func (a *DismissInsightAction) Execute(ctx context.Context, actx *action.Context
 	// input consumed for validation; reason not stored on entity.
 	_ = a.Input(actx)
 
-	return action.ExecUpdate[entities.Insight](ctx, actx, write.Set{
+	if r := action.ExecUpdate[entities.Insight](ctx, actx, write.Set{
 		write.NewField[string]("status").Value(entities.InsightDismissed),
-	})
+	}); r != nil {
+		return *r
+	}
+	actx.Resolve("Insight", actx.EntityID)
+	return action.OK()
 }

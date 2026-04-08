@@ -19,7 +19,11 @@ type PauseProjectAction struct {
 func (a *PauseProjectAction) Description() string { return "Pause an active project" }
 
 func (a *PauseProjectAction) Execute(ctx context.Context, actx *action.Context) action.Result {
-	return action.ExecUpdate[entities.Project](ctx, actx, write.Set{
+	if r := action.ExecUpdate[entities.Project](ctx, actx, write.Set{
 		write.NewField[string]("status").Value(entities.ProjectPaused),
-	})
+	}); r != nil {
+		return *r
+	}
+	actx.Resolve("Project", actx.EntityID)
+	return action.OK()
 }
