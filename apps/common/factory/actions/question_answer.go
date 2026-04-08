@@ -15,11 +15,10 @@ import (
 // AnswerQuestionAction answers an open question.
 type AnswerQuestionAction struct {
 	action.TypedInput[inputs.AnswerQuestionInput]
+	action.RequirePolicy[policies.CanAnswerQuestionPolicy]
 }
 
-func (a *AnswerQuestionAction) Policies() []action.AnyPolicy {
-	return []action.AnyPolicy{&policies.QuestionMustBeOpen{}}
-}
+func (a *AnswerQuestionAction) Description() string { return "Answer an open question" }
 
 func (a *AnswerQuestionAction) Execute(ctx context.Context, actx *action.Context) action.Result {
 	input := a.Input(actx)

@@ -17,13 +17,12 @@ import (
 // ApprovePRDAction approves a draft PRD and optionally triggers planning.
 type ApprovePRDAction struct {
 	action.NoInput
+	action.RequirePolicy[policies.CanApprovePRDPolicy]
 	JobClient  *jobs.Client
 	PlanPRDJob jobs.Handler
 }
 
-func (a *ApprovePRDAction) Policies() []action.AnyPolicy {
-	return []action.AnyPolicy{&policies.PRDMustBeDraft{}}
-}
+func (a *ApprovePRDAction) Description() string { return "Approve a draft PRD" }
 
 func (a *ApprovePRDAction) Execute(ctx context.Context, actx *action.Context) action.Result {
 	prd, r := action.FindOrFail[entities.PRD](ctx, action.ReadRepo[entities.PRD](actx), actx.EntityID)

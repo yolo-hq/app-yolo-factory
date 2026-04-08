@@ -14,7 +14,10 @@ import (
 // SubmitPRDAction creates a new PRD for a project.
 type SubmitPRDAction struct {
 	action.TypedInput[inputs.SubmitPRDInput]
+	action.PublicAccess
 }
+
+func (a *SubmitPRDAction) Description() string { return "Submit a new PRD for a project" }
 
 func (a *SubmitPRDAction) Execute(ctx context.Context, actx *action.Context) action.Result {
 	input := a.Input(actx)

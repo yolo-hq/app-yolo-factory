@@ -20,9 +20,12 @@ import (
 // CompleteRunAction records run completion and drives the task/PRD state machine.
 type CompleteRunAction struct {
 	action.TypedInput[inputs.CompleteRunInput]
+	action.PublicAccess
 	JobClient   *jobs.Client
 	WorkflowJob jobs.Handler
 }
+
+func (a *CompleteRunAction) Description() string { return "Record run completion and advance state machine" }
 
 func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) action.Result {
 	run, r := action.FindOrFail[entities.Run](ctx, action.ReadRepo[entities.Run](actx), actx.EntityID)

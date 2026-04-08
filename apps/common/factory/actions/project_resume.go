@@ -13,21 +13,13 @@ import (
 // ResumeProjectAction resumes a paused project.
 type ResumeProjectAction struct {
 	action.NoInput
+	action.RequirePolicy[policies.CanResumeProjectPolicy]
 }
 
-func (a *ResumeProjectAction) Policies() []action.AnyPolicy {
-	return []action.AnyPolicy{&policies.ProjectMustBePaused{}}
-}
+func (a *ResumeProjectAction) Description() string { return "Resume a paused project" }
 
 func (a *ResumeProjectAction) Execute(ctx context.Context, actx *action.Context) action.Result {
-	_, err := action.Write[entities.Project](actx).Exec(ctx, write.Update{
-		ID:  actx.EntityID,
-		Set: write.Set{write.NewField[string]("status").Value(entities.ProjectActive)},
+	return action.ExecUpdate[entities.Project](ctx, actx, write.Set{
+		write.NewField[string]("status").Value(entities.ProjectActive),
 	})
-	if err != nil {
-		return action.Failure(err.Error())
-	}
-
-	actx.Resolve("Project", actx.EntityID)
-	return action.OK()
 }

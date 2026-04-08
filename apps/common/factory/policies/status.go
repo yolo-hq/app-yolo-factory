@@ -1,5 +1,5 @@
 // Package policies defines EntityPolicies for Factory domain status guards.
-// These replace inline `if status != X` checks in action Execute() methods.
+// Named Can{Action}{Entity}Policy — each policy maps 1:1 with an action.
 package policies
 
 import (
@@ -18,12 +18,11 @@ type statusData struct {
 
 // --- Project policies ---
 
-// ProjectMustBeActive denies if project status is not "active".
-// Used by: SubmitPRDAction, PauseProjectAction
-type ProjectMustBeActive struct{ policy.EntityPolicyBase }
+// CanPauseProjectPolicy denies if project status is not "active".
+type CanPauseProjectPolicy struct{ policy.EntityPolicyBase }
 
-func (p *ProjectMustBeActive) PolicyData() any { return &statusData{} }
-func (p *ProjectMustBeActive) EvaluateEntity(_ context.Context, data any) policy.PolicyResult {
+func (p *CanPauseProjectPolicy) PolicyData() any { return &statusData{} }
+func (p *CanPauseProjectPolicy) EvaluateEntity(_ context.Context, data any) policy.PolicyResult {
 	d := data.(*statusData)
 	if d.Status != entities.ProjectActive {
 		return policy.Deny("project must be active")
@@ -31,12 +30,11 @@ func (p *ProjectMustBeActive) EvaluateEntity(_ context.Context, data any) policy
 	return policy.Allow()
 }
 
-// ProjectMustBePaused denies if project status is not "paused".
-// Used by: ResumeProjectAction
-type ProjectMustBePaused struct{ policy.EntityPolicyBase }
+// CanResumeProjectPolicy denies if project status is not "paused".
+type CanResumeProjectPolicy struct{ policy.EntityPolicyBase }
 
-func (p *ProjectMustBePaused) PolicyData() any { return &statusData{} }
-func (p *ProjectMustBePaused) EvaluateEntity(_ context.Context, data any) policy.PolicyResult {
+func (p *CanResumeProjectPolicy) PolicyData() any { return &statusData{} }
+func (p *CanResumeProjectPolicy) EvaluateEntity(_ context.Context, data any) policy.PolicyResult {
 	d := data.(*statusData)
 	if d.Status != entities.ProjectPaused {
 		return policy.Deny("project must be paused to resume")
@@ -46,12 +44,11 @@ func (p *ProjectMustBePaused) EvaluateEntity(_ context.Context, data any) policy
 
 // --- PRD policies ---
 
-// PRDMustBeDraft denies if PRD status is not "draft".
-// Used by: ApprovePRDAction
-type PRDMustBeDraft struct{ policy.EntityPolicyBase }
+// CanApprovePRDPolicy denies if PRD status is not "draft".
+type CanApprovePRDPolicy struct{ policy.EntityPolicyBase }
 
-func (p *PRDMustBeDraft) PolicyData() any { return &statusData{} }
-func (p *PRDMustBeDraft) EvaluateEntity(_ context.Context, data any) policy.PolicyResult {
+func (p *CanApprovePRDPolicy) PolicyData() any { return &statusData{} }
+func (p *CanApprovePRDPolicy) EvaluateEntity(_ context.Context, data any) policy.PolicyResult {
 	d := data.(*statusData)
 	if d.Status != entities.PRDDraft {
 		return policy.Deny("PRD must be in draft status")
@@ -59,12 +56,11 @@ func (p *PRDMustBeDraft) EvaluateEntity(_ context.Context, data any) policy.Poli
 	return policy.Allow()
 }
 
-// PRDMustBeDraftOrApproved denies if PRD status is not "draft" or "approved".
-// Used by: ExecutePRDAction
-type PRDMustBeDraftOrApproved struct{ policy.EntityPolicyBase }
+// CanExecutePRDPolicy denies if PRD status is not "draft" or "approved".
+type CanExecutePRDPolicy struct{ policy.EntityPolicyBase }
 
-func (p *PRDMustBeDraftOrApproved) PolicyData() any { return &statusData{} }
-func (p *PRDMustBeDraftOrApproved) EvaluateEntity(_ context.Context, data any) policy.PolicyResult {
+func (p *CanExecutePRDPolicy) PolicyData() any { return &statusData{} }
+func (p *CanExecutePRDPolicy) EvaluateEntity(_ context.Context, data any) policy.PolicyResult {
 	d := data.(*statusData)
 	if d.Status != entities.PRDDraft && d.Status != entities.PRDApproved {
 		return policy.Deny(fmt.Sprintf("PRD must be in draft or approved status, got %q", d.Status))
@@ -74,12 +70,11 @@ func (p *PRDMustBeDraftOrApproved) EvaluateEntity(_ context.Context, data any) p
 
 // --- Task policies ---
 
-// TaskMustBeFailed denies if task status is not "failed".
-// Used by: RetryTaskAction
-type TaskMustBeFailed struct{ policy.EntityPolicyBase }
+// CanRetryTaskPolicy denies if task status is not "failed".
+type CanRetryTaskPolicy struct{ policy.EntityPolicyBase }
 
-func (p *TaskMustBeFailed) PolicyData() any { return &statusData{} }
-func (p *TaskMustBeFailed) EvaluateEntity(_ context.Context, data any) policy.PolicyResult {
+func (p *CanRetryTaskPolicy) PolicyData() any { return &statusData{} }
+func (p *CanRetryTaskPolicy) EvaluateEntity(_ context.Context, data any) policy.PolicyResult {
 	d := data.(*statusData)
 	if d.Status != entities.TaskFailed {
 		return policy.Deny("task must be failed to retry")
@@ -87,14 +82,26 @@ func (p *TaskMustBeFailed) EvaluateEntity(_ context.Context, data any) policy.Po
 	return policy.Allow()
 }
 
+// CanCancelTaskPolicy denies if task is in a terminal state (done, failed, cancelled).
+type CanCancelTaskPolicy struct{ policy.EntityPolicyBase }
+
+func (p *CanCancelTaskPolicy) PolicyData() any { return &statusData{} }
+func (p *CanCancelTaskPolicy) EvaluateEntity(_ context.Context, data any) policy.PolicyResult {
+	d := data.(*statusData)
+	switch d.Status {
+	case entities.TaskDone, entities.TaskFailed, entities.TaskCancelled:
+		return policy.Deny(fmt.Sprintf("task cannot be cancelled in %q status", d.Status))
+	}
+	return policy.Allow()
+}
+
 // --- Question policies ---
 
-// QuestionMustBeOpen denies if question status is not "open".
-// Used by: AnswerQuestionAction
-type QuestionMustBeOpen struct{ policy.EntityPolicyBase }
+// CanAnswerQuestionPolicy denies if question status is not "open".
+type CanAnswerQuestionPolicy struct{ policy.EntityPolicyBase }
 
-func (p *QuestionMustBeOpen) PolicyData() any { return &statusData{} }
-func (p *QuestionMustBeOpen) EvaluateEntity(_ context.Context, data any) policy.PolicyResult {
+func (p *CanAnswerQuestionPolicy) PolicyData() any { return &statusData{} }
+func (p *CanAnswerQuestionPolicy) EvaluateEntity(_ context.Context, data any) policy.PolicyResult {
 	d := data.(*statusData)
 	if d.Status != entities.QuestionOpen {
 		return policy.Deny("question must be open to answer")
@@ -104,12 +111,11 @@ func (p *QuestionMustBeOpen) EvaluateEntity(_ context.Context, data any) policy.
 
 // --- Insight policies ---
 
-// InsightMustBePending denies if insight status is not "pending".
-// Used by: AcknowledgeInsightAction
-type InsightMustBePending struct{ policy.EntityPolicyBase }
+// CanAcknowledgeInsightPolicy denies if insight status is not "pending".
+type CanAcknowledgeInsightPolicy struct{ policy.EntityPolicyBase }
 
-func (p *InsightMustBePending) PolicyData() any { return &statusData{} }
-func (p *InsightMustBePending) EvaluateEntity(_ context.Context, data any) policy.PolicyResult {
+func (p *CanAcknowledgeInsightPolicy) PolicyData() any { return &statusData{} }
+func (p *CanAcknowledgeInsightPolicy) EvaluateEntity(_ context.Context, data any) policy.PolicyResult {
 	d := data.(*statusData)
 	if d.Status != entities.InsightPending {
 		return policy.Deny("insight must be pending")
@@ -117,15 +123,52 @@ func (p *InsightMustBePending) EvaluateEntity(_ context.Context, data any) polic
 	return policy.Allow()
 }
 
-// InsightMustBeAcknowledged denies if insight status is not "acknowledged".
-// Used by: ApplyInsightAction
-type InsightMustBeAcknowledged struct{ policy.EntityPolicyBase }
+// CanApplyInsightPolicy denies if insight status is not "acknowledged".
+type CanApplyInsightPolicy struct{ policy.EntityPolicyBase }
 
-func (p *InsightMustBeAcknowledged) PolicyData() any { return &statusData{} }
-func (p *InsightMustBeAcknowledged) EvaluateEntity(_ context.Context, data any) policy.PolicyResult {
+func (p *CanApplyInsightPolicy) PolicyData() any { return &statusData{} }
+func (p *CanApplyInsightPolicy) EvaluateEntity(_ context.Context, data any) policy.PolicyResult {
 	d := data.(*statusData)
 	if d.Status != entities.InsightAcknowledged {
 		return policy.Deny("insight must be acknowledged to apply")
+	}
+	return policy.Allow()
+}
+
+// CanDismissInsightPolicy denies if insight is not "pending" or "acknowledged".
+type CanDismissInsightPolicy struct{ policy.EntityPolicyBase }
+
+func (p *CanDismissInsightPolicy) PolicyData() any { return &statusData{} }
+func (p *CanDismissInsightPolicy) EvaluateEntity(_ context.Context, data any) policy.PolicyResult {
+	d := data.(*statusData)
+	if d.Status != entities.InsightPending && d.Status != entities.InsightAcknowledged {
+		return policy.Deny(fmt.Sprintf("insight must be pending or acknowledged to dismiss, got %q", d.Status))
+	}
+	return policy.Allow()
+}
+
+// --- Suggestion policies ---
+
+// CanApproveSuggestionPolicy denies if suggestion status is not "pending".
+type CanApproveSuggestionPolicy struct{ policy.EntityPolicyBase }
+
+func (p *CanApproveSuggestionPolicy) PolicyData() any { return &statusData{} }
+func (p *CanApproveSuggestionPolicy) EvaluateEntity(_ context.Context, data any) policy.PolicyResult {
+	d := data.(*statusData)
+	if d.Status != entities.SuggestionPending {
+		return policy.Deny("suggestion must be pending to approve")
+	}
+	return policy.Allow()
+}
+
+// CanRejectSuggestionPolicy denies if suggestion status is not "pending".
+type CanRejectSuggestionPolicy struct{ policy.EntityPolicyBase }
+
+func (p *CanRejectSuggestionPolicy) PolicyData() any { return &statusData{} }
+func (p *CanRejectSuggestionPolicy) EvaluateEntity(_ context.Context, data any) policy.PolicyResult {
+	d := data.(*statusData)
+	if d.Status != entities.SuggestionPending {
+		return policy.Deny("suggestion must be pending to reject")
 	}
 	return policy.Allow()
 }

@@ -14,13 +14,12 @@ import (
 // ExecutePRDAction kicks off PRD planning by enqueuing a PlanPRDJob.
 type ExecutePRDAction struct {
 	action.NoInput
+	action.RequirePolicy[policies.CanExecutePRDPolicy]
 	JobClient *jobs.Client
 	PlanJob   jobs.Handler
 }
 
-func (a *ExecutePRDAction) Policies() []action.AnyPolicy {
-	return []action.AnyPolicy{&policies.PRDMustBeDraftOrApproved{}}
-}
+func (a *ExecutePRDAction) Description() string { return "Execute a PRD by starting planning" }
 
 func (a *ExecutePRDAction) Execute(ctx context.Context, actx *action.Context) action.Result {
 	prd, r := action.FindOrFail[entities.PRD](ctx, action.ReadRepo[entities.PRD](actx), actx.EntityID)

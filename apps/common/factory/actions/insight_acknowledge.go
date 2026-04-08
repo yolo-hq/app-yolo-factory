@@ -13,21 +13,13 @@ import (
 // AcknowledgeInsightAction acknowledges a pending insight.
 type AcknowledgeInsightAction struct {
 	action.NoInput
+	action.RequirePolicy[policies.CanAcknowledgeInsightPolicy]
 }
 
-func (a *AcknowledgeInsightAction) Policies() []action.AnyPolicy {
-	return []action.AnyPolicy{&policies.InsightMustBePending{}}
-}
+func (a *AcknowledgeInsightAction) Description() string { return "Acknowledge a pending insight" }
 
 func (a *AcknowledgeInsightAction) Execute(ctx context.Context, actx *action.Context) action.Result {
-	_, err := action.Write[entities.Insight](actx).Exec(ctx, write.Update{
-		ID:  actx.EntityID,
-		Set: write.Set{write.NewField[string]("status").Value(entities.InsightAcknowledged)},
+	return action.ExecUpdate[entities.Insight](ctx, actx, write.Set{
+		write.NewField[string]("status").Value(entities.InsightAcknowledged),
 	})
-	if err != nil {
-		return action.Failure(err.Error())
-	}
-
-	actx.Resolve("Insight", actx.EntityID)
-	return action.OK()
 }

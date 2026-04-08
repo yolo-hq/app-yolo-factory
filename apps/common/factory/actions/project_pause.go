@@ -13,21 +13,13 @@ import (
 // PauseProjectAction pauses an active project.
 type PauseProjectAction struct {
 	action.NoInput
+	action.RequirePolicy[policies.CanPauseProjectPolicy]
 }
 
-func (a *PauseProjectAction) Policies() []action.AnyPolicy {
-	return []action.AnyPolicy{&policies.ProjectMustBeActive{}}
-}
+func (a *PauseProjectAction) Description() string { return "Pause an active project" }
 
 func (a *PauseProjectAction) Execute(ctx context.Context, actx *action.Context) action.Result {
-	_, err := action.Write[entities.Project](actx).Exec(ctx, write.Update{
-		ID:  actx.EntityID,
-		Set: write.Set{write.NewField[string]("status").Value(entities.ProjectPaused)},
+	return action.ExecUpdate[entities.Project](ctx, actx, write.Set{
+		write.NewField[string]("status").Value(entities.ProjectPaused),
 	})
-	if err != nil {
-		return action.Failure(err.Error())
-	}
-
-	actx.Resolve("Project", actx.EntityID)
-	return action.OK()
 }

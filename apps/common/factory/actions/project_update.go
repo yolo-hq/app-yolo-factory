@@ -10,4 +10,7 @@ import (
 // UpdateProjectAction updates an existing project.
 type UpdateProjectAction struct {
 	action.BaseUpdate[entities.Project, inputs.UpdateProjectInput]
+	action.PublicAccess
 }
+
+func (a *UpdateProjectAction) Description() string { return "Update an existing project" }

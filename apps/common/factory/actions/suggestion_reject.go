@@ -8,30 +8,22 @@ import (
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
 
 // RejectSuggestionAction rejects a suggestion with a reason.
 type RejectSuggestionAction struct {
 	action.TypedInput[inputs.RejectSuggestionInput]
+	action.RequirePolicy[policies.CanRejectSuggestionPolicy]
 }
 
-func (a *RejectSuggestionAction) Execute(ctx context.Context, actx *action.Context) action.Result {
-	_, r := action.FindOrFail[entities.Suggestion](ctx, action.ReadRepo[entities.Suggestion](actx), actx.EntityID)
-	if r != nil {
-		return *r
-	}
+func (a *RejectSuggestionAction) Description() string { return "Reject a pending suggestion" }
 
-	// input consumed for validation; reason not stored on entity (no field for it).
+func (a *RejectSuggestionAction) Execute(ctx context.Context, actx *action.Context) action.Result {
+	// input consumed for validation; reason not stored on entity.
 	_ = a.Input(actx)
 
-	_, err := action.Write[entities.Suggestion](actx).Exec(ctx, write.Update{
-		ID:  actx.EntityID,
-		Set: write.Set{write.NewField[string]("status").Value(entities.SuggestionRejected)},
+	return action.ExecUpdate[entities.Suggestion](ctx, actx, write.Set{
+		write.NewField[string]("status").Value(entities.SuggestionRejected),
 	})
-	if err != nil {
-		return action.Failure(err.Error())
-	}
-
-	actx.Resolve("Suggestion", actx.EntityID)
-	return action.OK()
 }

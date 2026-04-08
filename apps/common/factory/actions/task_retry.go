@@ -14,11 +14,10 @@ import (
 // RetryTaskAction retries a failed task, resetting it to queued.
 type RetryTaskAction struct {
 	action.TypedInput[inputs.RetryTaskInput]
+	action.RequirePolicy[policies.CanRetryTaskPolicy]
 }
 
-func (a *RetryTaskAction) Policies() []action.AnyPolicy {
-	return []action.AnyPolicy{&policies.TaskMustBeFailed{}}
-}
+func (a *RetryTaskAction) Description() string { return "Retry a failed task" }
 
 func (a *RetryTaskAction) Execute(ctx context.Context, actx *action.Context) action.Result {
 	input := a.Input(actx)
