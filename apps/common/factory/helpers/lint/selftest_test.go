@@ -8,8 +8,8 @@ import (
 
 func factoryRoot() string {
 	_, file, _, _ := runtime.Caller(0)
-	// lint/ -> factory/ -> server/ -> repo root
-	return filepath.Join(filepath.Dir(file), "..", "..", "..", "..")
+	// lint/ -> helpers/ -> factory/ -> common/ -> apps/ -> repo root
+	return filepath.Join(filepath.Dir(file), "..", "..", "..", "..", "..")
 }
 
 func TestLint_FactoryCodebase(t *testing.T) {

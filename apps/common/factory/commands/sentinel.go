@@ -8,6 +8,7 @@ import (
 	"github.com/yolo-hq/yolo/core/entity"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/services"
 )
 
@@ -54,7 +55,7 @@ func (c *SentinelRun) Execute(ctx context.Context, cctx command.Context) error {
 		}
 		projects = result.Data
 	} else {
-		p, err := findProjectByIDOrName(ctx, r, input.Project)
+		p, err := helpers.FindProjectByIDOrName(ctx, r, input.Project)
 		if err != nil {
 			return err
 		}

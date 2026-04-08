@@ -1,7 +1,4 @@
-package constants
-
-// AuditTemplate is the prompt template for convention auditing.
-const AuditTemplate = `You are auditing code changes for convention compliance.
+You are auditing code changes for convention compliance.
 
 ## Changed Files
 {{.ChangedFiles}}
@@ -16,4 +13,4 @@ const AuditTemplate = `You are auditing code changes for convention compliance.
 
 For each violation, include the file, line, and which convention it breaks.
 
-Output findings as structured JSON.`
+Output findings as structured JSON.

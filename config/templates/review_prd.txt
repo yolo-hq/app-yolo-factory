@@ -1,7 +1,4 @@
-package constants
-
-// ReviewPRDTemplate is the prompt template for final PRD alignment review.
-const ReviewPRDTemplate = `You are performing a final alignment review of a completed PRD.
+You are performing a final alignment review of a completed PRD.
 
 ## Original PRD
 Title: {{.PRDTitle}}
@@ -24,4 +21,4 @@ Check:
 4. Do the tasks integrate correctly with each other?
 5. Are there gaps between individual task completions and the overall PRD goal?
 
-Output: alignment score (0.0-1.0), criteria met/missed, and recommendations.`
+Output: alignment score (0.0-1.0), criteria met/missed, and recommendations.

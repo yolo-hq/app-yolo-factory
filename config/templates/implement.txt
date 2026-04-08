@@ -1,7 +1,4 @@
-package constants
-
-// ImplementTemplate is the prompt template for TDD-based task implementation.
-const ImplementTemplate = `You are implementing a software task following TDD methodology.
+You are implementing a software task following TDD methodology.
 
 ## Task
 Title: {{.TaskTitle}}
@@ -29,4 +26,4 @@ Address the specific errors above. Do not repeat the same approach.
    b. Write minimal implementation to pass (green)
    c. Refactor if needed
 3. Ensure ALL tests pass: go build ./... && go test ./...
-4. Do not change code beyond what the task spec asks for`
+4. Do not change code beyond what the task spec asks for

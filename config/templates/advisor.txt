@@ -1,7 +1,4 @@
-package constants
-
-// AdvisorTemplate is the prompt template for optimization advisor analysis.
-const AdvisorTemplate = `You are an optimization advisor analyzing project {{.ProjectName}}.
+You are an optimization advisor analyzing project {{.ProjectName}}.
 
 ## Analysis Type: {{.AnalysisType}}
 
@@ -22,4 +19,4 @@ For each suggestion:
 - Priority (low/medium/high)
 - Estimated impact
 
-Output as structured JSON.`
+Output as structured JSON.

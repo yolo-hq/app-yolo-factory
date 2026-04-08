@@ -1,7 +1,4 @@
-package constants
-
-// IntegrationReviewTemplate is the prompt template for cross-task integration review.
-const IntegrationReviewTemplate = `You are reviewing the combined output of multiple tasks for integration issues.
+You are reviewing the combined output of multiple tasks for integration issues.
 
 ## Project
 {{.ProjectName}}
@@ -26,4 +23,4 @@ For each finding, classify by category, severity, and list affected files.
 Do not flag issues that are contained within a single task's scope.
 Focus on problems that emerge from combining multiple changes.
 
-Output as structured JSON.`
+Output as structured JSON.

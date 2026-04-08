@@ -1,7 +1,4 @@
-package constants
-
-// ProcessAdvisorTemplate is the prompt template for process improvement analysis.
-const ProcessAdvisorTemplate = `You are analyzing Factory execution history to suggest process improvements.
+You are analyzing Factory execution history to suggest process improvements.
 
 ## Execution Metrics
 {{.MetricsSummary}}
@@ -23,4 +20,4 @@ For each insight:
 - Priority: low|medium|high
 
 Only report insights backed by data. Do not speculate.
-Output as structured JSON.`
+Output as structured JSON.

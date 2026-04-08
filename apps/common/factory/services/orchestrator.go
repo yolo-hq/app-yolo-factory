@@ -19,7 +19,7 @@ import (
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/events"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/lint"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers/lint"
 )
 
 // OrchestratorService executes a single task through the full workflow:
