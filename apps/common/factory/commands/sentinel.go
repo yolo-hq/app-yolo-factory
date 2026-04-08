@@ -68,8 +68,8 @@ func (c *SentinelRun) Execute(ctx context.Context, cctx command.Context) error {
 	for _, p := range projects {
 		cctx.Print("Running sentinel on %s (%s)...", p.Name, p.ID)
 		out, err := svc.Execute(ctx, services.SentinelInput{
-			Project: p,
-			Watches: defaultWatches,
+			ProjectID: p.ID,
+			Watches:   defaultWatches,
 		})
 		if err != nil {
 			cctx.Print("  ERROR: %s", err)

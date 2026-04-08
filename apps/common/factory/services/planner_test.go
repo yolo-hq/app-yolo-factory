@@ -82,7 +82,7 @@ func TestConvertToEntities(t *testing.T) {
 		},
 	}
 
-	input := PlannerInput{
+	input := plannerEntitiesInput{
 		PRD:     entities.PRD{ProjectID: "proj-1"},
 		Project: entities.Project{DefaultBranch: "main"},
 	}
@@ -122,7 +122,7 @@ func TestConvertToEntities_DependencyMapping(t *testing.T) {
 		{Title: "C", Spec: "c", Sequence: 3, DependsOn: []int{1, 2}},
 	}
 
-	input := PlannerInput{
+	input := plannerEntitiesInput{
 		PRD:     entities.PRD{},
 		Project: entities.Project{DefaultBranch: "main"},
 	}
@@ -145,7 +145,7 @@ func TestConvertToEntities_UnknownSequence(t *testing.T) {
 		{Title: "A", Spec: "a", Sequence: 1, DependsOn: []int{99}},
 	}
 
-	input := PlannerInput{
+	input := plannerEntitiesInput{
 		PRD:     entities.PRD{},
 		Project: entities.Project{DefaultBranch: "main"},
 	}
@@ -162,7 +162,7 @@ func TestConvertToEntities_DefaultBranch(t *testing.T) {
 		{Title: "Has branch", Spec: "test", Sequence: 2, Branch: "custom"},
 	}
 
-	input := PlannerInput{
+	input := plannerEntitiesInput{
 		PRD:     entities.PRD{},
 		Project: entities.Project{DefaultBranch: "develop"},
 	}

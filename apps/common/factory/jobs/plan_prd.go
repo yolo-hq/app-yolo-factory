@@ -4,24 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"time"
 
-	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/jobs"
 
 	svc "github.com/yolo-hq/app-yolo-factory/.yolo/svc"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/services"
 )
 
-// PlanPRDJob runs the PlannerService and persists the resulting tasks.
+// PlanPRDJob runs the PlannerService to plan and create tasks from a PRD.
 type PlanPRDJob struct {
 	jobs.Base
-	PRDRead     entity.ReadRepository[entities.PRD]
-	PRDWrite    entity.WriteRepository[entities.PRD]
-	TaskWrite   entity.WriteRepository[entities.Task]
-	ProjectRead entity.ReadRepository[entities.Project]
 }
 
 type planPRDPayload struct {
@@ -44,58 +37,8 @@ func (j *PlanPRDJob) Handle(ctx context.Context, payload []byte) error {
 		return fmt.Errorf("parse payload: %w", err)
 	}
 
-	// Load PRD.
-	prd, err := j.PRDRead.FindOne(ctx, entity.FindOneOptions{ID: p.PRDID})
-	if err != nil {
-		return fmt.Errorf("load prd: %w", err)
-	}
-	if prd == nil {
-		return fmt.Errorf("prd %s not found", p.PRDID)
-	}
-
-	// Load Project.
-	project, err := j.ProjectRead.FindOne(ctx, entity.FindOneOptions{ID: prd.ProjectID})
-	if err != nil {
-		return fmt.Errorf("load project: %w", err)
-	}
-	if project == nil {
-		return fmt.Errorf("project %s not found", prd.ProjectID)
-	}
-
-	// Run planner.
-	out, err := svc.S.Planner.Execute(ctx, services.PlannerInput{
-		PRD:     *prd,
-		Project: *project,
-	})
-	if err != nil {
-		// Mark PRD as failed on planner error.
-		if _, uerr := j.PRDWrite.Update(ctx).
-			WhereID(prd.ID).
-			Set("status", entities.PRDFailed).
-			Exec(ctx); uerr != nil {
-			slog.Error("failed to mark PRD as failed", "prd_id", prd.ID, "error", uerr)
-		}
-		return fmt.Errorf("planner: %w", err)
-	}
-
-	// Persist tasks.
-	for i := range out.Tasks {
-		if _, err := j.TaskWrite.Insert(ctx, &out.Tasks[i]); err != nil {
-			return fmt.Errorf("insert task %s: %w", out.Tasks[i].Title, err)
-		}
-	}
-
-	// Update PRD: set total_tasks and transition to approved.
-	_, err = j.PRDWrite.Update(ctx).
-		WhereID(prd.ID).
-		Set("total_tasks", out.Count).
-		Set("status", entities.PRDApproved).
-		Exec(ctx)
-	if err != nil {
-		return fmt.Errorf("update prd: %w", err)
-	}
-
-	return nil
+	_, err := svc.S.Planner.Execute(ctx, services.PlannerInput{PRDID: p.PRDID})
+	return err
 }
 
 func (j *PlanPRDJob) Description() string { return "Plan and create tasks from an approved PRD" }

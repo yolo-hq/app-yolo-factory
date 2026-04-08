@@ -10,21 +10,29 @@ import (
 	"strings"
 	"time"
 
+	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/service"
 
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"gopkg.in/yaml.v3"
 )
 
 // BackupService writes entity state to a git-backed directory.
 type BackupService struct {
 	service.Base
-	StatePath string
+	StatePath      string
+	ProjectRead    entity.ReadRepository[entities.Project]
+	PRDRead        entity.ReadRepository[entities.PRD]
+	TaskRead       entity.ReadRepository[entities.Task]
+	QuestionRead   entity.ReadRepository[entities.Question]
+	SuggestionRead entity.ReadRepository[entities.Suggestion]
 }
 
 // BackupInput describes what to back up.
+// If Trigger is "snapshot" and EntityType is empty, a full snapshot of all entity types is performed.
 type BackupInput struct {
-	Trigger    string // "task_change", "prd_change", "project_change", "daily_snapshot", "manual"
-	EntityType string // "project", "prd", "task", "question", "suggestion"
+	Trigger    string // "task_change", "prd_change", "project_change", "snapshot", "manual"
+	EntityType string // "project", "prd", "task", "question", "suggestion" — empty for full snapshot
 	EntityID   string
 	EntityData any // the actual entity data to serialize
 }
@@ -36,7 +44,13 @@ type BackupOutput struct {
 }
 
 // Execute writes the entity to YAML and commits it.
+// If Trigger is "snapshot" and EntityType is empty, performs a full snapshot of all entity types.
 func (s *BackupService) Execute(ctx context.Context, in BackupInput) (BackupOutput, error) {
+	// Full snapshot mode.
+	if in.Trigger == "snapshot" && in.EntityType == "" {
+		return s.snapshotAll(ctx)
+	}
+
 	// 1. Ensure state repo exists.
 	if err := s.ensureRepo(ctx); err != nil {
 		return BackupOutput{}, fmt.Errorf("ensure repo: %w", err)
@@ -209,6 +223,46 @@ func (s *BackupService) gitPush(ctx context.Context) error {
 	cmd.Dir = s.StatePath
 	_, err := cmd.CombinedOutput()
 	return err
+}
+
+// snapshotAll backs up all entities of every type.
+func (s *BackupService) snapshotAll(ctx context.Context) (BackupOutput, error) {
+	if err := backupEntities(ctx, s, "project", s.ProjectRead); err != nil {
+		return BackupOutput{}, fmt.Errorf("backup projects: %w", err)
+	}
+	if err := backupEntities(ctx, s, "prd", s.PRDRead); err != nil {
+		return BackupOutput{}, fmt.Errorf("backup prds: %w", err)
+	}
+	if err := backupEntities(ctx, s, "task", s.TaskRead); err != nil {
+		return BackupOutput{}, fmt.Errorf("backup tasks: %w", err)
+	}
+	if err := backupEntities(ctx, s, "question", s.QuestionRead); err != nil {
+		return BackupOutput{}, fmt.Errorf("backup questions: %w", err)
+	}
+	if err := backupEntities(ctx, s, "suggestion", s.SuggestionRead); err != nil {
+		return BackupOutput{}, fmt.Errorf("backup suggestions: %w", err)
+	}
+	return BackupOutput{}, nil
+}
+
+// backupEntities iterates all entities from a read repo and backs each one up.
+func backupEntities[T entity.Entity](ctx context.Context, s *BackupService, entityType string, repo entity.ReadRepository[T]) error {
+	result, err := repo.FindMany(ctx, entity.FindOptions{})
+	if err != nil {
+		return err
+	}
+	for _, e := range result.Data {
+		_, err := s.Execute(ctx, BackupInput{
+			Trigger:    "snapshot",
+			EntityType: entityType,
+			EntityID:   e.GetID(),
+			EntityData: e,
+		})
+		if err != nil {
+			return fmt.Errorf("backup %s %s: %w", entityType, e.GetID(), err)
+		}
+	}
+	return nil
 }
 
 func (s *BackupService) Description() string { return "Create and manage factory state backups" }

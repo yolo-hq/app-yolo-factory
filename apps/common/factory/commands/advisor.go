@@ -52,7 +52,7 @@ func (c *AdvisorRun) Execute(ctx context.Context, cctx command.Context) error {
 
 	cctx.Print("Running advisor %s analysis on %s...", analysis, project.Name)
 	out, err := svc.Execute(ctx, services.AdvisorInput{
-		Project:      *project,
+		ProjectID:    project.ID,
 		AnalysisType: analysis,
 	})
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/oklog/ulid/v2"
+	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/pkg/claude"
 	"github.com/yolo-hq/yolo/core/service"
 
@@ -18,13 +19,16 @@ import (
 // SentinelService runs health checks against a project and produces findings.
 type SentinelService struct {
 	service.Base
-	Claude *claude.Client
+	Claude          *claude.Client
+	ProjectRead     entity.ReadRepository[entities.Project]
+	TaskWrite       entity.WriteRepository[entities.Task]
+	SuggestionWrite entity.WriteRepository[entities.Suggestion]
 }
 
 // SentinelInput specifies which watches to run against a project.
 type SentinelInput struct {
-	Project entities.Project
-	Watches []string // "build_health", "test_health", "security", "convention_drift", "orphaned_runs"
+	ProjectID string
+	Watches   []string // "build_health", "test_health", "security", "convention_drift", "orphaned_runs"
 }
 
 // Finding is a single health check result.
@@ -42,12 +46,21 @@ type SentinelOutput struct {
 	SuggestionsToCreate []entities.Suggestion
 }
 
-// Execute runs each watch and collects findings.
+// Execute loads the project, runs each watch, persists tasks/suggestions, and returns findings.
 func (s *SentinelService) Execute(ctx context.Context, in SentinelInput) (SentinelOutput, error) {
 	var out SentinelOutput
 
+	// Load project.
+	project, err := s.ProjectRead.FindOne(ctx, entity.FindOneOptions{ID: in.ProjectID})
+	if err != nil {
+		return out, fmt.Errorf("load project: %w", err)
+	}
+	if project == nil {
+		return out, fmt.Errorf("project %s not found", in.ProjectID)
+	}
+
 	for _, watch := range in.Watches {
-		findings, err := s.runWatch(ctx, watch, in.Project)
+		findings, err := s.runWatch(ctx, watch, *project)
 		if err != nil {
 			// Non-fatal: record as info finding.
 			out.Findings = append(out.Findings, Finding{
@@ -68,7 +81,7 @@ func (s *SentinelService) Execute(ctx context.Context, in SentinelInput) (Sentin
 			service.EmitEvent(ctx, service.PendingEvent{
 				Name: events.SentinelBuildBrokenName,
 				Data: events.SentinelPayload{
-					ProjectID: in.Project.ID,
+					ProjectID: project.ID,
 					Error:       f.Message,
 					Severity:    f.Severity,
 				},
@@ -77,7 +90,7 @@ func (s *SentinelService) Execute(ctx context.Context, in SentinelInput) (Sentin
 			service.EmitEvent(ctx, service.PendingEvent{
 				Name: events.SentinelSecurityVulnName,
 				Data: events.SentinelPayload{
-					ProjectID: in.Project.ID,
+					ProjectID: project.ID,
 					Error:       f.Message,
 					Severity:    f.Severity,
 				},
@@ -85,22 +98,25 @@ func (s *SentinelService) Execute(ctx context.Context, in SentinelInput) (Sentin
 		}
 	}
 
-	// Convert findings to tasks/suggestions.
+	// Convert findings to tasks/suggestions and persist.
 	for _, f := range out.Findings {
 		switch f.Action {
 		case "create_task":
 			task := entities.Task{
-				ProjectID: in.Project.ID,
+				ProjectID: project.ID,
 				Title:     fmt.Sprintf("[sentinel] %s", f.Message),
 				Spec:      f.Message,
 				Status:    entities.TaskQueued,
-				Branch:    in.Project.DefaultBranch,
+				Branch:    project.DefaultBranch,
 			}
 			task.ID = ulid.Make().String()
+			if _, err := s.TaskWrite.Insert(ctx, &task); err != nil {
+				return out, fmt.Errorf("insert task: %w", err)
+			}
 			out.TasksToCreate = append(out.TasksToCreate, task)
 		case "create_suggestion":
 			sug := entities.Suggestion{
-				ProjectID: in.Project.ID,
+				ProjectID: project.ID,
 				Source:    "sentinel",
 				Category:  categoryFromWatch(f.Watch),
 				Title:     fmt.Sprintf("[sentinel] %s", helpers.Truncate(f.Message, 80)),
@@ -108,6 +124,9 @@ func (s *SentinelService) Execute(ctx context.Context, in SentinelInput) (Sentin
 				Priority:  f.Severity,
 			}
 			sug.ID = ulid.Make().String()
+			if _, err := s.SuggestionWrite.Insert(ctx, &sug); err != nil {
+				return out, fmt.Errorf("insert suggestion: %w", err)
+			}
 			out.SuggestionsToCreate = append(out.SuggestionsToCreate, sug)
 		}
 	}

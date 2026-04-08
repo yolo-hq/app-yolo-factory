@@ -4,31 +4,36 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/oklog/ulid/v2"
+	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/pkg/claude"
 	"github.com/yolo-hq/yolo/core/service"
 
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 )
 
 // PlannerService spawns a Claude agent to break a PRD into implementation tasks.
 type PlannerService struct {
 	service.Base
-	Claude     *claude.Client
-	Context    *ContextService
-	Dependency *DependencyService
+	Claude      *claude.Client
+	Context     *ContextService
+	Dependency  *DependencyService
+	PRDRead     entity.ReadRepository[entities.PRD]
+	PRDWrite    entity.WriteRepository[entities.PRD]
+	TaskWrite   entity.WriteRepository[entities.Task]
+	ProjectRead entity.ReadRepository[entities.Project]
 }
 
 // PlannerInput holds the data needed for planning.
 type PlannerInput struct {
-	PRD     entities.PRD
-	Project entities.Project
+	PRDID string
 }
 
 // PlannerOutput holds the planned tasks (not persisted — caller persists).
@@ -59,22 +64,40 @@ type planTasksOutput struct {
 	Tasks []TaskDef `json:"tasks"`
 }
 
-// Execute runs the planner agent and returns task entities.
+// Execute loads the PRD and project, runs the planner agent, persists tasks, and updates the PRD.
 func (s *PlannerService) Execute(ctx context.Context, in PlannerInput) (PlannerOutput, error) {
-	// 1. Build context prompt.
-	claudeMD := readCLAUDEMD(in.Project.LocalPath)
+	// 1. Load PRD.
+	prd, err := s.PRDRead.FindOne(ctx, entity.FindOneOptions{ID: in.PRDID})
+	if err != nil {
+		return PlannerOutput{}, fmt.Errorf("load prd: %w", err)
+	}
+	if prd == nil {
+		return PlannerOutput{}, fmt.Errorf("prd %s not found", in.PRDID)
+	}
+
+	// 2. Load Project.
+	project, err := s.ProjectRead.FindOne(ctx, entity.FindOneOptions{ID: prd.ProjectID})
+	if err != nil {
+		return PlannerOutput{}, fmt.Errorf("load project: %w", err)
+	}
+	if project == nil {
+		return PlannerOutput{}, fmt.Errorf("project %s not found", prd.ProjectID)
+	}
+
+	// 3. Build context prompt.
+	claudeMD := readCLAUDEMD(project.LocalPath)
 
 	ctxOut, err := s.Context.Execute(ctx, ContextInput{
 		Phase:           "plan_tasks",
-		PRD:             in.PRD,
-		Project:         in.Project,
+		PRD:             *prd,
+		Project:         *project,
 		CLAUDEMDContent: claudeMD,
 	})
 	if err != nil {
 		return PlannerOutput{}, fmt.Errorf("build context: %w", err)
 	}
 
-	// 2. Spawn planner agent.
+	// 4. Spawn planner agent.
 	result, err := s.Claude.Run(ctx, claude.Config{
 		Model:          "opus",
 		AllowedTools:   []string{"Read", "Glob", "Grep"},
@@ -82,32 +105,37 @@ func (s *PlannerService) Execute(ctx context.Context, in PlannerInput) (PlannerO
 		BudgetUSD:      1.0,
 		PermissionMode: "auto",
 		Effort:         "high",
-		CWD:            in.Project.LocalPath,
+		CWD:            project.LocalPath,
 		JSONSchema:     constants.PlanTasksSchema,
-		SessionName:    fmt.Sprintf("factory:prd-%s:plan", in.PRD.ID),
+		SessionName:    fmt.Sprintf("factory:prd-%s:plan", prd.ID),
 		Timeout:        10 * time.Minute,
 	}, ctxOut.Prompt)
 	if err != nil {
+		s.markPRDFailed(ctx, prd.ID)
 		return PlannerOutput{}, fmt.Errorf("claude run: %w", err)
 	}
 
 	if result.IsError {
+		s.markPRDFailed(ctx, prd.ID)
 		return PlannerOutput{}, fmt.Errorf("claude error: %s", result.Text)
 	}
 
-	// 3. Parse structured output.
+	// 5. Parse structured output.
 	defs, err := parseTaskDefs(result.StructuredOutput)
 	if err != nil {
+		s.markPRDFailed(ctx, prd.ID)
 		return PlannerOutput{}, fmt.Errorf("parse output: %w", err)
 	}
 
-	// 4. Convert to entities.
-	tasks, err := s.convertToEntities(defs, in)
+	// 6. Convert to entities.
+	planInput := plannerEntitiesInput{PRD: *prd, Project: *project}
+	tasks, err := s.convertToEntities(defs, planInput)
 	if err != nil {
+		s.markPRDFailed(ctx, prd.ID)
 		return PlannerOutput{}, fmt.Errorf("convert tasks: %w", err)
 	}
 
-	// 5. Validate dependencies (cycle detection).
+	// 7. Validate dependencies (cycle detection).
 	for _, task := range tasks {
 		deps := helpers.ParseDeps(task.DependsOn)
 		if len(deps) == 0 {
@@ -118,17 +146,46 @@ func (s *PlannerService) Execute(ctx context.Context, in PlannerInput) (PlannerO
 			DependsOn: deps,
 		})
 		if err != nil {
+			s.markPRDFailed(ctx, prd.ID)
 			return PlannerOutput{}, fmt.Errorf("validate deps for task %s: %w", task.Title, err)
 		}
 		if depOut.CycleError != "" {
+			s.markPRDFailed(ctx, prd.ID)
 			return PlannerOutput{}, fmt.Errorf("cycle in task %s: %s", task.Title, depOut.CycleError)
 		}
+	}
+
+	// 8. Persist tasks.
+	for i := range tasks {
+		if _, err := s.TaskWrite.Insert(ctx, &tasks[i]); err != nil {
+			return PlannerOutput{}, fmt.Errorf("insert task %s: %w", tasks[i].Title, err)
+		}
+	}
+
+	// 9. Update PRD: set total_tasks and transition to approved.
+	_, err = s.PRDWrite.Update(ctx).
+		WhereID(prd.ID).
+		Set("total_tasks", len(tasks)).
+		Set("status", entities.PRDApproved).
+		Exec(ctx)
+	if err != nil {
+		return PlannerOutput{}, fmt.Errorf("update prd: %w", err)
 	}
 
 	return PlannerOutput{
 		Tasks: tasks,
 		Count: len(tasks),
 	}, nil
+}
+
+// markPRDFailed marks a PRD as failed (best-effort).
+func (s *PlannerService) markPRDFailed(ctx context.Context, prdID string) {
+	if _, err := s.PRDWrite.Update(ctx).
+		WhereID(prdID).
+		Set("status", entities.PRDFailed).
+		Exec(ctx); err != nil {
+		slog.Error("failed to mark PRD as failed", "prd_id", prdID, "error", err)
+	}
 }
 
 // parseTaskDefs parses the agent's structured JSON output.
@@ -147,8 +204,14 @@ func parseTaskDefs(raw json.RawMessage) ([]TaskDef, error) {
 	return out.Tasks, nil
 }
 
+// plannerEntitiesInput holds loaded entities for task conversion.
+type plannerEntitiesInput struct {
+	PRD     entities.PRD
+	Project entities.Project
+}
+
 // convertToEntities turns TaskDefs into entity.Task structs with IDs and deps mapped.
-func (s *PlannerService) convertToEntities(defs []TaskDef, in PlannerInput) ([]entities.Task, error) {
+func (s *PlannerService) convertToEntities(defs []TaskDef, in plannerEntitiesInput) ([]entities.Task, error) {
 	// Generate IDs and build sequence→ID map.
 	seqToID := make(map[int]string, len(defs))
 	tasks := make([]entities.Task, len(defs))

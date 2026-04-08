@@ -6,20 +6,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/jobs"
 
 	svc "github.com/yolo-hq/app-yolo-factory/.yolo/svc"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/services"
 )
 
-// SentinelJob runs the SentinelService and persists findings as tasks/suggestions.
+// SentinelJob runs the SentinelService for health checks on a project.
 type SentinelJob struct {
 	jobs.Base
-	ProjectRead     entity.ReadRepository[entities.Project]
-	TaskWrite       entity.WriteRepository[entities.Task]
-	SuggestionWrite entity.WriteRepository[entities.Suggestion]
 }
 
 type sentinelPayload struct {
@@ -42,40 +37,11 @@ func (j *SentinelJob) Handle(ctx context.Context, payload []byte) error {
 	if err := json.Unmarshal(payload, &p); err != nil {
 		return fmt.Errorf("parse payload: %w", err)
 	}
-
-	// Load project.
-	project, err := j.ProjectRead.FindOne(ctx, entity.FindOneOptions{ID: p.ProjectID})
-	if err != nil {
-		return fmt.Errorf("load project: %w", err)
-	}
-	if project == nil {
-		return fmt.Errorf("project %s not found", p.ProjectID)
-	}
-
-	// Run sentinel.
-	out, err := svc.S.Sentinel.Execute(ctx, services.SentinelInput{
-		Project: *project,
-		Watches: p.Watches,
+	_, err := svc.S.Sentinel.Execute(ctx, services.SentinelInput{
+		ProjectID: p.ProjectID,
+		Watches:   p.Watches,
 	})
-	if err != nil {
-		return fmt.Errorf("sentinel: %w", err)
-	}
-
-	// Persist tasks.
-	for i := range out.TasksToCreate {
-		if _, err := j.TaskWrite.Insert(ctx, &out.TasksToCreate[i]); err != nil {
-			return fmt.Errorf("insert task: %w", err)
-		}
-	}
-
-	// Persist suggestions.
-	for i := range out.SuggestionsToCreate {
-		if _, err := j.SuggestionWrite.Insert(ctx, &out.SuggestionsToCreate[i]); err != nil {
-			return fmt.Errorf("insert suggestion: %w", err)
-		}
-	}
-
-	return nil
+	return err
 }
 
 func (j *SentinelJob) Description() string { return "Run sentinel health checks on all active projects" }

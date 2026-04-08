@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/oklog/ulid/v2"
+	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/pkg/claude"
 	"github.com/yolo-hq/yolo/core/service"
 
@@ -26,18 +27,23 @@ import (
 // plan -> implement -> test -> audit -> review -> merge.
 type OrchestratorService struct {
 	service.Base
-	Claude     *claude.Client
-	Git        *GitService
-	Context    *ContextService
-	Dependency *DependencyService
-	Linter     *LinterService
+	Claude      *claude.Client
+	Git         *GitService
+	Context     *ContextService
+	Dependency  *DependencyService
+	Linter      *LinterService
+	TaskRead    entity.ReadRepository[entities.Task]
+	TaskWrite   entity.WriteRepository[entities.Task]
+	PRDRead     entity.ReadRepository[entities.PRD]
+	ProjectRead entity.ReadRepository[entities.Project]
+	RunWrite    entity.WriteRepository[entities.Run]
+	StepWrite   entity.WriteRepository[entities.Step]
+	ReviewWrite entity.WriteRepository[entities.Review]
 }
 
 // OrchestratorInput holds the data needed to execute a task workflow.
 type OrchestratorInput struct {
-	Task    entities.Task
-	PRD     entities.PRD
-	Project entities.Project
+	TaskID string
 }
 
 // OrchestratorOutput holds the result of a full task execution.
@@ -79,17 +85,71 @@ type StepResult struct {
 }
 
 // Execute runs the full task workflow and returns the result.
-func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput) (OrchestratorOutput, error) {
+func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput) (retOut OrchestratorOutput, retErr error) {
 	out := OrchestratorOutput{Status: entities.RunFailed}
 
-	// 0. Budget enforcement — check before any work.
-	if err := checkBudget(in.Project); err != nil {
+	// 0a. Load task, PRD, project.
+	task, err := s.TaskRead.FindOne(ctx, entity.FindOneOptions{ID: in.TaskID})
+	if err != nil {
+		return out, fmt.Errorf("load task: %w", err)
+	}
+	if task == nil {
+		return out, fmt.Errorf("task %s not found", in.TaskID)
+	}
+
+	prd, err := s.PRDRead.FindOne(ctx, entity.FindOneOptions{ID: task.PrdID})
+	if err != nil {
+		return out, fmt.Errorf("load prd: %w", err)
+	}
+	if prd == nil {
+		return out, fmt.Errorf("prd %s not found", task.PrdID)
+	}
+
+	project, err := s.ProjectRead.FindOne(ctx, entity.FindOneOptions{ID: task.ProjectID})
+	if err != nil {
+		return out, fmt.Errorf("load project: %w", err)
+	}
+	if project == nil {
+		return out, fmt.Errorf("project %s not found", task.ProjectID)
+	}
+
+	// 0b. Update task: status -> "running", started_at, increment run_count.
+	now := time.Now()
+	_, err = s.TaskWrite.Update(ctx).
+		WhereID(task.ID).
+		Set("status", entities.TaskRunning).
+		Set("started_at", now).
+		Set("run_count", task.RunCount+1).
+		Exec(ctx)
+	if err != nil {
+		return out, fmt.Errorf("update task to running: %w", err)
+	}
+
+	// Use local copies for the rest of the workflow.
+	inTask := *task
+	inPRD := *prd
+	inProject := *project
+	// Safety net: if we return a hard error (not a step failure),
+	// mark the task as failed so it doesn't stay stuck in "running".
+	defer func() {
+		if retErr != nil {
+			if _, uerr := s.TaskWrite.Update(ctx).
+				WhereID(inTask.ID).
+				Set("status", entities.TaskFailed).
+				Exec(ctx); uerr != nil {
+				slog.Error("failed to mark task as failed after hard error", "task_id", inTask.ID, "error", uerr)
+			}
+		}
+	}()
+
+	// 0c. Budget enforcement — check before any work.
+	if err := checkBudget(inProject); err != nil {
 		service.EmitEvent(ctx, service.PendingEvent{
 			Name: events.BudgetExceededName,
 			Data: events.BudgetPayload{
-				ProjectName: in.Project.Name,
-				Spent:       in.Project.SpentThisMonthUSD,
-				Limit:       in.Project.BudgetMonthlyUSD,
+				ProjectName: inProject.Name,
+				Spent:       inProject.SpentThisMonthUSD,
+				Limit:       inProject.BudgetMonthlyUSD,
 				Percentage:  100,
 			},
 		})
@@ -98,22 +158,22 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	}
 
 	// 0b. Budget warning — log if approaching limit.
-	if in.Project.BudgetMonthlyUSD > 0 && in.Project.BudgetWarningAt > 0 {
-		ratio := in.Project.SpentThisMonthUSD / in.Project.BudgetMonthlyUSD
-		if ratio >= in.Project.BudgetWarningAt {
+	if inProject.BudgetMonthlyUSD > 0 && inProject.BudgetWarningAt > 0 {
+		ratio := inProject.SpentThisMonthUSD / inProject.BudgetMonthlyUSD
+		if ratio >= inProject.BudgetWarningAt {
 			service.EmitEvent(ctx, service.PendingEvent{
 				Name: events.BudgetWarningName,
 				Data: events.BudgetPayload{
-					ProjectName: in.Project.Name,
-					Spent:       in.Project.SpentThisMonthUSD,
-					Limit:       in.Project.BudgetMonthlyUSD,
+					ProjectName: inProject.Name,
+					Spent:       inProject.SpentThisMonthUSD,
+					Limit:       inProject.BudgetMonthlyUSD,
 					Percentage:  ratio * 100,
 				},
 			})
 			slog.Warn("budget warning",
-				"project", in.Project.Name,
-				"spent", in.Project.SpentThisMonthUSD,
-				"limit", in.Project.BudgetMonthlyUSD,
+				"project", inProject.Name,
+				"spent", inProject.SpentThisMonthUSD,
+				"limit", inProject.BudgetMonthlyUSD,
 				"pct", fmt.Sprintf("%.0f%%", ratio*100),
 			)
 		}
@@ -122,32 +182,32 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	// 0c. Emit task started event.
 	service.EmitEvent(ctx, service.PendingEvent{
 		EntityType: "Task",
-		EntityID:   in.Task.ID,
+		EntityID:   inTask.ID,
 		Name:       events.TaskStartedName,
 		Data: events.TaskPayload{
-			TaskID:      in.Task.ID,
-			Title:       in.Task.Title,
-			ProjectName: in.Project.Name,
+			TaskID:      inTask.ID,
+			Title:       inTask.Title,
+			ProjectName: inProject.Name,
 		},
 	})
 
 	// 1. Determine working directory.
-	workDir := workingDir(in.Project, in.Task.ID)
+	workDir := workingDir(inProject, inTask.ID)
 
 	// 2. Determine model (with escalation support).
-	model := determineModel(in.Task, in.Project)
+	model := determineModel(inTask, inProject)
 
 	// 3. Read CLAUDE.md from working dir.
-	claudeMD := readCLAUDEMD(in.Project.LocalPath)
+	claudeMD := readCLAUDEMD(inProject.LocalPath)
 
 	// 4. Git setup: pull latest, create branch.
 	branchName := ""
-	if in.Project.UseWorktrees {
-		wtPath := filepath.Join(in.Project.LocalPath, ".worktrees", "task-"+in.Task.ID)
+	if inProject.UseWorktrees {
+		wtPath := filepath.Join(inProject.LocalPath, ".worktrees", "task-"+inTask.ID)
 		gitOut, err := s.Git.Execute(ctx, GitInput{
 			Operation: "worktree_add",
-			RepoPath:  in.Project.LocalPath,
-			TaskID:    in.Task.ID,
+			RepoPath:  inProject.LocalPath,
+			TaskID:    inTask.ID,
 			Path:      wtPath,
 		})
 		if err != nil {
@@ -158,15 +218,15 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	} else {
 		if _, err := s.Git.Execute(ctx, GitInput{
 			Operation: "pull",
-			RepoPath:  in.Project.LocalPath,
-			Branch:    in.Task.Branch,
+			RepoPath:  inProject.LocalPath,
+			Branch:    inTask.Branch,
 		}); err != nil {
 			return out, fmt.Errorf("git pull: %w", err)
 		}
 		gitOut, err := s.Git.Execute(ctx, GitInput{
 			Operation: "branch",
-			RepoPath:  in.Project.LocalPath,
-			TaskID:    in.Task.ID,
+			RepoPath:  inProject.LocalPath,
+			TaskID:    inTask.ID,
 		})
 		if err != nil {
 			return out, fmt.Errorf("create branch: %w", err)
@@ -175,8 +235,8 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	}
 
 	// 4b. Run setup commands if defined.
-	setupCommands := parseTestCommands(in.Project.SetupCommands)
-	if in.Project.SetupCommands != "" && in.Project.SetupCommands != "[]" {
+	setupCommands := parseTestCommands(inProject.SetupCommands)
+	if inProject.SetupCommands != "" && inProject.SetupCommands != "[]" {
 		for _, cmd := range setupCommands {
 			if _, err := runShellCommand(ctx, workDir, cmd); err != nil {
 				return out, fmt.Errorf("setup command %q: %w", cmd, err)
@@ -186,20 +246,20 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 
 	// 5. Create Run entity struct.
 	runID := ulid.Make().String()
-	now := time.Now()
+	now = time.Now()
 	run := entities.Run{
-		TaskID:      in.Task.ID,
+		TaskID:      inTask.ID,
 		AgentType:   entities.AgentImplementer,
 		Status:      entities.RunRunning,
 		Model:       model,
 		BranchName:  branchName,
 		StartedAt:   now,
-		SessionName: fmt.Sprintf("factory:task-%s", in.Task.ID),
+		SessionName: fmt.Sprintf("factory:task-%s", inTask.ID),
 	}
 	run.ID = runID
 
 	// Track escalation.
-	if task := in.Task; task.RunCount >= in.Project.EscalationAfterRetries && in.Project.EscalationModel != "" && task.Model == "" {
+	if task := inTask; task.RunCount >= inProject.EscalationAfterRetries && inProject.EscalationModel != "" && task.Model == "" {
 		run.EscalatedModel = model
 	}
 
@@ -209,9 +269,9 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	// 6. Step 1: PLAN — Opus, read-only.
 	planCtx, err := s.Context.Execute(ctx, ContextInput{
 		Phase:           "implement",
-		Task:            in.Task,
-		PRD:             in.PRD,
-		Project:         in.Project,
+		Task:            inTask,
+		PRD:             inPRD,
+		Project:         inProject,
 		CLAUDEMDContent: claudeMD,
 	})
 	if err != nil {
@@ -220,7 +280,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 
 	planResult, err := s.executeStep(ctx, StepParams{
 		RunID:  runID,
-		TaskID: in.Task.ID,
+		TaskID: inTask.ID,
 		Phase:  entities.PhasePlan,
 		Skill:  entities.PhasePlan,
 		Model:  "opus",
@@ -232,7 +292,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 			PermissionMode: "auto",
 			Effort:         "high",
 			CWD:            workDir,
-			SessionName:    fmt.Sprintf("factory:task-%s:plan", in.Task.ID),
+			SessionName:    fmt.Sprintf("factory:task-%s:plan", inTask.ID),
 			Timeout:        10 * time.Minute,
 		},
 		Prompt: planCtx.Prompt,
@@ -243,15 +303,15 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	steps = append(steps, planResult.Step)
 	totalCost += planResult.Step.CostUSD
 	if planResult.Failed {
-		return s.buildFailure(ctx, in, run, steps, nil, totalCost, planResult)
+		return s.buildFailure(ctx, inTask, inProject, run, steps, nil, totalCost, planResult)
 	}
 
 	// 7. Step 2: IMPLEMENT — resume plan session.
 	implCtx, err := s.Context.Execute(ctx, ContextInput{
 		Phase:           "implement",
-		Task:            in.Task,
-		PRD:             in.PRD,
-		Project:         in.Project,
+		Task:            inTask,
+		PRD:             inPRD,
+		Project:         inProject,
 		CLAUDEMDContent: claudeMD,
 	})
 	if err != nil {
@@ -259,13 +319,13 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	}
 
 	implBudget := 2.0
-	if in.Project.BudgetPerTaskUSD > 0 {
-		implBudget = in.Project.BudgetPerTaskUSD
+	if inProject.BudgetPerTaskUSD > 0 {
+		implBudget = inProject.BudgetPerTaskUSD
 	}
 
 	implResult, err := s.executeStep(ctx, StepParams{
 		RunID:    runID,
-		TaskID:   in.Task.ID,
+		TaskID:   inTask.ID,
 		Phase:    entities.PhaseImplement,
 		Skill:    entities.PhaseImplement,
 		Model:    model,
@@ -278,7 +338,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 			PermissionMode: "auto",
 			Effort:         "high",
 			CWD:            workDir,
-			SessionName:    fmt.Sprintf("factory:task-%s:implement", in.Task.ID),
+			SessionName:    fmt.Sprintf("factory:task-%s:implement", inTask.ID),
 			Timeout:        15 * time.Minute,
 		},
 		Prompt: implCtx.Prompt,
@@ -289,20 +349,20 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	steps = append(steps, implResult.Step)
 	totalCost += implResult.Step.CostUSD
 	if implResult.Failed {
-		return s.buildFailure(ctx, in, run, steps, nil, totalCost, implResult)
+		return s.buildFailure(ctx, inTask, inProject, run, steps, nil, totalCost, implResult)
 	}
 
 	// 7b. Detect questions in implementation output.
 	var questions []entities.Question
-	if q := detectQuestion(implResult.Output, in.Task, runID); q != nil {
+	if q := detectQuestion(implResult.Output, inTask, runID); q != nil {
 		questions = append(questions, *q)
 	}
 
 	// 8. Step 3: TEST — shell commands, not an agent.
-	testCommands := parseTestCommands(in.Project.TestCommands)
+	testCommands := parseTestCommands(inProject.TestCommands)
 	testResult, err := s.executeStep(ctx, StepParams{
 		RunID:    runID,
-		TaskID:   in.Task.ID,
+		TaskID:   inTask.ID,
 		Phase:    entities.PhaseTest,
 		Skill:    entities.PhaseTest,
 		Model:    "shell",
@@ -317,17 +377,17 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	}
 	steps = append(steps, testResult.Step)
 	if testResult.Failed {
-		return s.buildFailure(ctx, in, run, steps, nil, totalCost, testResult)
+		return s.buildFailure(ctx, inTask, inProject, run, steps, nil, totalCost, testResult)
 	}
 
 	// 9. Step 4: LINT — zero-token static analysis.
-	lintResult, err := s.executeLintStep(ctx, in.Task, &run, in.Project, workDir, runID)
+	lintResult, err := s.executeLintStep(ctx, inTask, &run, inProject, workDir, runID)
 	if err != nil {
 		return out, fmt.Errorf("lint step: %w", err)
 	}
 	steps = append(steps, lintResult.Step)
 	if lintResult.Failed {
-		return s.buildFailure(ctx, in, run, steps, nil, totalCost, lintResult)
+		return s.buildFailure(ctx, inTask, inProject, run, steps, nil, totalCost, lintResult)
 	}
 
 	// 10. Step 5: AUDIT — Sonnet, read+bash.
@@ -340,9 +400,9 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 
 	auditCtx, err := s.Context.Execute(ctx, ContextInput{
 		Phase:           "audit",
-		Task:            in.Task,
-		PRD:             in.PRD,
-		Project:         in.Project,
+		Task:            inTask,
+		PRD:             inPRD,
+		Project:         inProject,
 		CLAUDEMDContent: claudeMD,
 		ChangedFiles:    changedFiles,
 	})
@@ -352,7 +412,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 
 	auditResult, err := s.executeStep(ctx, StepParams{
 		RunID:  runID,
-		TaskID: in.Task.ID,
+		TaskID: inTask.ID,
 		Phase:  entities.PhaseAudit,
 		Skill:  entities.PhaseAudit,
 		Model:  "sonnet",
@@ -365,7 +425,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 			Effort:         "medium",
 			CWD:            workDir,
 			JSONSchema:     constants.AuditSchema,
-			SessionName:    fmt.Sprintf("factory:task-%s:audit", in.Task.ID),
+			SessionName:    fmt.Sprintf("factory:task-%s:audit", inTask.ID),
 			Timeout:        5 * time.Minute,
 		},
 		Prompt: auditCtx.Prompt,
@@ -376,7 +436,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	steps = append(steps, auditResult.Step)
 	totalCost += auditResult.Step.CostUSD
 	if auditResult.Failed {
-		return s.buildFailure(ctx, in, run, steps, nil, totalCost, auditResult)
+		return s.buildFailure(ctx, inTask, inProject, run, steps, nil, totalCost, auditResult)
 	}
 
 	// 10. Step 5: REVIEW — Sonnet, read-only, NEW session.
@@ -388,9 +448,9 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 
 	reviewCtx, err := s.Context.Execute(ctx, ContextInput{
 		Phase:           "review_task",
-		Task:            in.Task,
-		PRD:             in.PRD,
-		Project:         in.Project,
+		Task:            inTask,
+		PRD:             inPRD,
+		Project:         inProject,
 		CLAUDEMDContent: claudeMD,
 		GitDiff:         strings.Join(reviewDiffOut.FilesChanged, "\n"),
 	})
@@ -400,7 +460,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 
 	reviewResult, err := s.executeStep(ctx, StepParams{
 		RunID:  runID,
-		TaskID: in.Task.ID,
+		TaskID: inTask.ID,
 		Phase:  entities.PhaseReview,
 		Skill:  entities.PhaseReview,
 		Model:  "sonnet",
@@ -413,7 +473,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 			Effort:         "medium",
 			CWD:            workDir,
 			JSONSchema:     constants.ReviewTaskSchema,
-			SessionName:    fmt.Sprintf("factory:task-%s:review", in.Task.ID),
+			SessionName:    fmt.Sprintf("factory:task-%s:review", inTask.ID),
 			Timeout:        5 * time.Minute,
 		},
 		Prompt: reviewCtx.Prompt,
@@ -431,7 +491,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	}
 
 	if reviewResult.Failed {
-		return s.buildFailure(ctx, in, run, steps, review, totalCost, reviewResult)
+		return s.buildFailure(ctx, inTask, inProject, run, steps, review, totalCost, reviewResult)
 	}
 
 	// 11. All steps passed — capture files changed BEFORE committing.
@@ -446,7 +506,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	commitOut, err := s.Git.Execute(ctx, GitInput{
 		Operation: "commit",
 		RepoPath:  workDir,
-		Message:   fmt.Sprintf("feat: %s\n\nTask: %s", in.Task.Title, in.Task.ID),
+		Message:   fmt.Sprintf("feat: %s\n\nTask: %s", inTask.Title, inTask.ID),
 	})
 	if err != nil {
 		return out, fmt.Errorf("git commit: %w", err)
@@ -454,42 +514,42 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	commitHash := commitOut.CommitHash
 
 	// 13. Merge to target branch + push (if auto_merge).
-	if in.Project.AutoMerge {
+	if inProject.AutoMerge {
 		if _, err := s.Git.Execute(ctx, GitInput{
 			Operation: "merge",
-			RepoPath:  in.Project.LocalPath,
-			Branch:    in.Task.Branch,
-			TaskID:    in.Task.ID,
+			RepoPath:  inProject.LocalPath,
+			Branch:    inTask.Branch,
+			TaskID:    inTask.ID,
 		}); err != nil {
 			return out, fmt.Errorf("git merge: %w", err)
 		}
 
 		if _, err := s.Git.Execute(ctx, GitInput{
 			Operation: "push",
-			RepoPath:  in.Project.LocalPath,
-			Branch:    in.Task.Branch,
+			RepoPath:  inProject.LocalPath,
+			Branch:    inTask.Branch,
 		}); err != nil {
 			return out, fmt.Errorf("git push: %w", err)
 		}
 	}
 
 	// 14. Git cleanup.
-	if in.Project.UseWorktrees {
-		wtPath := filepath.Join(in.Project.LocalPath, ".worktrees", "task-"+in.Task.ID)
+	if inProject.UseWorktrees {
+		wtPath := filepath.Join(inProject.LocalPath, ".worktrees", "task-"+inTask.ID)
 		if _, err := s.Git.Execute(ctx, GitInput{
 			Operation: "worktree_remove",
-			RepoPath:  in.Project.LocalPath,
+			RepoPath:  inProject.LocalPath,
 			Path:      wtPath,
 		}); err != nil {
-			slog.Warn("git worktree cleanup failed", "task_id", in.Task.ID, "error", err)
+			slog.Warn("git worktree cleanup failed", "task_id", inTask.ID, "error", err)
 		}
 	}
 	if _, err := s.Git.Execute(ctx, GitInput{
 		Operation:    "delete_branch",
-		RepoPath:     in.Project.LocalPath,
-		TaskID:       in.Task.ID,
+		RepoPath:     inProject.LocalPath,
+		TaskID:       inTask.ID,
 	}); err != nil {
-		slog.Warn("git branch cleanup failed", "task_id", in.Task.ID, "error", err)
+		slog.Warn("git branch cleanup failed", "task_id", inTask.ID, "error", err)
 	}
 
 	// 15. TODO: Trigger integration review after every N completed tasks.
@@ -500,12 +560,12 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	// 16. Emit task completed event.
 	service.EmitEvent(ctx, service.PendingEvent{
 		EntityType: "Task",
-		EntityID:   in.Task.ID,
+		EntityID:   inTask.ID,
 		Name:       events.TaskCompletedName,
 		Data: events.TaskPayload{
-			TaskID:      in.Task.ID,
-			Title:       in.Task.Title,
-			ProjectName: in.Project.Name,
+			TaskID:      inTask.ID,
+			Title:       inTask.Title,
+			ProjectName: inProject.Name,
 			CostUSD:     totalCost,
 		},
 	})
@@ -518,6 +578,21 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	run.FilesChanged = helpers.ToJSON(filesChanged)
 	run.CompletedAt = &completedAt
 	run.Result = summary
+
+	// 18. Persist run, steps, review.
+	if _, err := s.RunWrite.Insert(ctx, &run); err != nil {
+		return out, fmt.Errorf("insert run: %w", err)
+	}
+	for i := range steps {
+		if _, err := s.StepWrite.Insert(ctx, &steps[i]); err != nil {
+			return out, fmt.Errorf("insert step %s: %w", steps[i].Phase, err)
+		}
+	}
+	if review != nil {
+		if _, err := s.ReviewWrite.Insert(ctx, review); err != nil {
+			return out, fmt.Errorf("insert review: %w", err)
+		}
+	}
 
 	return OrchestratorOutput{
 		Run:          run,
@@ -651,7 +726,7 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 
 // buildFailure constructs an OrchestratorOutput for early-return (failure) cases.
 // It also emits TaskFailed event and pushes the branch if push_failed_branches is set.
-func (s *OrchestratorService) buildFailure(ctx context.Context, in OrchestratorInput, run entities.Run, steps []entities.Step, review *entities.Review, totalCost float64, lastResult *StepResult) (OrchestratorOutput, error) {
+func (s *OrchestratorService) buildFailure(ctx context.Context, task entities.Task, project entities.Project, run entities.Run, steps []entities.Step, review *entities.Review, totalCost float64, lastResult *StepResult) (OrchestratorOutput, error) {
 	completedAt := time.Now()
 	run.Status = entities.RunFailed
 	run.CostUSD = totalCost
@@ -664,20 +739,35 @@ func (s *OrchestratorService) buildFailure(ctx context.Context, in OrchestratorI
 		Name:       events.TaskFailedName,
 		Data: events.TaskPayload{
 			TaskID:      run.TaskID,
-			Title:       in.Task.Title,
-			ProjectName: in.Project.Name,
+			Title:       task.Title,
+			ProjectName: project.Name,
 			CostUSD:     totalCost,
 			Error:       lastResult.Error,
 		},
 	})
 
-	if in.Project.PushFailedBranches && run.BranchName != "" {
+	if project.PushFailedBranches && run.BranchName != "" {
 		if _, err := s.Git.Execute(ctx, GitInput{
 			Operation: "push",
-			RepoPath:  workingDir(in.Project, in.Task.ID),
+			RepoPath:  workingDir(project, task.ID),
 			Branch:    run.BranchName,
 		}); err != nil {
-			slog.Warn("push failed branch failed", "task_id", in.Task.ID, "branch", run.BranchName, "error", err)
+			slog.Warn("push failed branch failed", "task_id", task.ID, "branch", run.BranchName, "error", err)
+		}
+	}
+
+	// Persist run and steps on failure.
+	if _, err := s.RunWrite.Insert(ctx, &run); err != nil {
+		slog.Error("insert failed run", "error", err)
+	}
+	for i := range steps {
+		if _, err := s.StepWrite.Insert(ctx, &steps[i]); err != nil {
+			slog.Error("insert step on failure", "phase", steps[i].Phase, "error", err)
+		}
+	}
+	if review != nil {
+		if _, err := s.ReviewWrite.Insert(ctx, review); err != nil {
+			slog.Error("insert review on failure", "error", err)
 		}
 	}
 
