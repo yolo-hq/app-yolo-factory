@@ -9,6 +9,7 @@ import (
 	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/jobs"
 
+	svc "github.com/yolo-hq/app-yolo-factory/.yolo/svc"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/services"
 )
@@ -16,7 +17,6 @@ import (
 // SentinelJob runs the SentinelService and persists findings as tasks/suggestions.
 type SentinelJob struct {
 	jobs.Base
-	Sentinel        *services.SentinelService
 	ProjectRead     entity.ReadRepository[entities.Project]
 	TaskWrite       entity.WriteRepository[entities.Task]
 	SuggestionWrite entity.WriteRepository[entities.Suggestion]
@@ -53,7 +53,7 @@ func (j *SentinelJob) Handle(ctx context.Context, payload []byte) error {
 	}
 
 	// Run sentinel.
-	out, err := j.Sentinel.Execute(ctx, services.SentinelInput{
+	out, err := svc.S.Sentinel.Execute(ctx, services.SentinelInput{
 		Project: *project,
 		Watches: p.Watches,
 	})

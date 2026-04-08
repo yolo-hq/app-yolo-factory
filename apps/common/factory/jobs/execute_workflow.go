@@ -9,6 +9,7 @@ import (
 	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/jobs"
 
+	svc "github.com/yolo-hq/app-yolo-factory/.yolo/svc"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/services"
 )
@@ -16,7 +17,6 @@ import (
 // ExecuteWorkflowJob runs the OrchestratorService for a single task and persists all results.
 type ExecuteWorkflowJob struct {
 	jobs.Base
-	Orchestrator *services.OrchestratorService
 	TaskRead     entity.ReadRepository[entities.Task]
 	TaskWrite    entity.WriteRepository[entities.Task]
 	RunWrite     entity.WriteRepository[entities.Run]
@@ -85,7 +85,7 @@ func (j *ExecuteWorkflowJob) Handle(ctx context.Context, payload []byte) error {
 	}
 
 	// 4. Execute the full workflow.
-	out, err := j.Orchestrator.Execute(ctx, services.OrchestratorInput{
+	out, err := svc.S.Orchestrator.Execute(ctx, services.OrchestratorInput{
 		Task:    *task,
 		PRD:     *prd,
 		Project: *project,

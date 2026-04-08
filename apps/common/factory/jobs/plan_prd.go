@@ -10,6 +10,7 @@ import (
 	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/jobs"
 
+	svc "github.com/yolo-hq/app-yolo-factory/.yolo/svc"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/services"
 )
@@ -17,7 +18,6 @@ import (
 // PlanPRDJob runs the PlannerService and persists the resulting tasks.
 type PlanPRDJob struct {
 	jobs.Base
-	Planner     *services.PlannerService
 	PRDRead     entity.ReadRepository[entities.PRD]
 	PRDWrite    entity.WriteRepository[entities.PRD]
 	TaskWrite   entity.WriteRepository[entities.Task]
@@ -63,7 +63,7 @@ func (j *PlanPRDJob) Handle(ctx context.Context, payload []byte) error {
 	}
 
 	// Run planner.
-	out, err := j.Planner.Execute(ctx, services.PlannerInput{
+	out, err := svc.S.Planner.Execute(ctx, services.PlannerInput{
 		PRD:     *prd,
 		Project: *project,
 	})

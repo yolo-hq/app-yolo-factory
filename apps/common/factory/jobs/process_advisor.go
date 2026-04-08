@@ -9,6 +9,7 @@ import (
 	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/jobs"
 
+	svc "github.com/yolo-hq/app-yolo-factory/.yolo/svc"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/services"
 )
@@ -16,7 +17,6 @@ import (
 // ProcessAdvisorJob runs the ProcessAdvisorService and persists insights.
 type ProcessAdvisorJob struct {
 	jobs.Base
-	Advisor        *services.ProcessAdvisorService
 	ProjectRead    entity.ReadRepository[entities.Project]
 	TaskRead       entity.ReadRepository[entities.Task]
 	RunRead        entity.ReadRepository[entities.Run]
@@ -99,7 +99,7 @@ func (j *ProcessAdvisorJob) Handle(ctx context.Context, payload []byte) error {
 	}
 
 	// Run process advisor.
-	out, err := j.Advisor.Execute(ctx, services.ProcessAdvisorInput{
+	out, err := svc.S.ProcessAdvisor.Execute(ctx, services.ProcessAdvisorInput{
 		ProjectID:   p.ProjectID,
 		Tasks:       taskResult.Data,
 		Runs:        runResult.Data,

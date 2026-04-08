@@ -8,6 +8,7 @@ import (
 	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/jobs"
 
+	svc "github.com/yolo-hq/app-yolo-factory/.yolo/svc"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/services"
 )
@@ -15,7 +16,6 @@ import (
 // BackupSnapshotJob dumps all entities to the backup state repo.
 type BackupSnapshotJob struct {
 	jobs.Base
-	Backup          *services.BackupService
 	ProjectRead     entity.ReadRepository[entities.Project]
 	PRDRead         entity.ReadRepository[entities.PRD]
 	TaskRead        entity.ReadRepository[entities.Task]
@@ -78,15 +78,15 @@ func backupAll[T entity.Entity](ctx context.Context, entityType string, repo ent
 func (j *BackupSnapshotJob) backupAll(ctx context.Context, entityType string, repo any) error {
 	switch r := repo.(type) {
 	case entity.ReadRepository[entities.Project]:
-		return backupAll(ctx, entityType, r, j.Backup)
+		return backupAll(ctx, entityType, r, svc.S.Backup)
 	case entity.ReadRepository[entities.PRD]:
-		return backupAll(ctx, entityType, r, j.Backup)
+		return backupAll(ctx, entityType, r, svc.S.Backup)
 	case entity.ReadRepository[entities.Task]:
-		return backupAll(ctx, entityType, r, j.Backup)
+		return backupAll(ctx, entityType, r, svc.S.Backup)
 	case entity.ReadRepository[entities.Question]:
-		return backupAll(ctx, entityType, r, j.Backup)
+		return backupAll(ctx, entityType, r, svc.S.Backup)
 	case entity.ReadRepository[entities.Suggestion]:
-		return backupAll(ctx, entityType, r, j.Backup)
+		return backupAll(ctx, entityType, r, svc.S.Backup)
 	default:
 		return fmt.Errorf("unknown repo type for %s", entityType)
 	}
