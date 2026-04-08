@@ -7,6 +7,7 @@ import (
 	"github.com/yolo-hq/yolo/core/command"
 	"github.com/yolo-hq/yolo/core/entity"
 
+	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
@@ -34,7 +35,7 @@ func (c *InsightDismiss) Execute(ctx context.Context, cctx command.Context) erro
 	}
 	w := repo.(entity.WriteRepository[entities.Insight])
 
-	if _, err := w.Update(ctx).WhereID(id).Set("status", entities.InsightDismissed).Exec(ctx); err != nil {
+	if _, err := w.Update(ctx).WhereID(id).Set(fields.Insight.Status.Name(), entities.InsightDismissed).Exec(ctx); err != nil {
 		return fmt.Errorf("dismiss insight: %w", err)
 	}
 

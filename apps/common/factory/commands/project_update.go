@@ -7,6 +7,7 @@ import (
 	"github.com/yolo-hq/yolo/core/command"
 	"github.com/yolo-hq/yolo/core/entity"
 
+	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
@@ -41,19 +42,19 @@ func (c *ProjectUpdate) Execute(ctx context.Context, cctx command.Context) error
 
 	ub := w.Update(ctx).WhereID(id)
 	if input.Name != "" {
-		ub = ub.Set("name", input.Name)
+		ub = ub.Set(fields.Project.Name.Name(), input.Name)
 	}
 	if input.Branch != "" {
-		ub = ub.Set("default_branch", input.Branch)
+		ub = ub.Set(fields.Project.DefaultBranch.Name(), input.Branch)
 	}
 	if input.Model != "" {
-		ub = ub.Set("default_model", input.Model)
+		ub = ub.Set(fields.Project.DefaultModel.Name(), input.Model)
 	}
 	if input.Budget > 0 {
-		ub = ub.Set("budget_monthly_usd", input.Budget)
+		ub = ub.Set(fields.Project.BudgetMonthlyUSD.Name(), input.Budget)
 	}
 	if input.Retries > 0 {
-		ub = ub.Set("max_retries", input.Retries)
+		ub = ub.Set(fields.Project.MaxRetries.Name(), input.Retries)
 	}
 
 	if _, err := ub.Exec(ctx); err != nil {

@@ -6,6 +6,7 @@ import (
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/write"
 
+	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
@@ -23,10 +24,10 @@ func (a *RetryTaskAction) Execute(ctx context.Context, actx *action.Context) act
 	input := a.Input(actx)
 
 	set := write.Set{
-		write.NewField[string]("status").Value(entities.TaskQueued),
+		fields.Task.Status.Value(entities.TaskQueued),
 	}
 	if input.Model != "" {
-		set = append(set, write.NewField[string]("model").Value(input.Model))
+		set = append(set, fields.Task.Model.Value(input.Model))
 	}
 
 	_, err := action.Write[entities.Task](actx).Exec(ctx, write.Update{

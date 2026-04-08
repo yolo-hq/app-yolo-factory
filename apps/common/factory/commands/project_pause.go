@@ -7,6 +7,7 @@ import (
 	"github.com/yolo-hq/yolo/core/command"
 	"github.com/yolo-hq/yolo/core/entity"
 
+	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
@@ -29,7 +30,7 @@ func (c *ProjectPause) Execute(ctx context.Context, cctx command.Context) error 
 	}
 	w := repo.(entity.WriteRepository[entities.Project])
 
-	if _, err := w.Update(ctx).WhereID(id).Set("status", entities.ProjectPaused).Exec(ctx); err != nil {
+	if _, err := w.Update(ctx).WhereID(id).Set(fields.Project.Status.Name(), entities.ProjectPaused).Exec(ctx); err != nil {
 		return fmt.Errorf("pause project: %w", err)
 	}
 

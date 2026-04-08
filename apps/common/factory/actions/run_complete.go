@@ -11,6 +11,7 @@ import (
 	"github.com/yolo-hq/yolo/core/service"
 	"github.com/yolo-hq/yolo/core/write"
 
+	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/events"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
@@ -40,18 +41,18 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) a
 	_, err := action.Write[entities.Run](actx).Exec(ctx, write.Update{
 		ID: actx.EntityID,
 		Set: write.Set{
-			write.NewField[string]("status").Value(input.Status),
-			write.NewField[float64]("cost_usd").Value(input.CostUSD),
-			write.NewField[int]("tokens_in").Value(input.TokensIn),
-			write.NewField[int]("tokens_out").Value(input.TokensOut),
-			write.NewField[int]("duration_ms").Value(input.DurationMS),
-			write.NewField[int]("num_turns").Value(input.NumTurns),
-			write.NewField[string]("error").Value(input.Error),
-			write.NewField[string]("commit_hash").Value(input.CommitHash),
-			write.NewField[string]("files_changed").Value(input.FilesChanged),
-			write.NewField[string]("result").Value(input.Result),
-			write.NewField[string]("session_id").Value(input.SessionID),
-			write.NewField[*time.Time]("completed_at").Value(&now),
+			fields.Run.Status.Value(input.Status),
+			fields.Run.CostUSD.Value(input.CostUSD),
+			fields.Run.TokensIn.Value(input.TokensIn),
+			fields.Run.TokensOut.Value(input.TokensOut),
+			fields.Run.DurationMs.Value(input.DurationMS),
+			fields.Run.NumTurns.Value(input.NumTurns),
+			fields.Run.Error.Value(input.Error),
+			fields.Run.CommitHash.Value(input.CommitHash),
+			fields.Run.FilesChanged.Value(input.FilesChanged),
+			fields.Run.Result.Value(input.Result),
+			fields.Run.SessionID.Value(input.SessionID),
+			fields.Run.CompletedAt.Value(&now),
 		},
 	})
 	if err != nil {
@@ -94,11 +95,11 @@ func (a *CompleteRunAction) handleCompleted(
 	summary := helpers.Truncate(input.Result, 500)
 	if _, err := taskWrite.Update(ctx).
 		WhereID(task.ID).
-		Set("status", entities.TaskDone).
-		Set("cost_usd", task.CostUSD+input.CostUSD).
-		Set("commit_hash", input.CommitHash).
-		Set("summary", summary).
-		Set("completed_at", now).
+		Set(fields.Task.Status.Name(), entities.TaskDone).
+		Set(fields.Task.CostUSD.Name(), task.CostUSD+input.CostUSD).
+		Set(fields.Task.CommitHash.Name(), input.CommitHash).
+		Set(fields.Task.Summary.Name(), summary).
+		Set(fields.Task.CompletedAt.Name(), now).
 		Exec(ctx); err != nil {
 		fmt.Printf("[factory] ERROR: failed to update task %s to done: %v\n", task.ID, err)
 		return
@@ -145,9 +146,9 @@ func (a *CompleteRunAction) handleFailed(
 		// Retry: requeue the task (critical path).
 		if _, err := taskWrite.Update(ctx).
 			WhereID(task.ID).
-			Set("status", entities.TaskQueued).
-			Set("cost_usd", newCost).
-			Set("run_count", newRunCount).
+			Set(fields.Task.Status.Name(), entities.TaskQueued).
+			Set(fields.Task.CostUSD.Name(), newCost).
+			Set(fields.Task.RunCount.Name(), newRunCount).
 			Exec(ctx); err != nil {
 			fmt.Printf("[factory] ERROR: failed to requeue task %s: %v\n", task.ID, err)
 			return
@@ -165,9 +166,9 @@ func (a *CompleteRunAction) handleFailed(
 		// Exhausted retries: mark failed (critical path).
 		if _, err := taskWrite.Update(ctx).
 			WhereID(task.ID).
-			Set("status", entities.TaskFailed).
-			Set("cost_usd", newCost).
-			Set("run_count", newRunCount).
+			Set(fields.Task.Status.Name(), entities.TaskFailed).
+			Set(fields.Task.CostUSD.Name(), newCost).
+			Set(fields.Task.RunCount.Name(), newRunCount).
 			Exec(ctx); err != nil {
 			fmt.Printf("[factory] ERROR: failed to mark task %s as failed: %v\n", task.ID, err)
 			return
@@ -213,7 +214,7 @@ func unblockDependents(
 		}
 		_, err := taskWrite.Update(ctx).
 			WhereID(t.ID).
-			Set("status", entities.TaskQueued).
+			Set(fields.Task.Status.Name(), entities.TaskQueued).
 			Exec(ctx)
 		if err == nil {
 			unblocked = append(unblocked, t.ID)
@@ -261,7 +262,7 @@ func cascadeFailure(
 		}
 		_, err := taskWrite.Update(ctx).
 			WhereID(t.ID).
-			Set("status", entities.TaskFailed).
+			Set(fields.Task.Status.Name(), entities.TaskFailed).
 			Exec(ctx)
 		if err == nil {
 			// Recurse: cascade to tasks depending on this one.
@@ -320,9 +321,9 @@ func updatePRDCounters(
 
 	if _, err := prdWrite.Update(ctx).
 		WhereID(prdID).
-		Set("completed_tasks", completed).
-		Set("failed_tasks", failed).
-		Set("total_cost_usd", totalCost).
+		Set(fields.PRD.CompletedTasks.Name(), completed).
+		Set(fields.PRD.FailedTasks.Name(), failed).
+		Set(fields.PRD.TotalCostUSD.Name(), totalCost).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("update PRD counters %s: %w", prdID, err)
 	}
@@ -336,8 +337,8 @@ func updatePRDCounters(
 		}
 		if _, err := prdWrite.Update(ctx).
 			WhereID(prdID).
-			Set("status", status).
-			Set("completed_at", now).
+			Set(fields.PRD.Status.Name(), status).
+			Set(fields.PRD.CompletedAt.Name(), now).
 			Exec(ctx); err != nil {
 			return fmt.Errorf("update PRD status %s: %w", prdID, err)
 		}

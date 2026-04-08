@@ -7,6 +7,7 @@ import (
 	"github.com/yolo-hq/yolo/core/jobs"
 	"github.com/yolo-hq/yolo/core/write"
 
+	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
@@ -31,7 +32,7 @@ func (a *ExecutePRDAction) Execute(ctx context.Context, actx *action.Context) ac
 	_, err := action.Write[entities.PRD](actx).Exec(ctx, write.Update{
 		ID: actx.EntityID,
 		Set: write.Set{
-			write.NewField[string]("status").Value(entities.PRDPlanning),
+			fields.PRD.Status.Value(entities.PRDPlanning),
 		},
 	})
 	if err != nil {

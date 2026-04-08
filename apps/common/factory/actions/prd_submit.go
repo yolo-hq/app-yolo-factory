@@ -7,6 +7,7 @@ import (
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/write"
 
+	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
 )
@@ -39,9 +40,9 @@ func (a *SubmitPRDAction) Execute(ctx context.Context, actx *action.Context) act
 	res, err := action.Write[entities.PRD](actx).Exec(ctx, write.Create{
 		FromInput: input,
 		Set: write.Set{
-			write.NewField[string]("status").Value(entities.PRDDraft),
-			write.NewField[string]("created_by").Value("human"),
-			write.NewField[string]("source").Value(source),
+			fields.PRD.Status.Value(entities.PRDDraft),
+			fields.PRD.CreatedBy.Value("human"),
+			fields.PRD.Source.Value(source),
 		},
 	})
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/write"
 
+	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
@@ -27,10 +28,10 @@ func (a *AnswerQuestionAction) Execute(ctx context.Context, actx *action.Context
 	_, err := action.Write[entities.Question](actx).Exec(ctx, write.Update{
 		ID: actx.EntityID,
 		Set: write.Set{
-			write.NewField[string]("status").Value(entities.QuestionAnswered),
-			write.NewField[string]("answer").Value(input.Answer),
-			write.NewField[string]("answered_by").Value("human"),
-			write.NewField[*time.Time]("answered_at").Value(&now),
+			fields.Question.Status.Value(entities.QuestionAnswered),
+			fields.Question.Answer.Value(input.Answer),
+			fields.Question.AnsweredBy.Value("human"),
+			fields.Question.AnsweredAt.Value(&now),
 		},
 	})
 	if err != nil {

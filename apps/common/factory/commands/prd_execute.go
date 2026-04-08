@@ -7,6 +7,7 @@ import (
 	"github.com/yolo-hq/yolo/core/command"
 	"github.com/yolo-hq/yolo/core/entity"
 
+	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
@@ -44,7 +45,7 @@ func (c *PRDExecute) Execute(ctx context.Context, cctx command.Context) error {
 	}
 
 	// Mark PRD as planning to trigger the PlanPRDJob via the worker.
-	if _, err := w.Update(ctx).WhereID(id).Set("status", entities.PRDPlanning).Exec(ctx); err != nil {
+	if _, err := w.Update(ctx).WhereID(id).Set(fields.PRD.Status.Name(), entities.PRDPlanning).Exec(ctx); err != nil {
 		return fmt.Errorf("update prd: %w", err)
 	}
 
