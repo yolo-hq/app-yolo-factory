@@ -210,3 +210,5 @@ func (s *BackupService) gitPush(ctx context.Context) error {
 	_, err := cmd.CombinedOutput()
 	return err
 }
+
+func (s *BackupService) Description() string { return "Create and manage factory state backups" }

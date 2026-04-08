@@ -111,3 +111,5 @@ func (s *GitService) run(ctx context.Context, dir string, name string, args ...s
 	}
 	return GitOutput{RawOutput: stdout.String()}, nil
 }
+
+func (s *GitService) Description() string { return "Execute git operations for task workflows" }

@@ -1,4 +1,4 @@
-package skills
+package constants
 
 // PlanTasksSchema is the JSON schema for plan-tasks structured output.
 const PlanTasksSchema = `{

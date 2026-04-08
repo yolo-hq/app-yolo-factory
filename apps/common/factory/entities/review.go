@@ -12,7 +12,7 @@ type Review struct {
 	TaskID          string  `json:"taskId" bun:"task_id,notnull" fake:"rel:Task"`
 	SessionID       string  `json:"sessionId" bun:"session_id" fake:"-"`
 	Model           string  `json:"model" bun:"model,notnull" fake:"oneof:sonnet,opus,haiku"`
-	Verdict         string  `json:"verdict" bun:"verdict,notnull" fake:"oneof:pass,fail,retry"`
+	Verdict         string  `json:"verdict" bun:"verdict,notnull" fake:"oneof:pass,fail,retry" enum:"pass,fail"`
 	Reasons         string  `json:"reasons" bun:"reasons,default:'[]'" fake:"-"`
 	AntiPatterns    string  `json:"antiPatterns" bun:"anti_patterns,default:'[]'" fake:"-"`
 	CriteriaResults string  `json:"criteriaResults" bun:"criteria_results,notnull" fake:"sentence:15"`

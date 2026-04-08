@@ -1,4 +1,4 @@
-package skills
+package constants
 
 // AdvisorTemplate is the prompt template for optimization advisor analysis.
 const AdvisorTemplate = `You are an optimization advisor analyzing project {{.ProjectName}}.

@@ -13,7 +13,7 @@ type Task struct {
 	PrdID              string     `json:"prdId" bun:"prd_id" fake:"rel:PRD"`
 	ProjectID          string     `json:"projectId" bun:"project_id" fake:"rel:Project"`
 	Title              string     `json:"title" bun:"title,notnull" fake:"sentence:6"`
-	Status             string     `json:"status" bun:"status,notnull,default:'queued'" fake:"oneof:queued,running,completed,failed,cancelled"`
+	Status             string     `json:"status" bun:"status,notnull,default:'queued'" fake:"oneof:queued,running,completed,failed,cancelled" enum:"queued,blocked,running,reviewing,done,failed,cancelled"`
 	Spec               string     `json:"spec" bun:"spec,notnull" fake:"sentence:20"`
 	AcceptanceCriteria string     `json:"acceptanceCriteria" bun:"acceptance_criteria,notnull" fake:"sentence:15"`
 	Branch             string     `json:"branch" bun:"branch,notnull" fake:"word"`

@@ -12,6 +12,7 @@ import (
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/events"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 )
 
 // SentinelService runs health checks against a project and produces findings.
@@ -67,7 +68,7 @@ func (s *SentinelService) Execute(ctx context.Context, in SentinelInput) (Sentin
 			service.EmitEvent(ctx, service.PendingEvent{
 				Name: events.SentinelBuildBroken,
 				Data: events.SentinelPayload{
-					ProjectName: in.Project.Name,
+					ProjectID: in.Project.ID,
 					Error:       f.Message,
 					Severity:    f.Severity,
 				},
@@ -76,7 +77,7 @@ func (s *SentinelService) Execute(ctx context.Context, in SentinelInput) (Sentin
 			service.EmitEvent(ctx, service.PendingEvent{
 				Name: events.SentinelSecurityVuln,
 				Data: events.SentinelPayload{
-					ProjectName: in.Project.Name,
+					ProjectID: in.Project.ID,
 					Error:       f.Message,
 					Severity:    f.Severity,
 				},
@@ -102,7 +103,7 @@ func (s *SentinelService) Execute(ctx context.Context, in SentinelInput) (Sentin
 				ProjectID: in.Project.ID,
 				Source:    "sentinel",
 				Category:  categoryFromWatch(f.Watch),
-				Title:     fmt.Sprintf("[sentinel] %s", Truncate(f.Message, 80)),
+				Title:     fmt.Sprintf("[sentinel] %s", helpers.Truncate(f.Message, 80)),
 				Body:      f.Message,
 				Priority:  f.Severity,
 			}
@@ -141,7 +142,7 @@ func (s *SentinelService) checkBuild(ctx context.Context, project entities.Proje
 		return []Finding{{
 			Watch:    "build_health",
 			Severity: "critical",
-			Message:  fmt.Sprintf("build failed: %s", Truncate(output, 300)),
+			Message:  fmt.Sprintf("build failed: %s", helpers.Truncate(output, 300)),
 			Action:   "create_task",
 		}}, nil
 	}
@@ -159,7 +160,7 @@ func (s *SentinelService) checkTests(ctx context.Context, project entities.Proje
 		return []Finding{{
 			Watch:    "test_health",
 			Severity: "critical",
-			Message:  fmt.Sprintf("tests failed: %s", Truncate(output, 300)),
+			Message:  fmt.Sprintf("tests failed: %s", helpers.Truncate(output, 300)),
 			Action:   "create_task",
 		}}, nil
 	}
@@ -187,7 +188,7 @@ func (s *SentinelService) checkSecurity(ctx context.Context, project entities.Pr
 		return []Finding{{
 			Watch:    "security",
 			Severity: "critical",
-			Message:  fmt.Sprintf("vulnerabilities found: %s", Truncate(output, 300)),
+			Message:  fmt.Sprintf("vulnerabilities found: %s", helpers.Truncate(output, 300)),
 			Action:   "create_task",
 		}}, nil
 	}
@@ -205,7 +206,7 @@ func (s *SentinelService) checkConventions(ctx context.Context, project entities
 		return []Finding{{
 			Watch:    "convention_drift",
 			Severity: "warning",
-			Message:  fmt.Sprintf("convention violations: %s", Truncate(output, 300)),
+			Message:  fmt.Sprintf("convention violations: %s", helpers.Truncate(output, 300)),
 			Action:   "create_suggestion",
 		}}, nil
 	}
@@ -239,3 +240,5 @@ func runCmd(ctx context.Context, dir string, name string, args ...string) (strin
 	out, err := cmd.CombinedOutput()
 	return strings.TrimSpace(string(out)), err
 }
+
+func (s *SentinelService) Description() string { return "Monitor project health and detect issues" }

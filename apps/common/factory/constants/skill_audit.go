@@ -1,4 +1,4 @@
-package skills
+package constants
 
 // AuditTemplate is the prompt template for convention auditing.
 const AuditTemplate = `You are auditing code changes for convention compliance.

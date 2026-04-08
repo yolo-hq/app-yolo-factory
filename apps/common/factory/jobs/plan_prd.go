@@ -97,3 +97,5 @@ func (j *PlanPRDJob) Handle(ctx context.Context, payload []byte) error {
 
 	return nil
 }
+
+func (j *PlanPRDJob) Description() string { return "Plan and create tasks from an approved PRD" }

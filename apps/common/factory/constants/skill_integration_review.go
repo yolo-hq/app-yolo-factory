@@ -1,4 +1,4 @@
-package skills
+package constants
 
 // IntegrationReviewTemplate is the prompt template for cross-task integration review.
 const IntegrationReviewTemplate = `You are reviewing the combined output of multiple tasks for integration issues.

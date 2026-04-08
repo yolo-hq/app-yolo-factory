@@ -10,11 +10,11 @@ type Suggestion struct {
 	entity.BaseEntity
 	ProjectID       string `json:"projectId" bun:"project_id,notnull" fake:"rel:Project"`
 	Source          string `json:"source" bun:"source,notnull" fake:"oneof:review,sentinel,advisor,manual"`
-	Category        string `json:"category" bun:"category,notnull" fake:"oneof:bug,feature,refactor,test,docs"`
+	Category        string `json:"category" bun:"category,notnull" fake:"oneof:bug,feature,refactor,test,docs" enum:"optimization,refactoring,tech_debt,security,new_feature,pattern_extraction,bug_fix"`
 	Title           string `json:"title" bun:"title,notnull" fake:"sentence:6"`
 	Body            string `json:"body" bun:"body,notnull" fake:"sentence:20"`
-	Priority        string `json:"priority" bun:"priority,notnull,default:'medium'" fake:"oneof:low,medium,high,critical"`
-	Status          string `json:"status" bun:"status,notnull,default:'pending'" fake:"oneof:pending,accepted,rejected,converted"`
+	Priority        string `json:"priority" bun:"priority,notnull,default:'medium'" fake:"oneof:low,medium,high,critical" enum:"low,medium,high,critical"`
+	Status          string `json:"status" bun:"status,notnull,default:'pending'" fake:"oneof:pending,accepted,rejected,converted" enum:"pending,approved,rejected,converted"`
 	ConvertedTaskID string `json:"convertedTaskId" bun:"converted_task_id" fake:"-"`
 
 	// Relations

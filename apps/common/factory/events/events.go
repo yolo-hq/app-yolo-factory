@@ -25,6 +25,9 @@ const (
 	SentinelSecurityVuln = "factory.sentinel.security_vuln"
 )
 
+// Legacy payload structs — kept for backward compatibility.
+// New code should use typed event structs (e.g. TaskCompletedEvent) instead.
+
 // TaskPayload is sent with task lifecycle events.
 type TaskPayload struct {
 	TaskID      string  `json:"task_id"`
@@ -56,11 +59,4 @@ type BudgetPayload struct {
 	Spent       float64 `json:"spent"`
 	Limit       float64 `json:"limit"`
 	Percentage  float64 `json:"percentage"`
-}
-
-// SentinelPayload is sent for sentinel findings.
-type SentinelPayload struct {
-	ProjectName string `json:"project_name"`
-	Error       string `json:"error"`
-	Severity    string `json:"severity"`
 }

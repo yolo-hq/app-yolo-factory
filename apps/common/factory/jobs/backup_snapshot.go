@@ -91,3 +91,5 @@ func (j *BackupSnapshotJob) backupAll(ctx context.Context, entityType string, re
 		return fmt.Errorf("unknown repo type for %s", entityType)
 	}
 }
+
+func (j *BackupSnapshotJob) Description() string { return "Create periodic backup snapshots of factory state" }

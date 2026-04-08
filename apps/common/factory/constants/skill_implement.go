@@ -1,4 +1,4 @@
-package skills
+package constants
 
 // ImplementTemplate is the prompt template for TDD-based task implementation.
 const ImplementTemplate = `You are implementing a software task following TDD methodology.

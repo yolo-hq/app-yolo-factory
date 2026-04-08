@@ -104,3 +104,5 @@ func (j *AdvisorJob) Handle(ctx context.Context, payload []byte) error {
 
 	return nil
 }
+
+func (j *AdvisorJob) Description() string { return "Run optimization advisor on all active projects" }

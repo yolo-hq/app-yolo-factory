@@ -13,8 +13,8 @@ import (
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/events"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/services"
 )
 
 // CompleteRunAction records run completion and drives the task/PRD state machine.
@@ -91,7 +91,7 @@ func (a *CompleteRunAction) handleCompleted(
 	now time.Time,
 ) {
 	// a. Update task: done, accumulate cost (critical path).
-	summary := services.Truncate(input.Result, 500)
+	summary := helpers.Truncate(input.Result, 500)
 	if _, err := taskWrite.Update(ctx).
 		WhereID(task.ID).
 		Set("status", entities.TaskDone).
@@ -205,10 +205,10 @@ func unblockDependents(
 
 	var unblocked []string
 	for _, t := range result.Data {
-		if !services.ContainsDep(t.DependsOn, completedTaskID) {
+		if !helpers.ContainsDep(t.DependsOn, completedTaskID) {
 			continue
 		}
-		if !allDepsMet(ctx, taskRead, services.ParseDeps(t.DependsOn)) {
+		if !allDepsMet(ctx, taskRead, helpers.ParseDeps(t.DependsOn)) {
 			continue
 		}
 		_, err := taskWrite.Update(ctx).
@@ -256,7 +256,7 @@ func cascadeFailure(
 		if t.Status == entities.TaskDone || t.Status == entities.TaskFailed || t.Status == entities.TaskCancelled {
 			continue
 		}
-		if !services.ContainsDep(t.DependsOn, failedTaskID) {
+		if !helpers.ContainsDep(t.DependsOn, failedTaskID) {
 			continue
 		}
 		_, err := taskWrite.Update(ctx).

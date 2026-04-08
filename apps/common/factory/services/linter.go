@@ -46,3 +46,5 @@ func (s *LinterService) Execute(_ context.Context, input LinterInput) (LinterOut
 		Findings:     result.Findings,
 	}, nil
 }
+
+func (s *LinterService) Description() string { return "Run code quality linting on generated changes" }

@@ -127,3 +127,5 @@ func (j *ExecuteWorkflowJob) Handle(ctx context.Context, payload []byte) error {
 
 	return nil
 }
+
+func (j *ExecuteWorkflowJob) Description() string { return "Run the full implementation workflow for a queued task" }

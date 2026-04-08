@@ -77,3 +77,5 @@ func (j *SentinelJob) Handle(ctx context.Context, payload []byte) error {
 
 	return nil
 }
+
+func (j *SentinelJob) Description() string { return "Run sentinel health checks on all active projects" }

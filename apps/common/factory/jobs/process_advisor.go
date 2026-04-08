@@ -124,3 +124,5 @@ func (j *ProcessAdvisorJob) Handle(ctx context.Context, payload []byte) error {
 
 	return nil
 }
+
+func (j *ProcessAdvisorJob) Description() string { return "Analyze factory process metrics and generate insights" }

@@ -12,8 +12,8 @@ type PRD struct {
 	entity.BaseEntity
 	ProjectID          string     `json:"projectId" bun:"project_id,notnull" fake:"rel:Project"`
 	Title              string     `json:"title" bun:"title,notnull" fake:"sentence:6"`
-	Status             string     `json:"status" bun:"status,notnull,default:'draft'" fake:"oneof:draft,approved,in_progress,completed,failed"`
-	Source             string     `json:"source" bun:"source,notnull,default:'manual'" fake:"oneof:manual,suggestion,issue"`
+	Status             string     `json:"status" bun:"status,notnull,default:'draft'" fake:"oneof:draft,approved,in_progress,completed,failed" enum:"draft,approved,planning,in_progress,completed,failed"`
+	Source             string     `json:"source" bun:"source,notnull,default:'manual'" fake:"oneof:manual,suggestion,issue" enum:"manual,grill_me,factory_generated,imported"`
 	CreatedBy          string     `json:"createdBy" bun:"created_by,notnull,default:'human'" fake:"oneof:human,agent"`
 	Body               string     `json:"body" bun:"body,notnull" fake:"sentence:20"`
 	AcceptanceCriteria string     `json:"acceptanceCriteria" bun:"acceptance_criteria,notnull" fake:"sentence:15"`

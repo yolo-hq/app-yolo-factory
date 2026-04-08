@@ -13,7 +13,8 @@ import (
 	"github.com/yolo-hq/yolo/core/service"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/skills"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 )
 
 // PlannerService spawns a Claude agent to break a PRD into implementation tasks.
@@ -82,7 +83,7 @@ func (s *PlannerService) Execute(ctx context.Context, in PlannerInput) (PlannerO
 		PermissionMode: "auto",
 		Effort:         "high",
 		CWD:            in.Project.LocalPath,
-		JSONSchema:     skills.PlanTasksSchema,
+		JSONSchema:     constants.PlanTasksSchema,
 		SessionName:    fmt.Sprintf("factory:prd-%s:plan", in.PRD.ID),
 		Timeout:        10 * time.Minute,
 	}, ctxOut.Prompt)
@@ -108,7 +109,7 @@ func (s *PlannerService) Execute(ctx context.Context, in PlannerInput) (PlannerO
 
 	// 5. Validate dependencies (cycle detection).
 	for _, task := range tasks {
-		deps := ParseDeps(task.DependsOn)
+		deps := helpers.ParseDeps(task.DependsOn)
 		if len(deps) == 0 {
 			continue
 		}
@@ -195,7 +196,7 @@ func (s *PlannerService) convertToEntities(defs []TaskDef, in PlannerInput) ([]e
 			depIDs = append(depIDs, depID)
 		}
 
-		tasks[i].DependsOn = ToJSON(depIDs)
+		tasks[i].DependsOn = helpers.ToJSON(depIDs)
 		tasks[i].Status = entities.TaskBlocked
 	}
 
@@ -213,3 +214,5 @@ func readCLAUDEMD(projectPath string) string {
 	}
 	return string(data)
 }
+
+func (s *PlannerService) Description() string { return "Break a PRD into implementable tasks" }

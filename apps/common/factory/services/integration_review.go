@@ -11,8 +11,9 @@ import (
 	"github.com/yolo-hq/yolo/core/pkg/claude"
 	"github.com/yolo-hq/yolo/core/service"
 
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/skills"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 )
 
 // defaultIntegrationReviewEvery is how often (in completed tasks) to trigger integration review.
@@ -73,7 +74,7 @@ func (s *IntegrationReviewService) Execute(ctx context.Context, in IntegrationRe
 		PermissionMode: "auto",
 		Effort:         "medium",
 		CWD:            in.Project.LocalPath,
-		JSONSchema:     skills.IntegrationReviewSchema,
+		JSONSchema:     constants.IntegrationReviewSchema,
 		SessionName:    fmt.Sprintf("factory:project-%s:integration-review", in.Project.ID),
 		Timeout:        5 * time.Minute,
 	}, ctxOut.Prompt)
@@ -137,7 +138,7 @@ func findingsToSuggestions(findings []IntegrationFinding, projectID string) []en
 			ProjectID: projectID,
 			Source:    "integration_review",
 			Category:  mapFindingCategory(f.Category),
-			Title:     fmt.Sprintf("[%s] %s", f.Category, Truncate(f.Message, 80)),
+			Title:     fmt.Sprintf("[%s] %s", f.Category, helpers.Truncate(f.Message, 80)),
 			Body:      f.Message,
 			Priority:  priority,
 			Status:    entities.SuggestionPending,
@@ -168,8 +169,10 @@ func formatTaskSummaries(tasks []entities.Task) string {
 
 	var lines []string
 	for _, t := range tasks {
-		line := fmt.Sprintf("- [%s] %s: %s", t.ID, t.Title, Truncate(t.Spec, 200))
+		line := fmt.Sprintf("- [%s] %s: %s", t.ID, t.Title, helpers.Truncate(t.Spec, 200))
 		lines = append(lines, line)
 	}
 	return strings.Join(lines, "\n")
 }
+
+func (s *IntegrationReviewService) Description() string { return "Review cross-task integration patterns" }

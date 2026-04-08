@@ -98,3 +98,5 @@ func (j *CheckTimeoutsJob) Handle(ctx context.Context, _ []byte) error {
 
 	return nil
 }
+
+func (j *CheckTimeoutsJob) Description() string { return "Check and fail tasks that exceeded timeout" }

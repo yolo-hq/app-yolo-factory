@@ -1,4 +1,4 @@
-package skills
+package constants
 
 // SentinelTemplate is the prompt template for code health sentinel checks.
 const SentinelTemplate = `You are a code health sentinel checking project {{.ProjectName}}.

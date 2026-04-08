@@ -12,6 +12,7 @@ import (
 	"github.com/yolo-hq/yolo/core/pkg/claude"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/services"
 )
 
@@ -115,8 +116,8 @@ func TestE2E_OrchestratorHelpers(t *testing.T) {
 	assert.Equal(t, []string{"go build ./...", "go test ./..."}, services.ExportParseTestCommands(""))
 
 	// Test Truncate.
-	assert.Equal(t, "hello", services.Truncate("hello", 100))
-	assert.Equal(t, "hello...", services.Truncate("hello world", 5))
+	assert.Equal(t, "hello", helpers.Truncate("hello", 100))
+	assert.Equal(t, "hello...", helpers.Truncate("hello world", 5))
 }
 
 // TestE2E_DependencyChain verifies cycle detection and dependency parsing.
@@ -144,9 +145,9 @@ func TestE2E_DependencyChain(t *testing.T) {
 	assert.Contains(t, err.Error(), "cycle detected")
 
 	// ParseDeps.
-	assert.Nil(t, services.ParseDeps(""))
-	assert.Nil(t, services.ParseDeps("[]"))
-	assert.Equal(t, []string{"a", "b"}, services.ParseDeps(`["a","b"]`))
+	assert.Nil(t, helpers.ParseDeps(""))
+	assert.Nil(t, helpers.ParseDeps("[]"))
+	assert.Equal(t, []string{"a", "b"}, helpers.ParseDeps(`["a","b"]`))
 }
 
 // TestE2E_BackupRoundTrip tests backup serialization and recovery.

@@ -9,7 +9,7 @@ type Project struct {
 	bun.BaseModel `bun:"table:factory_projects"`
 	entity.BaseEntity
 	Name                 string  `json:"name" bun:"name,notnull,unique" fake:"name"`
-	Status               string  `json:"status" bun:"status,notnull,default:'active'" fake:"oneof:active,archived,paused"`
+	Status               string  `json:"status" bun:"status,notnull,default:'active'" fake:"oneof:active,archived,paused" enum:"active,paused,archived"`
 	RepoURL              string  `json:"repoUrl" bun:"repo_url,notnull" fake:"url"`
 	LocalPath            string  `json:"localPath" bun:"local_path,notnull,default:''" fake:"-"`
 	UseWorktrees         bool    `json:"useWorktrees" bun:"use_worktrees,default:false" fake:"bool"`

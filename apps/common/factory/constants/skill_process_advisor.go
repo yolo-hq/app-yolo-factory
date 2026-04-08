@@ -1,4 +1,4 @@
-package skills
+package constants
 
 // ProcessAdvisorTemplate is the prompt template for process improvement analysis.
 const ProcessAdvisorTemplate = `You are analyzing Factory execution history to suggest process improvements.

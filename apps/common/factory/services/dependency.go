@@ -8,6 +8,7 @@ import (
 	"github.com/yolo-hq/yolo/core/service"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 )
 
 // DependencyService validates task dependencies and unblocks tasks when deps complete.
@@ -120,7 +121,7 @@ func (s *DependencyService) Unblock(ctx context.Context, in UnblockInput) (Unblo
 	}
 
 	for _, task := range result.Data {
-		deps := ParseDeps(task.DependsOn)
+		deps := helpers.ParseDeps(task.DependsOn)
 		if !containsStr(deps, in.CompletedTaskID) {
 			continue
 		}
@@ -168,7 +169,7 @@ func detectCycle(taskID string, dependsOn []string, allTasks map[string]*entitie
 
 	// Temporarily add the candidate task.
 	orig, existed := allTasks[taskID]
-	allTasks[taskID] = &entities.Task{DependsOn: ToJSON(dependsOn)}
+	allTasks[taskID] = &entities.Task{DependsOn: helpers.ToJSON(dependsOn)}
 	defer func() {
 		if existed {
 			allTasks[taskID] = orig
@@ -188,7 +189,7 @@ func detectCycle(taskID string, dependsOn []string, allTasks map[string]*entitie
 			return nil
 		}
 
-		for _, depID := range ParseDeps(t.DependsOn) {
+		for _, depID := range helpers.ParseDeps(t.DependsOn) {
 			if path[depID] {
 				return fmt.Errorf("cycle detected: %s -> %s", id, depID)
 			}
@@ -214,3 +215,5 @@ func containsStr(ss []string, s string) bool {
 	}
 	return false
 }
+
+func (s *DependencyService) Description() string { return "Validate task dependencies and unblock tasks" }

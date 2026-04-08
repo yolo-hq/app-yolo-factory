@@ -3,7 +3,7 @@ package actions
 import (
 	"testing"
 
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/services"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 )
 
 func TestParseDeps(t *testing.T) {
@@ -18,7 +18,7 @@ func TestParseDeps(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := services.ParseDeps(tt.input)
+			got := helpers.ParseDeps(tt.input)
 			if len(got) != len(tt.want) {
 				t.Fatalf("ParseDeps(%q) = %v, want %v", tt.input, got, tt.want)
 			}
@@ -44,7 +44,7 @@ func TestParseDeps_Empty(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := services.ParseDeps(tt.input)
+			got := helpers.ParseDeps(tt.input)
 			if got != nil {
 				t.Errorf("ParseDeps(%q) = %v, want nil", tt.input, got)
 			}
@@ -54,25 +54,25 @@ func TestParseDeps_Empty(t *testing.T) {
 
 func TestContainsDep(t *testing.T) {
 	depsJSON := `["a","b","c"]`
-	if !services.ContainsDep(depsJSON, "b") {
+	if !helpers.ContainsDep(depsJSON, "b") {
 		t.Error("ContainsDep should find 'b'")
 	}
-	if services.ContainsDep(depsJSON, "d") {
+	if helpers.ContainsDep(depsJSON, "d") {
 		t.Error("ContainsDep should not find 'd'")
 	}
-	if services.ContainsDep("[]", "a") {
+	if helpers.ContainsDep("[]", "a") {
 		t.Error("ContainsDep([]) should return false")
 	}
 }
 
 func TestTruncate(t *testing.T) {
-	if got := services.Truncate("hello", 10); got != "hello" {
+	if got := helpers.Truncate("hello", 10); got != "hello" {
 		t.Errorf("Truncate short string: got %q", got)
 	}
-	if got := services.Truncate("hello world", 5); got != "hello..." {
+	if got := helpers.Truncate("hello world", 5); got != "hello..." {
 		t.Errorf("Truncate long string: got %q", got)
 	}
-	if got := services.Truncate("", 5); got != "" {
+	if got := helpers.Truncate("", 5); got != "" {
 		t.Errorf("Truncate empty: got %q", got)
 	}
 }

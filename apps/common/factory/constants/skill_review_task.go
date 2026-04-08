@@ -1,4 +1,4 @@
-package skills
+package constants
 
 // ReviewTaskTemplate is the prompt template for reviewing a task implementation.
 const ReviewTaskTemplate = `You are reviewing code changes against acceptance criteria.

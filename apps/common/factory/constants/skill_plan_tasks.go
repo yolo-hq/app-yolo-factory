@@ -1,4 +1,4 @@
-package skills
+package constants
 
 // PlanTasksTemplate is the prompt template for breaking a PRD into implementation tasks.
 const PlanTasksTemplate = `You are a software architect breaking a PRD into implementation tasks.

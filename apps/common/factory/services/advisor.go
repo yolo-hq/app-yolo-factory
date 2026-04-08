@@ -11,8 +11,9 @@ import (
 	"github.com/yolo-hq/yolo/core/pkg/claude"
 	"github.com/yolo-hq/yolo/core/service"
 
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/skills"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 )
 
 // AdvisorService spawns a read-only agent to analyze a project and suggest improvements.
@@ -74,7 +75,7 @@ func (s *AdvisorService) Execute(ctx context.Context, in AdvisorInput) (AdvisorO
 		PermissionMode: "auto",
 		Effort:         "medium",
 		CWD:            in.Project.LocalPath,
-		JSONSchema:     skills.AdvisorSchema,
+		JSONSchema:     constants.AdvisorSchema,
 		SessionName:    fmt.Sprintf("factory:project-%s:advisor", in.Project.ID),
 		Timeout:        10 * time.Minute,
 	}, ctxOut.Prompt)
@@ -144,9 +145,11 @@ func formatRunHistory(runs []entities.Run) string {
 	for _, r := range runs {
 		line := fmt.Sprintf("- Run %s: status=%s model=%s cost=$%.2f", r.ID, r.Status, r.Model, r.CostUSD)
 		if r.Error != "" {
-			line += fmt.Sprintf(" error=%s", Truncate(r.Error, 100))
+			line += fmt.Sprintf(" error=%s", helpers.Truncate(r.Error, 100))
 		}
 		lines = append(lines, line)
 	}
 	return strings.Join(lines, "\n")
 }
+
+func (s *AdvisorService) Description() string { return "Run optimization advisor analysis on project metrics" }

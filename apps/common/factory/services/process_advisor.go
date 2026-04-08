@@ -12,7 +12,7 @@ import (
 	"github.com/yolo-hq/yolo/core/service"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/skills"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 )
 
 // ProcessAdvisorService analyzes execution history and generates process improvement insights.
@@ -111,7 +111,7 @@ func (s *ProcessAdvisorService) Execute(ctx context.Context, in ProcessAdvisorIn
 	summary := FormatMetrics(metrics)
 
 	// 4. Build prompt.
-	prompt := strings.Replace(skills.ProcessAdvisorTemplate, "{{.MetricsSummary}}", summary, 1)
+	prompt := strings.Replace(constants.ProcessAdvisorTemplate, "{{.MetricsSummary}}", summary, 1)
 
 	// 5. Spawn Sonnet agent.
 	result, err := s.Claude.Run(ctx, claude.Config{
@@ -121,7 +121,7 @@ func (s *ProcessAdvisorService) Execute(ctx context.Context, in ProcessAdvisorIn
 		BudgetUSD:      0.50,
 		PermissionMode: "auto",
 		Effort:         "medium",
-		JSONSchema:     skills.ProcessAdvisorSchema,
+		JSONSchema:     constants.ProcessAdvisorSchema,
 		SessionName:    fmt.Sprintf("factory:project-%s:process-advisor", in.ProjectID),
 		Timeout:        10 * time.Minute,
 	}, prompt)
@@ -377,3 +377,5 @@ func categorizeError(errMsg string) string {
 		return "other"
 	}
 }
+
+func (s *ProcessAdvisorService) Description() string { return "Analyze factory process metrics and suggest improvements" }

@@ -1,4 +1,4 @@
-package skills
+package constants
 
 // ReviewPRDTemplate is the prompt template for final PRD alignment review.
 const ReviewPRDTemplate = `You are performing a final alignment review of a completed PRD.

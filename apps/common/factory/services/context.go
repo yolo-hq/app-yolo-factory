@@ -11,10 +11,10 @@ import (
 	"github.com/yolo-hq/yolo/core/service"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/skills"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 )
 
-// ContextService builds prompts for headless agent skills.
+// ContextService builds prompts for headless agent constants.
 // Stateless — caller loads entities and passes them in.
 type ContextService struct {
 	service.Base
@@ -91,21 +91,21 @@ func (s *ContextService) Execute(_ context.Context, in ContextInput) (ContextOut
 func templateForPhase(phase string) (tmpl string, system string, err error) {
 	switch phase {
 	case "plan_tasks":
-		return skills.PlanTasksTemplate, "You are a software architect.", nil
+		return constants.PlanTasksTemplate, "You are a software architect.", nil
 	case "implement":
-		return skills.ImplementTemplate, "You are a TDD software engineer.", nil
+		return constants.ImplementTemplate, "You are a TDD software engineer.", nil
 	case "review_task":
-		return skills.ReviewTaskTemplate, "You are a code reviewer.", nil
+		return constants.ReviewTaskTemplate, "You are a code reviewer.", nil
 	case "review_prd":
-		return skills.ReviewPRDTemplate, "You are a PRD alignment reviewer.", nil
+		return constants.ReviewPRDTemplate, "You are a PRD alignment reviewer.", nil
 	case "audit":
-		return skills.AuditTemplate, "You are a convention auditor.", nil
+		return constants.AuditTemplate, "You are a convention auditor.", nil
 	case "sentinel":
-		return skills.SentinelTemplate, "You are a code health sentinel.", nil
+		return constants.SentinelTemplate, "You are a code health sentinel.", nil
 	case "advisor":
-		return skills.AdvisorTemplate, "You are an optimization advisor.", nil
+		return constants.AdvisorTemplate, "You are an optimization advisor.", nil
 	case "integration_review":
-		return skills.IntegrationReviewTemplate, "You are an integration reviewer.", nil
+		return constants.IntegrationReviewTemplate, "You are an integration reviewer.", nil
 	default:
 		return "", "", fmt.Errorf("unknown phase: %s", phase)
 	}
@@ -226,3 +226,5 @@ func formatDesignDecisions(raw string) string {
 	}
 	return strings.Join(lines, "\n")
 }
+
+func (s *ContextService) Description() string { return "Build prompt context for headless agent skills" }

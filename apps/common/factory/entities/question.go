@@ -14,8 +14,8 @@ type Question struct {
 	RunID           string     `json:"runId" bun:"run_id,notnull" fake:"rel:Run"`
 	Body            string     `json:"body" bun:"body,notnull" fake:"sentence:20"`
 	Context         string     `json:"context" bun:"context" fake:"sentence:15"`
-	Confidence      string     `json:"confidence" bun:"confidence,notnull" fake:"oneof:low,medium,high"`
-	Status          string     `json:"status" bun:"status,notnull,default:'open'" fake:"oneof:open,answered,dismissed"`
+	Confidence      string     `json:"confidence" bun:"confidence,notnull" fake:"oneof:low,medium,high" enum:"low,medium"`
+	Status          string     `json:"status" bun:"status,notnull,default:'open'" fake:"oneof:open,answered,dismissed" enum:"open,answered,auto_resolved"`
 	Answer          string     `json:"answer" bun:"answer" fake:"-"`
 	AnsweredBy      string     `json:"answeredBy" bun:"answered_by" fake:"-"`
 	AnswerSessionID string     `json:"answerSessionId" bun:"answer_session_id" fake:"-"`

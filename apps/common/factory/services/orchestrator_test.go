@@ -7,6 +7,7 @@ import (
 	"github.com/yolo-hq/yolo/core/pkg/claude"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 )
 
 var mockResult = claude.Result{
@@ -79,7 +80,7 @@ func TestParseTestCommands_InvalidJSON(t *testing.T) {
 }
 
 func TestTruncateSummary_Short(t *testing.T) {
-	got := Truncate("short text", 500)
+	got := helpers.Truncate("short text", 500)
 	assert.Equal(t, "short text", got)
 }
 
@@ -88,14 +89,14 @@ func TestTruncateSummary_Long(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		long += "abcdefghij" // 1000 chars
 	}
-	got := Truncate(long, 500)
+	got := helpers.Truncate(long, 500)
 	assert.Len(t, got, 503) // 500 + "..."
 	assert.Equal(t, long[:500]+"...", got)
 }
 
 func TestTruncateSummary_ExactLength(t *testing.T) {
 	text := "12345"
-	got := Truncate(text, 5)
+	got := helpers.Truncate(text, 5)
 	assert.Equal(t, "12345", got)
 }
 
