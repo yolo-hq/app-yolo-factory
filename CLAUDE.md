@@ -8,7 +8,7 @@ YOLO Factory — autonomous dev engine. Domain-driven, action-pipeline architect
 - Every action embeds `action.RequirePolicy[P]` or `action.PublicAccess`
 - Policy naming: `Can{Action}{Entity}Policy` — one per action in `policies/`
 - Actions only have `Execute()` — complex logic in `services/`
-- Use `action.ExecUpdate[T]` / `action.ExecCreate[T]` instead of manual write+error handling
+- Use `action.Write[T](actx).Exec(ctx, op)` for all writes — one consistent pattern
 - All actions must have `Description() string`
 - Services emit events via `service.EmitEvent(ctx, event)` — not `events.Emit()`
 - Integration tests only — no mocks, real DB
