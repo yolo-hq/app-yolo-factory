@@ -23,10 +23,12 @@ func (a *RejectSuggestionAction) Execute(ctx context.Context, actx *action.Conte
 	// input consumed for validation; reason not stored on entity.
 	_ = a.Input(actx)
 
-	if r := action.ExecUpdate[entities.Suggestion](ctx, actx, write.Set{
-		write.NewField[string]("status").Value(entities.SuggestionRejected),
-	}); r != nil {
-		return *r
+	_, err := action.Write[entities.Suggestion](actx).Exec(ctx, write.Update{
+		ID:  actx.EntityID,
+		Set: write.Set{write.NewField[string]("status").Value(entities.SuggestionRejected)},
+	})
+	if err != nil {
+		return action.Failure(err.Error())
 	}
 	actx.Resolve("Suggestion", actx.EntityID)
 	return action.OK()
