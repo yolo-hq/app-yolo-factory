@@ -11,6 +11,7 @@ import (
 	"github.com/yolo-hq/yolo/core/write"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
 
 // ApprovePRDAction approves a draft PRD and optionally triggers planning.
@@ -20,14 +21,14 @@ type ApprovePRDAction struct {
 	PlanPRDJob jobs.Handler
 }
 
+func (a *ApprovePRDAction) Policies() []action.AnyPolicy {
+	return []action.AnyPolicy{&policies.PRDMustBeDraft{}}
+}
+
 func (a *ApprovePRDAction) Execute(ctx context.Context, actx *action.Context) action.Result {
 	prd, r := action.FindOrFail[entities.PRD](ctx, action.ReadRepo[entities.PRD](actx), actx.EntityID)
 	if r != nil {
 		return *r
-	}
-
-	if prd.Status != entities.PRDDraft {
-		return action.Failure("PRD must be in draft status to approve")
 	}
 
 	now := time.Now()

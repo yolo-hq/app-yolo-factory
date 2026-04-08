@@ -8,6 +8,7 @@ import (
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
 
 // RetryTaskAction retries a failed task, resetting it to queued.
@@ -15,16 +16,11 @@ type RetryTaskAction struct {
 	action.TypedInput[inputs.RetryTaskInput]
 }
 
+func (a *RetryTaskAction) Policies() []action.AnyPolicy {
+	return []action.AnyPolicy{&policies.TaskMustBeFailed{}}
+}
+
 func (a *RetryTaskAction) Execute(ctx context.Context, actx *action.Context) action.Result {
-	task, r := action.FindOrFail[entities.Task](ctx, action.ReadRepo[entities.Task](actx), actx.EntityID)
-	if r != nil {
-		return *r
-	}
-
-	if task.Status != entities.TaskFailed {
-		return action.Failure("task must be failed to retry")
-	}
-
 	input := a.Input(actx)
 
 	set := write.Set{

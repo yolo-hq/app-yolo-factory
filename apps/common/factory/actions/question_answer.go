@@ -9,6 +9,7 @@ import (
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
 
 // AnswerQuestionAction answers an open question.
@@ -16,16 +17,11 @@ type AnswerQuestionAction struct {
 	action.TypedInput[inputs.AnswerQuestionInput]
 }
 
+func (a *AnswerQuestionAction) Policies() []action.AnyPolicy {
+	return []action.AnyPolicy{&policies.QuestionMustBeOpen{}}
+}
+
 func (a *AnswerQuestionAction) Execute(ctx context.Context, actx *action.Context) action.Result {
-	question, r := action.FindOrFail[entities.Question](ctx, action.ReadRepo[entities.Question](actx), actx.EntityID)
-	if r != nil {
-		return *r
-	}
-
-	if question.Status != entities.QuestionOpen {
-		return action.Failure("question must be open to answer")
-	}
-
 	input := a.Input(actx)
 	now := time.Now()
 

@@ -83,11 +83,14 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 
 	// 0. Budget enforcement — check before any work.
 	if err := checkBudget(in.Project); err != nil {
-		events.Emit(events.BudgetExceeded, events.BudgetPayload{
-			ProjectName: in.Project.Name,
-			Spent:       in.Project.SpentThisMonthUSD,
-			Limit:       in.Project.BudgetMonthlyUSD,
-			Percentage:  100,
+		service.EmitEvent(ctx, service.PendingEvent{
+			Name: events.BudgetExceeded,
+			Data: events.BudgetPayload{
+				ProjectName: in.Project.Name,
+				Spent:       in.Project.SpentThisMonthUSD,
+				Limit:       in.Project.BudgetMonthlyUSD,
+				Percentage:  100,
+			},
 		})
 		out.Summary = err.Error()
 		return out, nil
@@ -97,11 +100,14 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	if in.Project.BudgetMonthlyUSD > 0 && in.Project.BudgetWarningAt > 0 {
 		ratio := in.Project.SpentThisMonthUSD / in.Project.BudgetMonthlyUSD
 		if ratio >= in.Project.BudgetWarningAt {
-			events.Emit(events.BudgetWarning, events.BudgetPayload{
-				ProjectName: in.Project.Name,
-				Spent:       in.Project.SpentThisMonthUSD,
-				Limit:       in.Project.BudgetMonthlyUSD,
-				Percentage:  ratio * 100,
+			service.EmitEvent(ctx, service.PendingEvent{
+				Name: events.BudgetWarning,
+				Data: events.BudgetPayload{
+					ProjectName: in.Project.Name,
+					Spent:       in.Project.SpentThisMonthUSD,
+					Limit:       in.Project.BudgetMonthlyUSD,
+					Percentage:  ratio * 100,
+				},
 			})
 			slog.Warn("budget warning",
 				"project", in.Project.Name,
@@ -113,10 +119,15 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	}
 
 	// 0c. Emit task started event.
-	events.Emit(events.TaskStarted, events.TaskPayload{
-		TaskID:      in.Task.ID,
-		Title:       in.Task.Title,
-		ProjectName: in.Project.Name,
+	service.EmitEvent(ctx, service.PendingEvent{
+		EntityType: "Task",
+		EntityID:   in.Task.ID,
+		Name:       events.TaskStarted,
+		Data: events.TaskPayload{
+			TaskID:      in.Task.ID,
+			Title:       in.Task.Title,
+			ProjectName: in.Project.Name,
+		},
 	})
 
 	// 1. Determine working directory.
@@ -486,11 +497,16 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	// IntegrationReviewService.Execute with the combined diff from recent tasks.
 
 	// 16. Emit task completed event.
-	events.Emit(events.TaskCompleted, events.TaskPayload{
-		TaskID:      in.Task.ID,
-		Title:       in.Task.Title,
-		ProjectName: in.Project.Name,
-		CostUSD:     totalCost,
+	service.EmitEvent(ctx, service.PendingEvent{
+		EntityType: "Task",
+		EntityID:   in.Task.ID,
+		Name:       events.TaskCompleted,
+		Data: events.TaskPayload{
+			TaskID:      in.Task.ID,
+			Title:       in.Task.Title,
+			ProjectName: in.Project.Name,
+			CostUSD:     totalCost,
+		},
 	})
 
 	// 17. Build final output.
@@ -641,12 +657,17 @@ func (s *OrchestratorService) buildFailure(ctx context.Context, in OrchestratorI
 	run.Error = lastResult.Error
 	run.CompletedAt = &completedAt
 
-	events.Emit(events.TaskFailed, events.TaskPayload{
-		TaskID:      run.TaskID,
-		Title:       in.Task.Title,
-		ProjectName: in.Project.Name,
-		CostUSD:     totalCost,
-		Error:       lastResult.Error,
+	service.EmitEvent(ctx, service.PendingEvent{
+		EntityType: "Task",
+		EntityID:   run.TaskID,
+		Name:       events.TaskFailed,
+		Data: events.TaskPayload{
+			TaskID:      run.TaskID,
+			Title:       in.Task.Title,
+			ProjectName: in.Project.Name,
+			CostUSD:     totalCost,
+			Error:       lastResult.Error,
+		},
 	})
 
 	if in.Project.PushFailedBranches && run.BranchName != "" {

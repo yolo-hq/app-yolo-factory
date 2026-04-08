@@ -8,6 +8,7 @@ import (
 	"github.com/yolo-hq/yolo/core/write"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
 
 // ExecutePRDAction kicks off PRD planning by enqueuing a PlanPRDJob.
@@ -17,14 +18,14 @@ type ExecutePRDAction struct {
 	PlanJob   jobs.Handler
 }
 
+func (a *ExecutePRDAction) Policies() []action.AnyPolicy {
+	return []action.AnyPolicy{&policies.PRDMustBeDraftOrApproved{}}
+}
+
 func (a *ExecutePRDAction) Execute(ctx context.Context, actx *action.Context) action.Result {
 	prd, r := action.FindOrFail[entities.PRD](ctx, action.ReadRepo[entities.PRD](actx), actx.EntityID)
 	if r != nil {
 		return *r
-	}
-
-	if prd.Status != entities.PRDDraft && prd.Status != entities.PRDApproved {
-		return action.Failure("PRD must be in draft or approved status to execute")
 	}
 
 	// Transition to planning.

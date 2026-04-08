@@ -64,16 +64,22 @@ func (s *SentinelService) Execute(ctx context.Context, in SentinelInput) (Sentin
 	for _, f := range out.Findings {
 		switch {
 		case f.Watch == "build_health" && f.Severity == "critical":
-			events.Emit(events.SentinelBuildBroken, events.SentinelPayload{
-				ProjectName: in.Project.Name,
-				Error:       f.Message,
-				Severity:    f.Severity,
+			service.EmitEvent(ctx, service.PendingEvent{
+				Name: events.SentinelBuildBroken,
+				Data: events.SentinelPayload{
+					ProjectName: in.Project.Name,
+					Error:       f.Message,
+					Severity:    f.Severity,
+				},
 			})
 		case f.Watch == "security" && f.Severity == "critical":
-			events.Emit(events.SentinelSecurityVuln, events.SentinelPayload{
-				ProjectName: in.Project.Name,
-				Error:       f.Message,
-				Severity:    f.Severity,
+			service.EmitEvent(ctx, service.PendingEvent{
+				Name: events.SentinelSecurityVuln,
+				Data: events.SentinelPayload{
+					ProjectName: in.Project.Name,
+					Error:       f.Message,
+					Severity:    f.Severity,
+				},
 			})
 		}
 	}

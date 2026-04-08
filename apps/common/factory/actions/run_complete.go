@@ -8,6 +8,7 @@ import (
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/jobs"
+	"github.com/yolo-hq/yolo/core/service"
 	"github.com/yolo-hq/yolo/core/write"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
@@ -342,10 +343,15 @@ func updatePRDCounters(
 		if failed > 0 {
 			eventType = events.PRDFailed
 		}
-		events.Emit(eventType, events.PRDPayload{
-			PRDID:        prdID,
-			TaskCount:    total,
-			TotalCostUSD: totalCost,
+		service.EmitEvent(ctx, service.PendingEvent{
+			EntityType: "PRD",
+			EntityID:   prdID,
+			Name:       eventType,
+			Data: events.PRDPayload{
+				PRDID:        prdID,
+				TaskCount:    total,
+				TotalCostUSD: totalCost,
+			},
 		})
 	}
 	return nil
