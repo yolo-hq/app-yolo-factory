@@ -15,10 +15,17 @@ import (
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
 
+// ApprovePRDData declares the entity fields this action reads.
+type ApprovePRDData struct {
+	ID        string `field:"id"`
+	ProjectID string `field:"project_id"`
+}
+
 // ApprovePRDAction approves a draft PRD and optionally triggers planning.
 type ApprovePRDAction struct {
 	action.NoInput
 	action.RequirePolicy[policies.CanApprovePRDPolicy]
+	action.TypedData[ApprovePRDData]
 	JobClient  *jobs.Client
 	PlanPRDJob jobs.Handler
 }
@@ -26,10 +33,7 @@ type ApprovePRDAction struct {
 func (a *ApprovePRDAction) Description() string { return "Approve a draft PRD" }
 
 func (a *ApprovePRDAction) Execute(ctx context.Context, actx *action.Context) action.Result {
-	prd, r := action.FindOrFail[entities.PRD](ctx, action.ReadRepo[entities.PRD](actx), actx.EntityID)
-	if r != nil {
-		return *r
-	}
+	prd := a.Data(actx)
 
 	now := time.Now()
 	_, err := action.Write[entities.PRD](actx).Exec(ctx, write.Update{

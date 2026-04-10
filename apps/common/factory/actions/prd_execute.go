@@ -12,10 +12,16 @@ import (
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
 
+// ExecutePRDData declares the entity fields this action reads.
+type ExecutePRDData struct {
+	ID string `field:"id"`
+}
+
 // ExecutePRDAction kicks off PRD planning by enqueuing a PlanPRDJob.
 type ExecutePRDAction struct {
 	action.NoInput
 	action.RequirePolicy[policies.CanExecutePRDPolicy]
+	action.TypedData[ExecutePRDData]
 	JobClient *jobs.Client
 	PlanJob   jobs.Handler
 }
@@ -23,10 +29,7 @@ type ExecutePRDAction struct {
 func (a *ExecutePRDAction) Description() string { return "Execute a PRD by starting planning" }
 
 func (a *ExecutePRDAction) Execute(ctx context.Context, actx *action.Context) action.Result {
-	prd, r := action.FindOrFail[entities.PRD](ctx, action.ReadRepo[entities.PRD](actx), actx.EntityID)
-	if r != nil {
-		return *r
-	}
+	prd := a.Data(actx)
 
 	// Transition to planning.
 	_, err := action.Write[entities.PRD](actx).Exec(ctx, write.Update{
