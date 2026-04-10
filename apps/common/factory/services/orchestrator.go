@@ -263,23 +263,16 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 		return out, fmt.Errorf("build plan context: %w", err)
 	}
 
+	planCfg := phaseConfig("plan")
+	planCfg.CWD = workDir
+	planCfg.SessionName = fmt.Sprintf("factory:task-%s:plan", inTask.ID)
 	planResult, err := s.executeStep(ctx, StepParams{
 		RunID:  runID,
 		TaskID: inTask.ID,
 		Phase:  entities.PhasePlan,
 		Skill:  entities.PhasePlan,
-		Model:  "opus",
-		Config: claude.Config{
-			Model:          "opus",
-			AllowedTools:   []string{"Read", "Glob", "Grep"},
-			Bare:           true,
-			BudgetUSD:      1.0,
-			PermissionMode: "auto",
-			Effort:         "high",
-			CWD:            workDir,
-			SessionName:    fmt.Sprintf("factory:task-%s:plan", inTask.ID),
-			Timeout:        10 * time.Minute,
-		},
+		Model:  planCfg.Model,
+		Config: planCfg,
 		Prompt: planCtx.Prompt,
 	})
 	if err != nil {
@@ -303,30 +296,27 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 		return out, fmt.Errorf("build implement context: %w", err)
 	}
 
-	implBudget := 2.0
+	implCfg := phaseConfig("implement")
+	implCfg.Model = model
+	implCfg.CWD = workDir
+	implCfg.SessionName = fmt.Sprintf("factory:task-%s:implement", inTask.ID)
 	if inProject.BudgetPerTaskUSD > 0 {
-		implBudget = inProject.BudgetPerTaskUSD
+		implCfg.BudgetUSD = inProject.BudgetPerTaskUSD
 	}
 
+	// Compact the plan transcript before handing off to impl. Fresh
+	// session with a focused summary beats resuming a noisy plan session.
+	planSummary := s.compactPlanOutput(ctx, workDir, planResult.Output)
+	implPrompt := withPlanSummary(implCtx.Prompt, planSummary)
+
 	implResult, err := s.executeStep(ctx, StepParams{
-		RunID:    runID,
-		TaskID:   inTask.ID,
-		Phase:    entities.PhaseImplement,
-		Skill:    entities.PhaseImplement,
-		Model:    model,
-		ResumeID: planResult.SessionID,
-		Config: claude.Config{
-			Model:          model,
-			AllowedTools:   []string{"Read", "Edit", "Write", "Bash", "Glob", "Grep"},
-			Bare:           true,
-			BudgetUSD:      implBudget,
-			PermissionMode: "auto",
-			Effort:         "high",
-			CWD:            workDir,
-			SessionName:    fmt.Sprintf("factory:task-%s:implement", inTask.ID),
-			Timeout:        15 * time.Minute,
-		},
-		Prompt: implCtx.Prompt,
+		RunID:  runID,
+		TaskID: inTask.ID,
+		Phase:  entities.PhaseImplement,
+		Skill:  entities.PhaseImplement,
+		Model:  model,
+		Config: implCfg,
+		Prompt: implPrompt,
 	})
 	if err != nil {
 		return out, fmt.Errorf("implement step: %w", err)
@@ -395,24 +385,17 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 		return out, fmt.Errorf("build audit context: %w", err)
 	}
 
+	auditCfg := phaseConfig("audit")
+	auditCfg.CWD = workDir
+	auditCfg.JSONSchema = constants.AuditSchema
+	auditCfg.SessionName = fmt.Sprintf("factory:task-%s:audit", inTask.ID)
 	auditResult, err := s.executeStep(ctx, StepParams{
 		RunID:  runID,
 		TaskID: inTask.ID,
 		Phase:  entities.PhaseAudit,
 		Skill:  entities.PhaseAudit,
-		Model:  "sonnet",
-		Config: claude.Config{
-			Model:          "sonnet",
-			AllowedTools:   []string{"Read", "Bash", "Glob", "Grep"},
-			Bare:           true,
-			BudgetUSD:      0.30,
-			PermissionMode: "auto",
-			Effort:         "medium",
-			CWD:            workDir,
-			JSONSchema:     constants.AuditSchema,
-			SessionName:    fmt.Sprintf("factory:task-%s:audit", inTask.ID),
-			Timeout:        5 * time.Minute,
-		},
+		Model:  auditCfg.Model,
+		Config: auditCfg,
 		Prompt: auditCtx.Prompt,
 	})
 	if err != nil {
@@ -443,24 +426,17 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 		return out, fmt.Errorf("build review context: %w", err)
 	}
 
+	reviewCfg := phaseConfig("review")
+	reviewCfg.CWD = workDir
+	reviewCfg.JSONSchema = constants.ReviewTaskSchema
+	reviewCfg.SessionName = fmt.Sprintf("factory:task-%s:review", inTask.ID)
 	reviewResult, err := s.executeStep(ctx, StepParams{
 		RunID:  runID,
 		TaskID: inTask.ID,
 		Phase:  entities.PhaseReview,
 		Skill:  entities.PhaseReview,
-		Model:  "sonnet",
-		Config: claude.Config{
-			Model:          "sonnet",
-			AllowedTools:   []string{"Read", "Glob", "Grep"},
-			Bare:           true,
-			BudgetUSD:      0.50,
-			PermissionMode: "auto",
-			Effort:         "medium",
-			CWD:            workDir,
-			JSONSchema:     constants.ReviewTaskSchema,
-			SessionName:    fmt.Sprintf("factory:task-%s:review", inTask.ID),
-			Timeout:        5 * time.Minute,
-		},
+		Model:  reviewCfg.Model,
+		Config: reviewCfg,
 		Prompt: reviewCtx.Prompt,
 	})
 	if err != nil {
@@ -656,6 +632,7 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 	step.CostUSD = claudeResult.CostUSD
 	step.TokensIn = claudeResult.Usage.InputTokens
 	step.TokensOut = claudeResult.Usage.OutputTokens
+	step.Turns = claudeResult.NumTurns
 	result.SessionID = claudeResult.SessionID
 	result.Output = claudeResult.Text
 

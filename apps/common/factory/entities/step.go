@@ -19,6 +19,7 @@ type Step struct {
 	CostUSD       float64    `json:"costUsd" bun:"cost_usd,default:0" fake:"float:0,10"`
 	TokensIn      int        `json:"tokensIn" bun:"tokens_in,default:0" fake:"int:0,50000"`
 	TokensOut     int        `json:"tokensOut" bun:"tokens_out,default:0" fake:"int:0,25000"`
+	Turns         int        `json:"turns" bun:"turns,default:0" fake:"int:0,80"`
 	DurationMs    int        `json:"durationMs" bun:"duration_ms,default:0" fake:"int:500,60000"`
 	InputSummary  string     `json:"inputSummary" bun:"input_summary" fake:"sentence:10"`
 	OutputSummary string     `json:"outputSummary" bun:"output_summary" fake:"sentence:10"`
