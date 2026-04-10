@@ -10,7 +10,6 @@ import (
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 )
 
 type PRDSubmit struct {
@@ -38,7 +37,7 @@ func (c *PRDSubmit) Execute(ctx context.Context, cctx command.Context) error {
 	}
 	pr := projectRepo.(entity.ReadRepository[entities.Project])
 
-	project, err := helpers.FindProjectByIDOrName(ctx, pr, input.Project)
+	project, err := findProjectByIDOrName(ctx, pr, input.Project)
 	if err != nil {
 		return err
 	}

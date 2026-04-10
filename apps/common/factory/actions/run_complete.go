@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	yolostrings "github.com/yolo-hq/yolo/core/strings"
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/jobs"
 	"github.com/yolo-hq/yolo/core/write"
@@ -14,8 +15,8 @@ import (
 	"github.com/yolo-hq/app-yolo-factory/.yolo/svc"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/events"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/jsonutil"
 	factoryjobs "github.com/yolo-hq/app-yolo-factory/apps/common/factory/jobs"
 )
 
@@ -105,7 +106,7 @@ func (a *CompleteRunAction) handleCompleted(
 			fields.Task.Status.Value(string(enums.TaskStatusDone)),
 			fields.Task.CostUSD.Incr(input.CostUSD),
 			fields.Task.CommitHash.Value(input.CommitHash),
-			fields.Task.Summary.Value(helpers.Truncate(input.Result, 500)),
+			fields.Task.Summary.Value(yolostrings.Truncate(input.Result, 500)),
 			fields.Task.CompletedAt.Value(&now),
 		},
 	}); err != nil {
@@ -116,11 +117,11 @@ func (a *CompleteRunAction) handleCompleted(
 	// b. Unblock dependents — build list then issue a single UpdateMany.
 	var toUnblock []string
 	for _, blocked := range data.Task.PRD.BlockedTasks {
-		if !helpers.ContainsDep(blocked.DependsOn, data.Task.ID) {
+		if !jsonutil.ContainsDep(blocked.DependsOn, data.Task.ID) {
 			continue
 		}
 		if svc.S.RunCompletion != nil {
-			allMet, err := svc.S.RunCompletion.AllDepsMet(ctx, helpers.ParseDeps(blocked.DependsOn))
+			allMet, err := svc.S.RunCompletion.AllDepsMet(ctx, jsonutil.ParseDeps(blocked.DependsOn))
 			if err != nil || !allMet {
 				continue
 			}

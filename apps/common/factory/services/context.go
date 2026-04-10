@@ -10,8 +10,8 @@ import (
 
 	"github.com/yolo-hq/yolo/core/service"
 
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 )
 
 // ContextService builds prompts for headless agent constants.
@@ -91,21 +91,21 @@ func (s *ContextService) Execute(_ context.Context, in ContextInput) (ContextOut
 func templateForPhase(phase string) (tmpl string, system string, err error) {
 	switch phase {
 	case "plan_tasks":
-		return helpers.PlanTasksTemplate, "You are a software architect.", nil
+		return constants.PlanTasksTemplate, "You are a software architect.", nil
 	case "implement":
-		return helpers.ImplementTemplate, "You are a TDD software engineer.", nil
+		return constants.ImplementTemplate, "You are a TDD software engineer.", nil
 	case "review_task":
-		return helpers.ReviewTaskTemplate, "You are a code reviewer.", nil
+		return constants.ReviewTaskTemplate, "You are a code reviewer.", nil
 	case "review_prd":
-		return helpers.ReviewPRDTemplate, "You are a PRD alignment reviewer.", nil
+		return constants.ReviewPRDTemplate, "You are a PRD alignment reviewer.", nil
 	case "audit":
-		return helpers.AuditTemplate, "You are a convention auditor.", nil
+		return constants.AuditTemplate, "You are a convention auditor.", nil
 	case "sentinel":
-		return helpers.SentinelTemplate, "You are a code health sentinel.", nil
+		return constants.SentinelTemplate, "You are a code health sentinel.", nil
 	case "advisor":
-		return helpers.AdvisorTemplate, "You are an optimization advisor.", nil
+		return constants.AdvisorTemplate, "You are an optimization advisor.", nil
 	case "integration_review":
-		return helpers.IntegrationReviewTemplate, "You are an integration reviewer.", nil
+		return constants.IntegrationReviewTemplate, "You are an integration reviewer.", nil
 	default:
 		return "", "", fmt.Errorf("unknown phase: %s", phase)
 	}

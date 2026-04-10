@@ -8,13 +8,13 @@ import (
 	"time"
 
 	"github.com/oklog/ulid/v2"
+	yolostrings "github.com/yolo-hq/yolo/core/strings"
 	"github.com/yolo-hq/yolo/core/pkg/claude"
 	"github.com/yolo-hq/yolo/core/service"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 )
 
 // defaultIntegrationReviewEvery is how often (in completed tasks) to trigger integration review.
@@ -139,7 +139,7 @@ func findingsToSuggestions(findings []IntegrationFinding, projectID string) []en
 			ProjectID: projectID,
 			Source:    "integration_review",
 			Category:  mapFindingCategory(f.Category),
-			Title:     fmt.Sprintf("[%s] %s", f.Category, helpers.Truncate(f.Message, 80)),
+			Title:     fmt.Sprintf("[%s] %s", f.Category, yolostrings.Truncate(f.Message, 80)),
 			Body:      f.Message,
 			Priority:  priority,
 			Status:    string(enums.SuggestionStatusPending),
@@ -170,7 +170,7 @@ func formatTaskSummaries(tasks []entities.Task) string {
 
 	var lines []string
 	for _, t := range tasks {
-		line := fmt.Sprintf("- [%s] %s: %s", t.ID, t.Title, helpers.Truncate(t.Spec, 200))
+		line := fmt.Sprintf("- [%s] %s: %s", t.ID, t.Title, yolostrings.Truncate(t.Spec, 200))
 		lines = append(lines, line)
 	}
 	return strings.Join(lines, "\n")

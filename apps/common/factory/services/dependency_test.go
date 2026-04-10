@@ -7,14 +7,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/jsonutil"
 )
 
 func TestParseDepsJSON(t *testing.T) {
-	assert.Nil(t, helpers.ParseDeps(""))
-	assert.Nil(t, helpers.ParseDeps("[]"))
-	assert.Nil(t, helpers.ParseDeps("invalid"))
-	assert.Equal(t, []string{"a", "b"}, helpers.ParseDeps(`["a","b"]`))
+	assert.Nil(t, jsonutil.ParseDeps(""))
+	assert.Nil(t, jsonutil.ParseDeps("[]"))
+	assert.Nil(t, jsonutil.ParseDeps("invalid"))
+	assert.Equal(t, []string{"a", "b"}, jsonutil.ParseDeps(`["a","b"]`))
 }
 
 func TestDetectCycle_NoCycle(t *testing.T) {
@@ -60,6 +60,6 @@ func TestContainsStr(t *testing.T) {
 }
 
 func TestToJSON_Dep(t *testing.T) {
-	assert.Equal(t, `["a","b"]`, helpers.ToJSON([]string{"a", "b"}))
-	assert.Equal(t, "[]", helpers.ToJSON([]string{}))
+	assert.Equal(t, `["a","b"]`, jsonutil.ToJSON([]string{"a", "b"}))
+	assert.Equal(t, "[]", jsonutil.ToJSON([]string{}))
 }

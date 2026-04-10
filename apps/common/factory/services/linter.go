@@ -5,7 +5,7 @@ import (
 
 	"github.com/yolo-hq/yolo/core/service"
 
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers/lint"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/lint"
 )
 
 // LinterService runs static analysis checks on project code.

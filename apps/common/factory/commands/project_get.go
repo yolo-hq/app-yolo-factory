@@ -8,7 +8,6 @@ import (
 	"github.com/yolo-hq/yolo/core/entity"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 )
 
 type ProjectGet struct {
@@ -30,7 +29,7 @@ func (c *ProjectGet) Execute(ctx context.Context, cctx command.Context) error {
 	}
 	r := repo.(entity.ReadRepository[entities.Project])
 
-	p, err := helpers.FindProjectByIDOrName(ctx, r, idOrName)
+	p, err := findProjectByIDOrName(ctx, r, idOrName)
 	if err != nil {
 		return err
 	}

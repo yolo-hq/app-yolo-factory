@@ -1,4 +1,4 @@
-package helpers
+package constants
 
 // Skill prompt templates.
 // Canonical source: config/templates/*.txt

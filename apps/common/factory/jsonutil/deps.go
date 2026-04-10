@@ -1,15 +1,7 @@
-package helpers
+// Package jsonutil provides JSON helpers for task dependency arrays.
+package jsonutil
 
 import "encoding/json"
-
-// Truncate returns s truncated to maxLen runes with "..." appended if truncated.
-func Truncate(s string, maxLen int) string {
-	runes := []rune(s)
-	if len(runes) <= maxLen {
-		return s
-	}
-	return string(runes[:maxLen]) + "..."
-}
 
 // ParseDeps parses a JSON array string into a slice of strings.
 // Returns nil for empty, "null", or "[]" input.

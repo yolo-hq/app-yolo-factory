@@ -15,7 +15,6 @@ import (
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 )
 
 // ProcessAdvisorService analyzes execution history and generates process improvement insights.
@@ -156,7 +155,7 @@ func (s *ProcessAdvisorService) Execute(ctx context.Context, in ProcessAdvisorIn
 	summary := FormatMetrics(metrics)
 
 	// 4. Build prompt.
-	prompt := strings.Replace(helpers.ProcessAdvisorTemplate, "{{.MetricsSummary}}", summary, 1)
+	prompt := strings.Replace(constants.ProcessAdvisorTemplate, "{{.MetricsSummary}}", summary, 1)
 
 	// 5. Spawn Sonnet agent.
 	result, err := s.Claude.Run(ctx, claude.Config{

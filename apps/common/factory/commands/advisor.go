@@ -8,7 +8,6 @@ import (
 	"github.com/yolo-hq/yolo/core/entity"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/services"
 )
 
@@ -40,7 +39,7 @@ func (c *AdvisorRun) Execute(ctx context.Context, cctx command.Context) error {
 	}
 	r := repo.(entity.ReadRepository[entities.Project])
 
-	project, err := helpers.FindProjectByIDOrName(ctx, r, input.Project)
+	project, err := findProjectByIDOrName(ctx, r, input.Project)
 	if err != nil {
 		return err
 	}

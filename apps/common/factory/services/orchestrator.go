@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/oklog/ulid/v2"
+	yolostrings "github.com/yolo-hq/yolo/core/strings"
 	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/pkg/claude"
 	"github.com/yolo-hq/yolo/core/service"
@@ -20,8 +21,8 @@ import (
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/events"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers/lint"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/jsonutil"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/lint"
 )
 
 // OrchestratorService executes a single task through the full workflow:
@@ -463,7 +464,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	filesChanged := filesOut.FilesChanged
 
 	// 12. Git commit.
-	summary := helpers.Truncate(implResult.Output, 500)
+	summary := yolostrings.Truncate(implResult.Output, 500)
 	commitOut, err := s.Git.Execute(ctx, GitInput{
 		Operation: "commit",
 		RepoPath:  workDir,
@@ -526,7 +527,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	run.Status = string(enums.RunStatusCompleted)
 	run.CostUSD = totalCost
 	run.CommitHash = commitHash
-	run.FilesChanged = helpers.ToJSON(filesChanged)
+	run.FilesChanged = jsonutil.ToJSON(filesChanged)
 	run.CompletedAt = &completedAt
 	run.Result = summary
 
@@ -586,7 +587,7 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 				step.Status = string(enums.StepStatusFailed)
 				step.CompletedAt = &completedAt
 				step.DurationMs = int(completedAt.Sub(startedAt).Milliseconds())
-				step.OutputSummary = helpers.Truncate(combinedOutput.String(), 500)
+				step.OutputSummary = yolostrings.Truncate(combinedOutput.String(), 500)
 				result.Step = step
 				result.Failed = true
 				result.Error = fmt.Sprintf("command failed: %s: %s", cmd, cmdOut)
@@ -598,7 +599,7 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 		step.Status = string(enums.StepStatusCompleted)
 		step.CompletedAt = &completedAt
 		step.DurationMs = int(completedAt.Sub(startedAt).Milliseconds())
-		step.OutputSummary = helpers.Truncate(combinedOutput.String(), 500)
+		step.OutputSummary = yolostrings.Truncate(combinedOutput.String(), 500)
 		result.Step = step
 		result.Output = combinedOutput.String()
 		return result, nil
@@ -613,7 +614,7 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 
 	if err != nil {
 		step.Status = string(enums.StepStatusFailed)
-		step.OutputSummary = helpers.Truncate(err.Error(), 500)
+		step.OutputSummary = yolostrings.Truncate(err.Error(), 500)
 		result.Step = step
 		result.Failed = true
 		result.Error = err.Error()
@@ -631,7 +632,7 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 
 	if claudeResult.IsError {
 		step.Status = string(enums.StepStatusFailed)
-		step.OutputSummary = helpers.Truncate(claudeResult.Text, 500)
+		step.OutputSummary = yolostrings.Truncate(claudeResult.Text, 500)
 		result.Step = step
 		result.Failed = true
 		result.Error = claudeResult.Text
@@ -644,7 +645,7 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 		failed, errMsg := parseAuditOutput(claudeResult.StructuredOutput)
 		if failed {
 			step.Status = string(enums.StepStatusFailed)
-			step.OutputSummary = helpers.Truncate(errMsg, 500)
+			step.OutputSummary = yolostrings.Truncate(errMsg, 500)
 			result.Step = step
 			result.Failed = true
 			result.Error = errMsg
@@ -655,7 +656,7 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 		result.Review = review
 		if failed {
 			step.Status = string(enums.StepStatusFailed)
-			step.OutputSummary = helpers.Truncate(errMsg, 500)
+			step.OutputSummary = yolostrings.Truncate(errMsg, 500)
 			result.Step = step
 			result.Failed = true
 			result.Error = errMsg
@@ -664,7 +665,7 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 	}
 
 	step.Status = string(enums.StepStatusCompleted)
-	step.OutputSummary = helpers.Truncate(claudeResult.Text, 500)
+	step.OutputSummary = yolostrings.Truncate(claudeResult.Text, 500)
 	result.Step = step
 	return result, nil
 }
@@ -884,10 +885,10 @@ func parseReviewOutput(raw json.RawMessage, runID, taskID string, result *claude
 		SessionID:       result.SessionID,
 		Model:           "sonnet",
 		Verdict:         out.Verdict,
-		Reasons:         helpers.ToJSON(out.Reasons),
-		AntiPatterns:    helpers.ToJSON(out.AntiPatterns),
+		Reasons:         jsonutil.ToJSON(out.Reasons),
+		AntiPatterns:    jsonutil.ToJSON(out.AntiPatterns),
 		CriteriaResults: string(out.CriteriaResults),
-		Suggestions:     helpers.ToJSON(out.Suggestions),
+		Suggestions:     jsonutil.ToJSON(out.Suggestions),
 		CostUSD:         result.CostUSD,
 	}
 	review.ID = ulid.Make().String()
@@ -928,7 +929,7 @@ func (s *OrchestratorService) executeLintStep(ctx context.Context, task entities
 		step.Status = string(enums.StepStatusFailed)
 		step.CompletedAt = &completedAt
 		step.DurationMs = int(completedAt.Sub(startedAt).Milliseconds())
-		step.OutputSummary = helpers.Truncate(err.Error(), 500)
+		step.OutputSummary = yolostrings.Truncate(err.Error(), 500)
 		return &StepResult{Step: step, Failed: true, Error: err.Error()}, nil
 	}
 
@@ -949,7 +950,7 @@ func (s *OrchestratorService) executeLintStep(ctx context.Context, task entities
 		}
 		errText := strings.Join(errParts, "\n")
 		step.Status = string(enums.StepStatusFailed)
-		step.OutputSummary = helpers.Truncate(summary+"\n"+errText, 500)
+		step.OutputSummary = yolostrings.Truncate(summary+"\n"+errText, 500)
 		return &StepResult{Step: step, Failed: true, Error: errText, Output: summary}, nil
 	}
 
