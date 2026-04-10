@@ -11,6 +11,7 @@ import (
 	"github.com/yolo-hq/yolo/core/pkg/claude"
 	"github.com/yolo-hq/yolo/core/service"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
@@ -41,9 +42,9 @@ type IntegrationReviewOutput struct {
 
 // IntegrationFinding represents a single cross-task integration issue.
 type IntegrationFinding struct {
-	Category string `json:"category"` // duplicate_function, inconsistent_pattern, state_machine_drift, missing_helper
-	Severity string `json:"severity"` // error, warning, info
-	Message  string `json:"message"`
+	Category string   `json:"category"` // duplicate_function, inconsistent_pattern, state_machine_drift, missing_helper
+	Severity string   `json:"severity"` // error, warning, info
+	Message  string   `json:"message"`
 	Files    []string `json:"files,omitempty"`
 }
 
@@ -130,9 +131,9 @@ func findingsToSuggestions(findings []IntegrationFinding, projectID string) []en
 		if f.Severity == "info" {
 			continue
 		}
-		priority := entities.PriorityMedium
+		priority := string(enums.SuggestionPriorityMedium)
 		if f.Severity == "error" {
-			priority = entities.PriorityHigh
+			priority = string(enums.SuggestionPriorityHigh)
 		}
 		s := entities.Suggestion{
 			ProjectID: projectID,
@@ -141,7 +142,7 @@ func findingsToSuggestions(findings []IntegrationFinding, projectID string) []en
 			Title:     fmt.Sprintf("[%s] %s", f.Category, helpers.Truncate(f.Message, 80)),
 			Body:      f.Message,
 			Priority:  priority,
-			Status:    entities.SuggestionPending,
+			Status:    string(enums.SuggestionStatusPending),
 		}
 		s.ID = ulid.Make().String()
 		suggestions = append(suggestions, s)
@@ -153,11 +154,11 @@ func findingsToSuggestions(findings []IntegrationFinding, projectID string) []en
 func mapFindingCategory(category string) string {
 	switch category {
 	case "duplicate_function", "missing_helper":
-		return entities.CategoryRefactoring
+		return string(enums.SuggestionCategoryRefactoring)
 	case "inconsistent_pattern", "state_machine_drift":
-		return entities.CategoryTechDebt
+		return string(enums.SuggestionCategoryTechDebt)
 	default:
-		return entities.CategoryRefactoring
+		return string(enums.SuggestionCategoryRefactoring)
 	}
 }
 
@@ -175,4 +176,6 @@ func formatTaskSummaries(tasks []entities.Task) string {
 	return strings.Join(lines, "\n")
 }
 
-func (s *IntegrationReviewService) Description() string { return "Review cross-task integration patterns" }
+func (s *IntegrationReviewService) Description() string {
+	return "Review cross-task integration patterns"
+}

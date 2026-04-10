@@ -7,6 +7,7 @@ import (
 	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/service"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 )
@@ -86,7 +87,7 @@ func (s *DependencyService) Execute(ctx context.Context, in DependencyInput) (De
 	// Check which deps are not done.
 	for _, depID := range in.DependsOn {
 		t := taskMap[depID]
-		if t.Status != entities.TaskDone {
+		if t.Status != string(enums.TaskStatusDone) {
 			out.AllMet = false
 			out.BlockedBy = append(out.BlockedBy, depID)
 		}
@@ -113,7 +114,7 @@ func (s *DependencyService) Unblock(ctx context.Context, in UnblockInput) (Unblo
 	// Load all blocked tasks.
 	result, err := s.TaskRead.FindMany(ctx, entity.FindOptions{
 		Filters: []entity.FilterCondition{
-			{Field: "status", Operator: entity.OpEq, Value: entities.TaskBlocked},
+			{Field: "status", Operator: entity.OpEq, Value: string(enums.TaskStatusBlocked)},
 		},
 	})
 	if err != nil {
@@ -138,7 +139,7 @@ func (s *DependencyService) Unblock(ctx context.Context, in UnblockInput) (Unblo
 		// Transition blocked → queued.
 		_, err = s.TaskWrite.Update(ctx).
 			WhereID(task.ID).
-			Set("status", entities.TaskQueued).
+			Set("status", string(enums.TaskStatusQueued)).
 			Exec(ctx)
 		if err != nil {
 			return out, fmt.Errorf("unblock task %s: %w", task.ID, err)
@@ -155,7 +156,7 @@ func (s *DependencyService) allDepsDone(ctx context.Context, depIDs []string) (b
 		if err != nil {
 			return false, err
 		}
-		if t == nil || t.Status != entities.TaskDone {
+		if t == nil || t.Status != string(enums.TaskStatusDone) {
 			return false, nil
 		}
 	}
@@ -216,4 +217,6 @@ func containsStr(ss []string, s string) bool {
 	return false
 }
 
-func (s *DependencyService) Description() string { return "Validate task dependencies and unblock tasks" }
+func (s *DependencyService) Description() string {
+	return "Validate task dependencies and unblock tasks"
+}

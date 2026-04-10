@@ -30,4 +30,6 @@ func (j *ResetBudgetsJob) Handle(ctx context.Context, _ []byte) error {
 	return err
 }
 
-func (j *ResetBudgetsJob) Description() string { return "Reset monthly budget counters for all projects" }
+func (j *ResetBudgetsJob) Description() string {
+	return "Reset monthly budget counters for all projects"
+}

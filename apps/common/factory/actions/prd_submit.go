@@ -3,10 +3,11 @@ package actions
 import (
 	"context"
 
-	yolocontext "github.com/yolo-hq/yolo/core/context"
 	"github.com/yolo-hq/yolo/core/action"
+	yolocontext "github.com/yolo-hq/yolo/core/context"
 	"github.com/yolo-hq/yolo/core/write"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
@@ -28,19 +29,19 @@ func (a *SubmitPRDAction) Execute(ctx context.Context, actx *action.Context) act
 	if r != nil {
 		return *r
 	}
-	if project.Status != entities.ProjectActive {
+	if project.Status != string(enums.ProjectStatusActive) {
 		return action.Failure("project must be active to submit a PRD")
 	}
 
 	source := input.Source
 	if source == "" {
-		source = entities.SourceManual
+		source = string(enums.PRDSourceManual)
 	}
 
 	res, err := action.Write[entities.PRD](actx).Exec(ctx, write.Create{
 		FromInput: input,
 		Set: write.Set{
-			fields.PRD.Status.Value(entities.PRDDraft),
+			fields.PRD.Status.Value(string(enums.PRDStatusDraft)),
 			fields.PRD.CreatedBy.Value("human"),
 			fields.PRD.Source.Value(source),
 		},

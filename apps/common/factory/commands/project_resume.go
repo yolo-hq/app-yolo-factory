@@ -7,6 +7,7 @@ import (
 	"github.com/yolo-hq/yolo/core/command"
 	"github.com/yolo-hq/yolo/core/entity"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
@@ -30,7 +31,7 @@ func (c *ProjectResume) Execute(ctx context.Context, cctx command.Context) error
 	}
 	w := repo.(entity.WriteRepository[entities.Project])
 
-	if _, err := w.Update(ctx).WhereID(id).Set(fields.Project.Status.Name(), entities.ProjectActive).Exec(ctx); err != nil {
+	if _, err := w.Update(ctx).WhereID(id).Set(fields.Project.Status.Name(), string(enums.ProjectStatusActive)).Exec(ctx); err != nil {
 		return fmt.Errorf("resume project: %w", err)
 	}
 

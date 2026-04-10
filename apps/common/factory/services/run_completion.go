@@ -6,6 +6,7 @@ import (
 	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/service"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
@@ -38,7 +39,7 @@ func (s *RunCompletionService) CascadeFailure(ctx context.Context, failedTaskID,
 	}
 
 	for _, t := range result.Data {
-		if t.Status == entities.TaskDone || t.Status == entities.TaskFailed || t.Status == entities.TaskCancelled {
+		if t.Status == string(enums.TaskStatusDone) || t.Status == string(enums.TaskStatusFailed) || t.Status == string(enums.TaskStatusCancelled) {
 			continue
 		}
 		if !helpers.ContainsDep(t.DependsOn, failedTaskID) {
@@ -46,7 +47,7 @@ func (s *RunCompletionService) CascadeFailure(ctx context.Context, failedTaskID,
 		}
 		if _, err := s.TaskWrite.Update(ctx).
 			WhereID(t.ID).
-			Set(fields.Task.Status.Name(), entities.TaskFailed).
+			Set(fields.Task.Status.Name(), string(enums.TaskStatusFailed)).
 			Exec(ctx); err != nil {
 			continue
 		}
@@ -65,7 +66,7 @@ func (s *RunCompletionService) AllDepsMet(ctx context.Context, depIDs []string) 
 		if err != nil {
 			return false, err
 		}
-		if t == nil || t.Status != entities.TaskDone {
+		if t == nil || t.Status != string(enums.TaskStatusDone) {
 			return false, nil
 		}
 	}

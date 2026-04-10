@@ -3,10 +3,9 @@ package policies
 import (
 	"context"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/policy"
-
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
 // CanResumeProjectData declares the entity fields this policy reads.
@@ -22,7 +21,7 @@ type CanResumeProjectPolicy struct {
 
 func (p *CanResumeProjectPolicy) Evaluate(_ context.Context, actx *action.Context) policy.PolicyResult {
 	data := p.Data(actx)
-	if data.Status != entities.ProjectPaused {
+	if data.Status != string(enums.ProjectStatusPaused) {
 		return policy.Deny("project must be paused to resume")
 	}
 	return policy.Allow()

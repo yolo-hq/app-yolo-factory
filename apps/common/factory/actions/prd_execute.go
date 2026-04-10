@@ -7,6 +7,7 @@ import (
 	"github.com/yolo-hq/yolo/core/jobs"
 	"github.com/yolo-hq/yolo/core/write"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
@@ -35,7 +36,7 @@ func (a *ExecutePRDAction) Execute(ctx context.Context, actx *action.Context) ac
 	_, err := action.Write[entities.PRD](actx).Exec(ctx, write.Update{
 		ID: actx.EntityID,
 		Set: write.Set{
-			fields.PRD.Status.Value(entities.PRDPlanning),
+			fields.PRD.Status.Value(string(enums.PRDStatusPlanning)),
 		},
 	})
 	if err != nil {
@@ -49,5 +50,5 @@ func (a *ExecutePRDAction) Execute(ctx context.Context, actx *action.Context) ac
 	})
 
 	actx.Resolve("PRD", actx.EntityID)
-	return action.OK(map[string]string{"status": entities.PRDPlanning})
+	return action.OK(map[string]string{"status": string(enums.PRDStatusPlanning)})
 }

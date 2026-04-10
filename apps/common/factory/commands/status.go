@@ -7,6 +7,7 @@ import (
 	"github.com/yolo-hq/yolo/core/command"
 	"github.com/yolo-hq/yolo/core/entity"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
@@ -39,7 +40,7 @@ func (c *Status) Execute(ctx context.Context, cctx command.Context) error {
 	cctx.Print("=== Factory Status ===")
 	cctx.Print("")
 	cctx.Print("Tasks:")
-	for _, s := range []string{entities.TaskQueued, entities.TaskRunning, entities.TaskDone, entities.TaskFailed, entities.TaskCancelled, entities.TaskBlocked} {
+	for _, s := range []string{string(enums.TaskStatusQueued), string(enums.TaskStatusRunning), string(enums.TaskStatusDone), string(enums.TaskStatusFailed), string(enums.TaskStatusCancelled), string(enums.TaskStatusBlocked)} {
 		if c := counts[s]; c > 0 {
 			cctx.Print("  %-12s %d", s, c)
 		}
@@ -55,7 +56,7 @@ func (c *Status) Execute(ctx context.Context, cctx command.Context) error {
 
 	activePRDs, err := pr.FindMany(ctx, entity.FindOptions{
 		Filters: []entity.FilterCondition{
-			{Field: "status", Operator: entity.OpEq, Value: entities.PRDInProgress},
+			{Field: "status", Operator: entity.OpEq, Value: string(enums.PRDStatusInProgress)},
 		},
 	})
 	if err != nil {

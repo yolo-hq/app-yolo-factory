@@ -7,6 +7,7 @@ import (
 	"github.com/yolo-hq/yolo/core/command"
 	"github.com/yolo-hq/yolo/core/entity"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/services"
@@ -47,7 +48,7 @@ func (c *SentinelRun) Execute(ctx context.Context, cctx command.Context) error {
 	if input.All {
 		result, err := r.FindMany(ctx, entity.FindOptions{
 			Filters: []entity.FilterCondition{
-				{Field: "status", Operator: entity.OpEq, Value: entities.ProjectActive},
+				{Field: "status", Operator: entity.OpEq, Value: string(enums.ProjectStatusActive)},
 			},
 		})
 		if err != nil {

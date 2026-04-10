@@ -183,4 +183,6 @@ If you are UNSURE, respond with exactly "UNSURE" at the start of your response.`
 	}, nil
 }
 
-func (s *QuestionResolverService) Description() string { return "Attempt auto-resolution of open questions" }
+func (s *QuestionResolverService) Description() string {
+	return "Attempt auto-resolution of open questions"
+}

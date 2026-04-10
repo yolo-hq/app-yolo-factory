@@ -9,6 +9,7 @@ import (
 	"github.com/yolo-hq/yolo/core/jobs"
 	"github.com/yolo-hq/yolo/core/write"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/svc"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
@@ -82,9 +83,9 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) a
 
 	// 2. Branch on run outcome.
 	switch input.Status {
-	case entities.RunCompleted:
+	case string(enums.RunStatusCompleted):
 		a.handleCompleted(ctx, actx, data, input, now)
-	case entities.RunFailed:
+	case string(enums.RunStatusFailed):
 		a.handleFailed(ctx, actx, data, input)
 	}
 
@@ -103,7 +104,7 @@ func (a *CompleteRunAction) handleCompleted(
 	if _, err := action.Write[entities.Task](actx).Exec(ctx, write.Update{
 		ID: data.Task.ID,
 		Set: write.Set{
-			fields.Task.Status.Value(entities.TaskDone),
+			fields.Task.Status.Value(string(enums.TaskStatusDone)),
 			fields.Task.CostUSD.Incr(input.CostUSD),
 			fields.Task.CommitHash.Value(input.CommitHash),
 			fields.Task.Summary.Value(helpers.Truncate(input.Result, 500)),
@@ -128,7 +129,7 @@ func (a *CompleteRunAction) handleCompleted(
 		}
 		if _, err := action.Write[entities.Task](actx).Exec(ctx, write.Update{
 			ID:  blocked.ID,
-			Set: write.Set{fields.Task.Status.Value(entities.TaskQueued)},
+			Set: write.Set{fields.Task.Status.Value(string(enums.TaskStatusQueued))},
 		}); err == nil {
 			unblockedIDs = append(unblockedIDs, blocked.ID)
 		}
@@ -149,9 +150,9 @@ func (a *CompleteRunAction) handleCompleted(
 
 	// d. Check PRD completion.
 	if data.Task.PRD.TotalCount > 0 && (newCompleted+data.Task.PRD.FailedCount) == data.Task.PRD.TotalCount {
-		status := entities.PRDCompleted
+		status := string(enums.PRDStatusCompleted)
 		if data.Task.PRD.FailedCount > 0 {
-			status = entities.PRDFailed
+			status = string(enums.PRDStatusFailed)
 		}
 		if _, err := action.Write[entities.PRD](actx).Exec(ctx, write.Update{
 			ID: data.Task.PRD.ID,
@@ -195,7 +196,7 @@ func (a *CompleteRunAction) handleFailed(
 		if _, err := action.Write[entities.Task](actx).Exec(ctx, write.Update{
 			ID: data.Task.ID,
 			Set: write.Set{
-				fields.Task.Status.Value(entities.TaskQueued),
+				fields.Task.Status.Value(string(enums.TaskStatusQueued)),
 				fields.Task.CostUSD.Incr(input.CostUSD),
 				fields.Task.RunCount.Incr(1),
 			},
@@ -215,7 +216,7 @@ func (a *CompleteRunAction) handleFailed(
 	if _, err := action.Write[entities.Task](actx).Exec(ctx, write.Update{
 		ID: data.Task.ID,
 		Set: write.Set{
-			fields.Task.Status.Value(entities.TaskFailed),
+			fields.Task.Status.Value(string(enums.TaskStatusFailed)),
 			fields.Task.CostUSD.Incr(input.CostUSD),
 			fields.Task.RunCount.Incr(1),
 		},

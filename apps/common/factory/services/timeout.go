@@ -8,6 +8,7 @@ import (
 	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/service"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
@@ -36,7 +37,7 @@ func (s *TimeoutService) Execute(ctx context.Context, _ TimeoutInput) (TimeoutOu
 	// Find all running runs.
 	result, err := s.RunRead.FindMany(ctx, entity.FindOptions{
 		Filters: []entity.FilterCondition{
-			{Field: "status", Operator: entity.OpEq, Value: entities.RunRunning},
+			{Field: "status", Operator: entity.OpEq, Value: string(enums.RunStatusRunning)},
 		},
 	})
 	if err != nil {
@@ -69,7 +70,7 @@ func (s *TimeoutService) Execute(ctx context.Context, _ TimeoutInput) (TimeoutOu
 		now := time.Now()
 		if _, err := s.RunWrite.Update(ctx).
 			WhereID(run.ID).
-			Set("status", entities.RunFailed).
+			Set("status", string(enums.RunStatusFailed)).
 			Set("error", "timeout").
 			Set("completed_at", now).
 			Exec(ctx); err != nil {
@@ -84,7 +85,7 @@ func (s *TimeoutService) Execute(ctx context.Context, _ TimeoutInput) (TimeoutOu
 		if newRunCount < task.MaxRetries {
 			if _, err := s.TaskWrite.Update(ctx).
 				WhereID(task.ID).
-				Set("status", entities.TaskQueued).
+				Set("status", string(enums.TaskStatusQueued)).
 				Set("run_count", newRunCount).
 				Exec(ctx); err != nil {
 				fmt.Printf("[factory] ERROR: failed to requeue task %s: %v\n", task.ID, err)
@@ -92,7 +93,7 @@ func (s *TimeoutService) Execute(ctx context.Context, _ TimeoutInput) (TimeoutOu
 		} else {
 			if _, err := s.TaskWrite.Update(ctx).
 				WhereID(task.ID).
-				Set("status", entities.TaskFailed).
+				Set("status", string(enums.TaskStatusFailed)).
 				Set("run_count", newRunCount).
 				Exec(ctx); err != nil {
 				fmt.Printf("[factory] ERROR: failed to fail task %s: %v\n", task.ID, err)

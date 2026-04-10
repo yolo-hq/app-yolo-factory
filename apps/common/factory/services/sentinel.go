@@ -11,6 +11,7 @@ import (
 	"github.com/yolo-hq/yolo/core/pkg/claude"
 	"github.com/yolo-hq/yolo/core/service"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/events"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
@@ -82,8 +83,8 @@ func (s *SentinelService) Execute(ctx context.Context, in SentinelInput) (Sentin
 				Name: events.SentinelBuildBrokenName,
 				Data: events.SentinelPayload{
 					ProjectID: project.ID,
-					Error:       f.Message,
-					Severity:    f.Severity,
+					Error:     f.Message,
+					Severity:  f.Severity,
 				},
 			})
 		case f.Watch == "security" && f.Severity == "critical":
@@ -91,8 +92,8 @@ func (s *SentinelService) Execute(ctx context.Context, in SentinelInput) (Sentin
 				Name: events.SentinelSecurityVulnName,
 				Data: events.SentinelPayload{
 					ProjectID: project.ID,
-					Error:       f.Message,
-					Severity:    f.Severity,
+					Error:     f.Message,
+					Severity:  f.Severity,
 				},
 			})
 		}
@@ -106,7 +107,7 @@ func (s *SentinelService) Execute(ctx context.Context, in SentinelInput) (Sentin
 				ProjectID: project.ID,
 				Title:     fmt.Sprintf("[sentinel] %s", f.Message),
 				Spec:      f.Message,
-				Status:    entities.TaskQueued,
+				Status:    string(enums.TaskStatusQueued),
 				Branch:    project.DefaultBranch,
 			}
 			task.ID = ulid.Make().String()

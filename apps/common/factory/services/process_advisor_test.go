@@ -7,14 +7,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
 func TestComputeMetrics_Basic(t *testing.T) {
 	tasks := []entities.Task{
-		{Status: entities.TaskDone, CostUSD: 1.50, RunCount: 1},
-		{Status: entities.TaskDone, CostUSD: 2.00, RunCount: 2},
-		{Status: entities.TaskFailed, CostUSD: 0.50, RunCount: 3},
+		{Status: string(enums.TaskStatusDone), CostUSD: 1.50, RunCount: 1},
+		{Status: string(enums.TaskStatusDone), CostUSD: 2.00, RunCount: 2},
+		{Status: string(enums.TaskStatusFailed), CostUSD: 0.50, RunCount: 3},
 	}
 
 	m := ComputeMetrics(tasks, nil, nil, nil, nil)
@@ -30,10 +31,10 @@ func TestComputeMetrics_Basic(t *testing.T) {
 
 func TestComputeMetrics_ModelStats(t *testing.T) {
 	runs := []entities.Run{
-		{Model: "sonnet", Status: entities.RunCompleted, CostUSD: 0.50},
-		{Model: "sonnet", Status: entities.RunCompleted, CostUSD: 0.60},
-		{Model: "sonnet", Status: entities.RunFailed, CostUSD: 0.40, Error: "build failed"},
-		{Model: "opus", Status: entities.RunCompleted, CostUSD: 2.00},
+		{Model: "sonnet", Status: string(enums.RunStatusCompleted), CostUSD: 0.50},
+		{Model: "sonnet", Status: string(enums.RunStatusCompleted), CostUSD: 0.60},
+		{Model: "sonnet", Status: string(enums.RunStatusFailed), CostUSD: 0.40, Error: "build failed"},
+		{Model: "opus", Status: string(enums.RunStatusCompleted), CostUSD: 2.00},
 	}
 
 	m := ComputeMetrics(nil, runs, nil, nil, nil)
@@ -56,9 +57,9 @@ func TestComputeMetrics_ModelStats(t *testing.T) {
 
 func TestComputeMetrics_StepStats(t *testing.T) {
 	steps := []entities.Step{
-		{Phase: "implement", Status: entities.StepCompleted, CostUSD: 1.00, DurationMs: 5000},
-		{Phase: "implement", Status: entities.StepFailed, CostUSD: 0.80, DurationMs: 3000},
-		{Phase: "review", Status: entities.StepCompleted, CostUSD: 0.30, DurationMs: 2000},
+		{Phase: "implement", Status: string(enums.StepStatusCompleted), CostUSD: 1.00, DurationMs: 5000},
+		{Phase: "implement", Status: string(enums.StepStatusFailed), CostUSD: 0.80, DurationMs: 3000},
+		{Phase: "review", Status: string(enums.StepStatusCompleted), CostUSD: 0.30, DurationMs: 2000},
 	}
 
 	m := ComputeMetrics(nil, nil, steps, nil, nil)
@@ -95,9 +96,9 @@ func TestComputeMetrics_Empty(t *testing.T) {
 
 func TestComputeMetrics_LintAndReview(t *testing.T) {
 	reviews := []entities.Review{
-		{Verdict: entities.ReviewPass},
-		{Verdict: entities.ReviewFail},
-		{Verdict: entities.ReviewPass},
+		{Verdict: string(enums.ReviewVerdictPass)},
+		{Verdict: string(enums.ReviewVerdictFail)},
+		{Verdict: string(enums.ReviewVerdictPass)},
 	}
 	lintResults := []entities.LintResult{
 		{Passed: true},
@@ -114,11 +115,11 @@ func TestComputeMetrics_LintAndReview(t *testing.T) {
 
 func TestComputeMetrics_ErrorBreakdown(t *testing.T) {
 	runs := []entities.Run{
-		{Status: entities.RunFailed, Error: "build failed: exit code 1"},
-		{Status: entities.RunFailed, Error: "test suite failed"},
-		{Status: entities.RunFailed, Error: "build error in main.go"},
-		{Status: entities.RunFailed, Error: "timeout exceeded"},
-		{Status: entities.RunCompleted}, // not counted
+		{Status: string(enums.RunStatusFailed), Error: "build failed: exit code 1"},
+		{Status: string(enums.RunStatusFailed), Error: "test suite failed"},
+		{Status: string(enums.RunStatusFailed), Error: "build error in main.go"},
+		{Status: string(enums.RunStatusFailed), Error: "timeout exceeded"},
+		{Status: string(enums.RunStatusCompleted)}, // not counted
 	}
 
 	m := ComputeMetrics(nil, runs, nil, nil, nil)
@@ -189,13 +190,13 @@ func TestProcessAdvisor_ParseOutputEmpty(t *testing.T) {
 }
 
 func TestProcessAdvisor_MapInsightCategory(t *testing.T) {
-	assert.Equal(t, entities.InsightRetryRate, mapInsightCategory("retry_rate"))
-	assert.Equal(t, entities.InsightCostOptimization, mapInsightCategory("cost_optimization"))
-	assert.Equal(t, entities.InsightModelSelection, mapInsightCategory("model_selection"))
-	assert.Equal(t, entities.InsightSpecQuality, mapInsightCategory("spec_quality"))
-	assert.Equal(t, entities.InsightGateEffectiveness, mapInsightCategory("gate_effectiveness"))
-	assert.Equal(t, entities.InsightWorkflowOptimization, mapInsightCategory("workflow_optimization"))
-	assert.Equal(t, entities.InsightWorkflowOptimization, mapInsightCategory("unknown_category"))
+	assert.Equal(t, string(enums.InsightCategoryRetryRate), mapInsightCategory("retry_rate"))
+	assert.Equal(t, string(enums.InsightCategoryCostOptimization), mapInsightCategory("cost_optimization"))
+	assert.Equal(t, string(enums.InsightCategoryModelSelection), mapInsightCategory("model_selection"))
+	assert.Equal(t, string(enums.InsightCategorySpecQuality), mapInsightCategory("spec_quality"))
+	assert.Equal(t, string(enums.InsightCategoryGateEffectiveness), mapInsightCategory("gate_effectiveness"))
+	assert.Equal(t, string(enums.InsightCategoryWorkflowOptimization), mapInsightCategory("workflow_optimization"))
+	assert.Equal(t, string(enums.InsightCategoryWorkflowOptimization), mapInsightCategory("unknown_category"))
 }
 
 func TestProcessAdvisor_CategorizeError(t *testing.T) {

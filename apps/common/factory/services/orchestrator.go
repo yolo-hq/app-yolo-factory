@@ -16,6 +16,7 @@ import (
 	"github.com/yolo-hq/yolo/core/pkg/claude"
 	"github.com/yolo-hq/yolo/core/service"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/events"
@@ -61,16 +62,16 @@ type OrchestratorOutput struct {
 
 // StepParams configures a single step execution.
 type StepParams struct {
-	RunID      string
-	TaskID     string
-	Phase      string // plan, implement, test, audit, review
-	Skill      string
-	Model      string
-	WorkDir    string
-	Prompt     string
-	Config     claude.Config
-	IsShell    bool     // true for test step (exec.Command, not agent)
-	Commands   []string // shell commands for test step
+	RunID    string
+	TaskID   string
+	Phase    string // plan, implement, test, audit, review
+	Skill    string
+	Model    string
+	WorkDir  string
+	Prompt   string
+	Config   claude.Config
+	IsShell  bool     // true for test step (exec.Command, not agent)
+	Commands []string // shell commands for test step
 }
 
 // StepResult holds the output of a single step.
@@ -85,7 +86,7 @@ type StepResult struct {
 
 // Execute runs the full task workflow and returns the result.
 func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput) (retOut OrchestratorOutput, retErr error) {
-	out := OrchestratorOutput{Status: entities.RunFailed}
+	out := OrchestratorOutput{Status: string(enums.RunStatusFailed)}
 
 	// 0a. Load task, PRD, project.
 	task, err := s.TaskRead.FindOne(ctx, entity.FindOneOptions{ID: in.TaskID})
@@ -116,7 +117,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	now := time.Now()
 	_, err = s.TaskWrite.Update(ctx).
 		WhereID(task.ID).
-		Set("status", entities.TaskRunning).
+		Set("status", string(enums.TaskStatusRunning)).
 		Set("started_at", now).
 		Set("run_count", task.RunCount+1).
 		Exec(ctx)
@@ -134,7 +135,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 		if retErr != nil {
 			if _, uerr := s.TaskWrite.Update(ctx).
 				WhereID(inTask.ID).
-				Set("status", entities.TaskFailed).
+				Set("status", string(enums.TaskStatusFailed)).
 				Exec(ctx); uerr != nil {
 				slog.Error("failed to mark task as failed after hard error", "task_id", inTask.ID, "error", uerr)
 			}
@@ -234,7 +235,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	run := entities.Run{
 		TaskID:      inTask.ID,
 		AgentType:   entities.AgentImplementer,
-		Status:      entities.RunRunning,
+		Status:      string(enums.RunStatusRunning),
 		Model:       model,
 		BranchName:  branchName,
 		StartedAt:   now,
@@ -268,8 +269,8 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	planResult, err := s.executeStep(ctx, StepParams{
 		RunID:  runID,
 		TaskID: inTask.ID,
-		Phase:  entities.PhasePlan,
-		Skill:  entities.PhasePlan,
+		Phase:  string(enums.StepPhasePlan),
+		Skill:  string(enums.StepPhasePlan),
 		Model:  planCfg.Model,
 		Config: planCfg,
 		Prompt: planCtx.Prompt,
@@ -311,8 +312,8 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	implResult, err := s.executeStep(ctx, StepParams{
 		RunID:  runID,
 		TaskID: inTask.ID,
-		Phase:  entities.PhaseImplement,
-		Skill:  entities.PhaseImplement,
+		Phase:  string(enums.StepPhaseImplement),
+		Skill:  string(enums.StepPhaseImplement),
 		Model:  model,
 		Config: implCfg,
 		Prompt: implPrompt,
@@ -337,8 +338,8 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	testResult, err := s.executeStep(ctx, StepParams{
 		RunID:    runID,
 		TaskID:   inTask.ID,
-		Phase:    entities.PhaseTest,
-		Skill:    entities.PhaseTest,
+		Phase:    string(enums.StepPhaseTest),
+		Skill:    string(enums.StepPhaseTest),
 		Model:    "shell",
 		IsShell:  true,
 		Commands: testCommands,
@@ -391,8 +392,8 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	auditResult, err := s.executeStep(ctx, StepParams{
 		RunID:  runID,
 		TaskID: inTask.ID,
-		Phase:  entities.PhaseAudit,
-		Skill:  entities.PhaseAudit,
+		Phase:  string(enums.StepPhaseAudit),
+		Skill:  string(enums.StepPhaseAudit),
 		Model:  auditCfg.Model,
 		Config: auditCfg,
 		Prompt: auditCtx.Prompt,
@@ -432,8 +433,8 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	reviewResult, err := s.executeStep(ctx, StepParams{
 		RunID:  runID,
 		TaskID: inTask.ID,
-		Phase:  entities.PhaseReview,
-		Skill:  entities.PhaseReview,
+		Phase:  string(enums.StepPhaseReview),
+		Skill:  string(enums.StepPhaseReview),
 		Model:  reviewCfg.Model,
 		Config: reviewCfg,
 		Prompt: reviewCtx.Prompt,
@@ -505,9 +506,9 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 		}
 	}
 	if _, err := s.Git.Execute(ctx, GitInput{
-		Operation:    "delete_branch",
-		RepoPath:     inProject.LocalPath,
-		TaskID:       inTask.ID,
+		Operation: "delete_branch",
+		RepoPath:  inProject.LocalPath,
+		TaskID:    inTask.ID,
 	}); err != nil {
 		slog.Warn("git branch cleanup failed", "task_id", inTask.ID, "error", err)
 	}
@@ -522,7 +523,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 
 	// 17. Build final output.
 	completedAt := time.Now()
-	run.Status = entities.RunCompleted
+	run.Status = string(enums.RunStatusCompleted)
 	run.CostUSD = totalCost
 	run.CommitHash = commitHash
 	run.FilesChanged = helpers.ToJSON(filesChanged)
@@ -549,7 +550,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 		Steps:        steps,
 		Review:       review,
 		Questions:    questions,
-		Status:       entities.RunCompleted,
+		Status:       string(enums.RunStatusCompleted),
 		CostUSD:      totalCost,
 		CommitHash:   commitHash,
 		FilesChanged: filesChanged,
@@ -563,11 +564,11 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 	startedAt := time.Now()
 
 	step := entities.Step{
-		RunID:   params.RunID,
-		Phase:   params.Phase,
-		Skill:   params.Skill,
-		Status:  entities.StepRunning,
-		Model:   params.Model,
+		RunID:     params.RunID,
+		Phase:     params.Phase,
+		Skill:     params.Skill,
+		Status:    string(enums.StepStatusRunning),
+		Model:     params.Model,
 		StartedAt: startedAt,
 	}
 	step.ID = stepID
@@ -582,7 +583,7 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 			combinedOutput.WriteString(fmt.Sprintf("$ %s\n%s\n", cmd, cmdOut))
 			if err != nil {
 				completedAt := time.Now()
-				step.Status = entities.StepFailed
+				step.Status = string(enums.StepStatusFailed)
 				step.CompletedAt = &completedAt
 				step.DurationMs = int(completedAt.Sub(startedAt).Milliseconds())
 				step.OutputSummary = helpers.Truncate(combinedOutput.String(), 500)
@@ -594,7 +595,7 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 			}
 		}
 		completedAt := time.Now()
-		step.Status = entities.StepCompleted
+		step.Status = string(enums.StepStatusCompleted)
 		step.CompletedAt = &completedAt
 		step.DurationMs = int(completedAt.Sub(startedAt).Milliseconds())
 		step.OutputSummary = helpers.Truncate(combinedOutput.String(), 500)
@@ -611,7 +612,7 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 	step.CompletedAt = &completedAt
 
 	if err != nil {
-		step.Status = entities.StepFailed
+		step.Status = string(enums.StepStatusFailed)
 		step.OutputSummary = helpers.Truncate(err.Error(), 500)
 		result.Step = step
 		result.Failed = true
@@ -629,7 +630,7 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 	result.Output = claudeResult.Text
 
 	if claudeResult.IsError {
-		step.Status = entities.StepFailed
+		step.Status = string(enums.StepStatusFailed)
 		step.OutputSummary = helpers.Truncate(claudeResult.Text, 500)
 		result.Step = step
 		result.Failed = true
@@ -639,21 +640,21 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 
 	// Parse structured output for audit and review steps.
 	switch params.Phase {
-	case entities.PhaseAudit:
+	case string(enums.StepPhaseAudit):
 		failed, errMsg := parseAuditOutput(claudeResult.StructuredOutput)
 		if failed {
-			step.Status = entities.StepFailed
+			step.Status = string(enums.StepStatusFailed)
 			step.OutputSummary = helpers.Truncate(errMsg, 500)
 			result.Step = step
 			result.Failed = true
 			result.Error = errMsg
 			return result, nil
 		}
-	case entities.PhaseReview:
+	case string(enums.StepPhaseReview):
 		review, failed, errMsg := parseReviewOutput(claudeResult.StructuredOutput, params.RunID, params.TaskID, claudeResult)
 		result.Review = review
 		if failed {
-			step.Status = entities.StepFailed
+			step.Status = string(enums.StepStatusFailed)
 			step.OutputSummary = helpers.Truncate(errMsg, 500)
 			result.Step = step
 			result.Failed = true
@@ -662,7 +663,7 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 		}
 	}
 
-	step.Status = entities.StepCompleted
+	step.Status = string(enums.StepStatusCompleted)
 	step.OutputSummary = helpers.Truncate(claudeResult.Text, 500)
 	result.Step = step
 	return result, nil
@@ -672,7 +673,7 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 // It also emits TaskFailed event and pushes the branch if push_failed_branches is set.
 func (s *OrchestratorService) buildFailure(ctx context.Context, task entities.Task, project entities.Project, run entities.Run, steps []entities.Step, review *entities.Review, totalCost float64, lastResult *StepResult) (OrchestratorOutput, error) {
 	completedAt := time.Now()
-	run.Status = entities.RunFailed
+	run.Status = string(enums.RunStatusFailed)
 	run.CostUSD = totalCost
 	run.Error = lastResult.Error
 	run.CompletedAt = &completedAt
@@ -719,7 +720,7 @@ func (s *OrchestratorService) buildFailure(ctx context.Context, task entities.Ta
 		Run:     run,
 		Steps:   steps,
 		Review:  review,
-		Status:  entities.RunFailed,
+		Status:  string(enums.RunStatusFailed),
 		CostUSD: totalCost,
 		Summary: lastResult.Error,
 	}, nil
@@ -777,8 +778,8 @@ func detectQuestion(resultText string, task entities.Task, runID string) *entiti
 		RunID:      runID,
 		Body:       questionText,
 		Context:    "Detected during implementation step",
-		Confidence: entities.ConfidenceMedium,
-		Status:     entities.QuestionOpen,
+		Confidence: string(enums.QuestionConfidenceMedium),
+		Status:     string(enums.QuestionStatusOpen),
 	}
 	q.ID = ulid.Make().String()
 	return q
@@ -860,11 +861,11 @@ func parseAuditOutput(raw json.RawMessage) (bool, string) {
 
 // reviewOutput is the structured output from the review agent.
 type reviewOutput struct {
-	Verdict         string   `json:"verdict"`
+	Verdict         string          `json:"verdict"`
 	CriteriaResults json.RawMessage `json:"criteria_results"`
-	AntiPatterns    []string `json:"anti_patterns"`
-	Reasons         []string `json:"reasons"`
-	Suggestions     []string `json:"suggestions"`
+	AntiPatterns    []string        `json:"anti_patterns"`
+	Reasons         []string        `json:"reasons"`
+	Suggestions     []string        `json:"suggestions"`
 }
 
 // parseReviewOutput parses review structured output into a Review entity.
@@ -891,7 +892,7 @@ func parseReviewOutput(raw json.RawMessage, runID, taskID string, result *claude
 	}
 	review.ID = ulid.Make().String()
 
-	if out.Verdict == entities.ReviewFail {
+	if out.Verdict == string(enums.ReviewVerdictFail) {
 		return review, true, fmt.Sprintf("review failed: %s", strings.Join(out.Reasons, "; "))
 	}
 	return review, false, ""
@@ -904,9 +905,9 @@ func (s *OrchestratorService) executeLintStep(ctx context.Context, task entities
 
 	step := entities.Step{
 		RunID:     runID,
-		Phase:     entities.PhaseLint,
+		Phase:     string(enums.StepPhaseLint),
 		Skill:     "factory-lint",
-		Status:    entities.StepRunning,
+		Status:    string(enums.StepStatusRunning),
 		Model:     "",
 		StartedAt: startedAt,
 	}
@@ -924,7 +925,7 @@ func (s *OrchestratorService) executeLintStep(ctx context.Context, task entities
 	})
 	if err != nil {
 		completedAt := time.Now()
-		step.Status = entities.StepFailed
+		step.Status = string(enums.StepStatusFailed)
 		step.CompletedAt = &completedAt
 		step.DurationMs = int(completedAt.Sub(startedAt).Milliseconds())
 		step.OutputSummary = helpers.Truncate(err.Error(), 500)
@@ -947,14 +948,16 @@ func (s *OrchestratorService) executeLintStep(ctx context.Context, task entities
 			}
 		}
 		errText := strings.Join(errParts, "\n")
-		step.Status = entities.StepFailed
+		step.Status = string(enums.StepStatusFailed)
 		step.OutputSummary = helpers.Truncate(summary+"\n"+errText, 500)
 		return &StepResult{Step: step, Failed: true, Error: errText, Output: summary}, nil
 	}
 
-	step.Status = entities.StepCompleted
+	step.Status = string(enums.StepStatusCompleted)
 	step.OutputSummary = summary
 	return &StepResult{Step: step, Output: summary}, nil
 }
 
-func (s *OrchestratorService) Description() string { return "Execute full implementation workflow for a task" }
+func (s *OrchestratorService) Description() string {
+	return "Execute full implementation workflow for a task"
+}

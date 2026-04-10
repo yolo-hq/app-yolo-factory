@@ -14,6 +14,7 @@ import (
 	"github.com/yolo-hq/yolo/core/pkg/claude"
 	"github.com/yolo-hq/yolo/core/service"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
@@ -44,13 +45,13 @@ type PlannerOutput struct {
 
 // TaskDef is the structured output from the planner agent.
 type TaskDef struct {
-	Title              string        `json:"title"`
-	Spec               string        `json:"spec"`
-	AcceptanceCriteria []CriteriaDef `json:"acceptance_criteria"`
-	Branch             string        `json:"branch"`
-	Sequence           int           `json:"sequence"`
-	DependsOn          []int         `json:"depends_on"`
-	EstimatedComplexity string       `json:"estimated_complexity"`
+	Title               string        `json:"title"`
+	Spec                string        `json:"spec"`
+	AcceptanceCriteria  []CriteriaDef `json:"acceptance_criteria"`
+	Branch              string        `json:"branch"`
+	Sequence            int           `json:"sequence"`
+	DependsOn           []int         `json:"depends_on"`
+	EstimatedComplexity string        `json:"estimated_complexity"`
 }
 
 // CriteriaDef is a single acceptance criterion from the agent.
@@ -166,7 +167,7 @@ func (s *PlannerService) Execute(ctx context.Context, in PlannerInput) (PlannerO
 	_, err = s.PRDWrite.Update(ctx).
 		WhereID(prd.ID).
 		Set("total_tasks", len(tasks)).
-		Set("status", entities.PRDApproved).
+		Set("status", string(enums.PRDStatusApproved)).
 		Exec(ctx)
 	if err != nil {
 		return PlannerOutput{}, fmt.Errorf("update prd: %w", err)
@@ -182,7 +183,7 @@ func (s *PlannerService) Execute(ctx context.Context, in PlannerInput) (PlannerO
 func (s *PlannerService) markPRDFailed(ctx context.Context, prdID string) {
 	if _, err := s.PRDWrite.Update(ctx).
 		WhereID(prdID).
-		Set("status", entities.PRDFailed).
+		Set("status", string(enums.PRDStatusFailed)).
 		Exec(ctx); err != nil {
 		slog.Error("failed to mark PRD as failed", "prd_id", prdID, "error", err)
 	}
@@ -246,7 +247,7 @@ func (s *PlannerService) convertToEntities(defs []TaskDef, in plannerEntitiesInp
 	for i, def := range defs {
 		if len(def.DependsOn) == 0 {
 			tasks[i].DependsOn = "[]"
-			tasks[i].Status = entities.TaskQueued
+			tasks[i].Status = string(enums.TaskStatusQueued)
 			continue
 		}
 
@@ -260,7 +261,7 @@ func (s *PlannerService) convertToEntities(defs []TaskDef, in plannerEntitiesInp
 		}
 
 		tasks[i].DependsOn = helpers.ToJSON(depIDs)
-		tasks[i].Status = entities.TaskBlocked
+		tasks[i].Status = string(enums.TaskStatusBlocked)
 	}
 
 	return tasks, nil

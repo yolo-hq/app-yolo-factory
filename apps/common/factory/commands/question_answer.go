@@ -9,6 +9,7 @@ import (
 	"github.com/yolo-hq/yolo/core/command"
 	"github.com/yolo-hq/yolo/core/entity"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
@@ -34,7 +35,7 @@ func (c *QuestionAnswer) Execute(ctx context.Context, cctx command.Context) erro
 
 	now := time.Now()
 	if _, err := w.Update(ctx).WhereID(id).
-		Set("status", entities.QuestionAnswered).
+		Set("status", string(enums.QuestionStatusAnswered)).
 		Set("answer", answer).
 		Set("answered_by", "human").
 		Set("answered_at", now).

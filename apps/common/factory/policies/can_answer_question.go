@@ -3,10 +3,9 @@ package policies
 import (
 	"context"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/policy"
-
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
 // CanAnswerQuestionData declares the entity fields this policy reads.
@@ -22,7 +21,7 @@ type CanAnswerQuestionPolicy struct {
 
 func (p *CanAnswerQuestionPolicy) Evaluate(_ context.Context, actx *action.Context) policy.PolicyResult {
 	data := p.Data(actx)
-	if data.Status != entities.QuestionOpen {
+	if data.Status != string(enums.QuestionStatusOpen) {
 		return policy.Deny("question must be open to answer")
 	}
 	return policy.Allow()

@@ -11,6 +11,7 @@ import (
 	"github.com/yolo-hq/yolo/core/command"
 	"github.com/yolo-hq/yolo/core/entity"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
@@ -27,9 +28,11 @@ type ProjectScanInput struct {
 	Model  string `flag:"model" usage:"Default model (default: sonnet)"`
 }
 
-func (c *ProjectScan) Name() string        { return "project:scan" }
-func (c *ProjectScan) Description() string { return "Auto-discover and register git repos in a directory" }
-func (c *ProjectScan) Input() any          { return &ProjectScanInput{} }
+func (c *ProjectScan) Name() string { return "project:scan" }
+func (c *ProjectScan) Description() string {
+	return "Auto-discover and register git repos in a directory"
+}
+func (c *ProjectScan) Input() any { return &ProjectScanInput{} }
 
 type scannedRepo struct {
 	Name      string
@@ -155,7 +158,7 @@ func (c *ProjectScan) Execute(ctx context.Context, cctx command.Context) error {
 			LocalPath:     sr.Path,
 			DefaultBranch: branch,
 			DefaultModel:  model,
-			Status:        entities.ProjectActive,
+			Status:        string(enums.ProjectStatusActive),
 		}
 		if _, err := w.Insert(ctx, p); err != nil {
 			cctx.Print("Warning: failed to register %s: %v", sr.Name, err)

@@ -9,6 +9,7 @@ import (
 	"github.com/yolo-hq/yolo/core/jobs"
 	"github.com/yolo-hq/yolo/core/write"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
@@ -38,7 +39,7 @@ func (a *ApprovePRDAction) Execute(ctx context.Context, actx *action.Context) ac
 	_, err := action.Write[entities.PRD](actx).Exec(ctx, write.Update{
 		ID: actx.EntityID,
 		Set: write.Set{
-			fields.PRD.Status.Value(entities.PRDApproved),
+			fields.PRD.Status.Value(string(enums.PRDStatusApproved)),
 			fields.PRD.ApprovedAt.Value(&now),
 		},
 	})

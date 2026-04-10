@@ -8,6 +8,7 @@ import (
 	"github.com/yolo-hq/yolo/core/command"
 	"github.com/yolo-hq/yolo/core/entity"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 )
@@ -65,8 +66,8 @@ func (c *PRDSubmit) Execute(ctx context.Context, cctx command.Context) error {
 		Title:              input.Title,
 		Body:               body,
 		AcceptanceCriteria: input.Criteria,
-		Status:             entities.PRDDraft,
-		Source:             entities.SourceManual,
+		Status:             string(enums.PRDStatusDraft),
+		Source:             string(enums.PRDSourceManual),
 		CreatedBy:          "human",
 	}
 

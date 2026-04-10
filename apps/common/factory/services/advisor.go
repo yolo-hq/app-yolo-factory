@@ -200,4 +200,6 @@ func formatRunHistory(runs []entities.Run) string {
 	return strings.Join(lines, "\n")
 }
 
-func (s *AdvisorService) Description() string { return "Run optimization advisor analysis on project metrics" }
+func (s *AdvisorService) Description() string {
+	return "Run optimization advisor analysis on project metrics"
+}

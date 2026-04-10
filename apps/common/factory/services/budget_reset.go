@@ -7,6 +7,7 @@ import (
 	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/service"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
@@ -31,7 +32,7 @@ func (s *BudgetResetService) Execute(ctx context.Context, _ BudgetResetInput) (B
 
 	result, err := s.ProjectRead.FindMany(ctx, entity.FindOptions{
 		Filters: []entity.FilterCondition{
-			{Field: "status", Operator: entity.OpEq, Value: entities.ProjectActive},
+			{Field: "status", Operator: entity.OpEq, Value: string(enums.ProjectStatusActive)},
 		},
 	})
 	if err != nil {

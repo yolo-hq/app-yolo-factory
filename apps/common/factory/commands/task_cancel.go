@@ -7,6 +7,7 @@ import (
 	"github.com/yolo-hq/yolo/core/command"
 	"github.com/yolo-hq/yolo/core/entity"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
@@ -30,7 +31,7 @@ func (c *TaskCancel) Execute(ctx context.Context, cctx command.Context) error {
 	}
 	w := repo.(entity.WriteRepository[entities.Task])
 
-	if _, err := w.Update(ctx).WhereID(id).Set(fields.Task.Status.Name(), entities.TaskCancelled).Exec(ctx); err != nil {
+	if _, err := w.Update(ctx).WhereID(id).Set(fields.Task.Status.Name(), string(enums.TaskStatusCancelled)).Exec(ctx); err != nil {
 		return fmt.Errorf("cancel task: %w", err)
 	}
 

@@ -4,10 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/policy"
-
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
 // CanExecutePRDData declares the entity fields this policy reads.
@@ -23,7 +22,7 @@ type CanExecutePRDPolicy struct {
 
 func (p *CanExecutePRDPolicy) Evaluate(_ context.Context, actx *action.Context) policy.PolicyResult {
 	data := p.Data(actx)
-	if data.Status != entities.PRDDraft && data.Status != entities.PRDApproved {
+	if data.Status != string(enums.PRDStatusDraft) && data.Status != string(enums.PRDStatusApproved) {
 		return policy.Deny(fmt.Sprintf("PRD must be in draft or approved status, got %q", data.Status))
 	}
 	return policy.Allow()

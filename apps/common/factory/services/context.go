@@ -114,8 +114,8 @@ func templateForPhase(phase string) (tmpl string, system string, err error) {
 // templateData is the flat struct passed to Go templates.
 type templateData struct {
 	// Common
-	ProjectName    string
-	Branch         string
+	ProjectName     string
+	Branch          string
 	CLAUDEMDContent string
 
 	// PRD fields
@@ -227,4 +227,6 @@ func formatDesignDecisions(raw string) string {
 	return strings.Join(lines, "\n")
 }
 
-func (s *ContextService) Description() string { return "Build prompt context for headless agent skills" }
+func (s *ContextService) Description() string {
+	return "Build prompt context for headless agent skills"
+}

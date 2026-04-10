@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
@@ -75,11 +76,11 @@ func TestIntegrationReview_FindingsToSuggestions(t *testing.T) {
 
 	assert.Equal(t, "proj-1", suggestions[0].ProjectID)
 	assert.Equal(t, "integration_review", suggestions[0].Source)
-	assert.Equal(t, entities.CategoryRefactoring, suggestions[0].Category)
-	assert.Equal(t, entities.PriorityMedium, suggestions[0].Priority)
+	assert.Equal(t, string(enums.SuggestionCategoryRefactoring), suggestions[0].Category)
+	assert.Equal(t, string(enums.SuggestionPriorityMedium), suggestions[0].Priority)
 
-	assert.Equal(t, entities.CategoryTechDebt, suggestions[1].Category)
-	assert.Equal(t, entities.PriorityHigh, suggestions[1].Priority)
+	assert.Equal(t, string(enums.SuggestionCategoryTechDebt), suggestions[1].Category)
+	assert.Equal(t, string(enums.SuggestionPriorityHigh), suggestions[1].Priority)
 }
 
 func TestIntegrationReview_ShouldRun(t *testing.T) {
@@ -115,9 +116,9 @@ func TestIntegrationReview_FormatTaskSummariesEmpty(t *testing.T) {
 }
 
 func TestIntegrationReview_MapFindingCategory(t *testing.T) {
-	assert.Equal(t, entities.CategoryRefactoring, mapFindingCategory("duplicate_function"))
-	assert.Equal(t, entities.CategoryRefactoring, mapFindingCategory("missing_helper"))
-	assert.Equal(t, entities.CategoryTechDebt, mapFindingCategory("inconsistent_pattern"))
-	assert.Equal(t, entities.CategoryTechDebt, mapFindingCategory("state_machine_drift"))
-	assert.Equal(t, entities.CategoryRefactoring, mapFindingCategory("unknown"))
+	assert.Equal(t, string(enums.SuggestionCategoryRefactoring), mapFindingCategory("duplicate_function"))
+	assert.Equal(t, string(enums.SuggestionCategoryRefactoring), mapFindingCategory("missing_helper"))
+	assert.Equal(t, string(enums.SuggestionCategoryTechDebt), mapFindingCategory("inconsistent_pattern"))
+	assert.Equal(t, string(enums.SuggestionCategoryTechDebt), mapFindingCategory("state_machine_drift"))
+	assert.Equal(t, string(enums.SuggestionCategoryRefactoring), mapFindingCategory("unknown"))
 }

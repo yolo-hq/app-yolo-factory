@@ -7,6 +7,7 @@ import (
 	"github.com/yolo-hq/yolo/core/command"
 	"github.com/yolo-hq/yolo/core/entity"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
@@ -36,7 +37,7 @@ func (c *TaskRetry) Execute(ctx context.Context, cctx command.Context) error {
 	}
 	w := repo.(entity.WriteRepository[entities.Task])
 
-	ub := w.Update(ctx).WhereID(id).Set(fields.Task.Status.Name(), entities.TaskQueued)
+	ub := w.Update(ctx).WhereID(id).Set(fields.Task.Status.Name(), string(enums.TaskStatusQueued))
 	if input != nil && input.Model != "" {
 		ub = ub.Set(fields.Task.Model.Name(), input.Model)
 	}

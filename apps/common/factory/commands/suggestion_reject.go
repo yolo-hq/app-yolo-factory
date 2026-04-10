@@ -7,6 +7,7 @@ import (
 	"github.com/yolo-hq/yolo/core/command"
 	"github.com/yolo-hq/yolo/core/entity"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
@@ -35,7 +36,7 @@ func (c *SuggestionReject) Execute(ctx context.Context, cctx command.Context) er
 	}
 	w := repo.(entity.WriteRepository[entities.Suggestion])
 
-	if _, err := w.Update(ctx).WhereID(id).Set(fields.Suggestion.Status.Name(), entities.SuggestionRejected).Exec(ctx); err != nil {
+	if _, err := w.Update(ctx).WhereID(id).Set(fields.Suggestion.Status.Name(), string(enums.SuggestionStatusRejected)).Exec(ctx); err != nil {
 		return fmt.Errorf("reject suggestion: %w", err)
 	}
 

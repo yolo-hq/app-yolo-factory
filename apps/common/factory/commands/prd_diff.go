@@ -10,6 +10,7 @@ import (
 	"github.com/yolo-hq/yolo/core/command"
 	"github.com/yolo-hq/yolo/core/entity"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
@@ -55,7 +56,7 @@ func (c *PRDDiff) Execute(ctx context.Context, cctx command.Context) error {
 	result, err := tr.FindMany(ctx, entity.FindOptions{
 		Filters: []entity.FilterCondition{
 			{Field: "prd_id", Operator: entity.OpEq, Value: prd.ID},
-			{Field: "status", Operator: entity.OpEq, Value: entities.TaskDone},
+			{Field: "status", Operator: entity.OpEq, Value: string(enums.TaskStatusDone)},
 		},
 		Sort: &entity.SortParams{Field: "sequence", Order: "asc"},
 	})

@@ -7,6 +7,7 @@ import (
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/write"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
@@ -28,7 +29,7 @@ func (a *AnswerQuestionAction) Execute(ctx context.Context, actx *action.Context
 	_, err := action.Write[entities.Question](actx).Exec(ctx, write.Update{
 		ID: actx.EntityID,
 		Set: write.Set{
-			fields.Question.Status.Value(entities.QuestionAnswered),
+			fields.Question.Status.Value(string(enums.QuestionStatusAnswered)),
 			fields.Question.Answer.Value(input.Answer),
 			fields.Question.AnsweredBy.Value("human"),
 			fields.Question.AnsweredAt.Value(&now),

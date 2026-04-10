@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/yolo-hq/yolo/core/pkg/claude"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 )
@@ -228,8 +229,8 @@ func TestDetectQuestion_Found(t *testing.T) {
 	assert.Equal(t, "Should I use X or Y?", q.Body)
 	assert.Equal(t, "task-1", q.TaskID)
 	assert.Equal(t, "run-1", q.RunID)
-	assert.Equal(t, entities.QuestionOpen, q.Status)
-	assert.Equal(t, entities.ConfidenceMedium, q.Confidence)
+	assert.Equal(t, string(enums.QuestionStatusOpen), q.Status)
+	assert.Equal(t, string(enums.QuestionConfidenceMedium), q.Confidence)
 	assert.NotEmpty(t, q.ID)
 }
 

@@ -7,6 +7,7 @@ import (
 	"github.com/yolo-hq/yolo/core/command"
 	"github.com/yolo-hq/yolo/core/entity"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
@@ -31,7 +32,7 @@ func (c *InsightAcknowledge) Execute(ctx context.Context, cctx command.Context) 
 	}
 	w := repo.(entity.WriteRepository[entities.Insight])
 
-	if _, err := w.Update(ctx).WhereID(id).Set(fields.Insight.Status.Name(), entities.InsightAcknowledged).Exec(ctx); err != nil {
+	if _, err := w.Update(ctx).WhereID(id).Set(fields.Insight.Status.Name(), string(enums.InsightStatusAcknowledged)).Exec(ctx); err != nil {
 		return fmt.Errorf("acknowledge insight: %w", err)
 	}
 

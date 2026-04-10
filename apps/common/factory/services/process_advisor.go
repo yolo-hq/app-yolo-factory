@@ -12,6 +12,7 @@ import (
 	"github.com/yolo-hq/yolo/core/pkg/claude"
 	"github.com/yolo-hq/yolo/core/service"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
@@ -137,7 +138,7 @@ func (s *ProcessAdvisorService) Execute(ctx context.Context, in ProcessAdvisorIn
 	// 2. Count completed tasks.
 	completed := 0
 	for _, t := range tasks {
-		if t.Status == entities.TaskDone {
+		if t.Status == string(enums.TaskStatusDone) {
 			completed++
 		}
 	}
@@ -193,7 +194,7 @@ func (s *ProcessAdvisorService) Execute(ctx context.Context, in ProcessAdvisorIn
 			Body:           def.Body,
 			Recommendation: def.Recommendation,
 			Priority:       def.Priority,
-			Status:         entities.InsightPending,
+			Status:         string(enums.InsightStatusPending),
 			MetricData:     string(metricJSON),
 		}
 		insights[i].ID = ulid.Make().String()
@@ -222,9 +223,9 @@ func ComputeMetrics(tasks []entities.Task, runs []entities.Run, steps []entities
 	var totalRetries int
 	for _, t := range tasks {
 		switch t.Status {
-		case entities.TaskDone:
+		case string(enums.TaskStatusDone):
 			m.CompletedTasks++
-		case entities.TaskFailed:
+		case string(enums.TaskStatusFailed):
 			m.FailedTasks++
 		}
 		totalRetries += t.RunCount
@@ -256,13 +257,13 @@ func ComputeMetrics(tasks []entities.Task, runs []entities.Run, steps []entities
 		}
 		acc.tasks++
 		acc.totalCost += r.CostUSD
-		if r.Status == entities.RunCompleted {
+		if r.Status == string(enums.RunStatusCompleted) {
 			acc.successes++
 		}
 	}
 	for model, acc := range modelMap {
 		stat := ModelStat{
-			Tasks:    acc.tasks,
+			Tasks:     acc.tasks,
 			Successes: acc.successes,
 		}
 		if acc.tasks > 0 {
@@ -274,10 +275,10 @@ func ComputeMetrics(tasks []entities.Task, runs []entities.Run, steps []entities
 
 	// Step stats.
 	type stepAccum struct {
-		count       int
-		totalCost   float64
-		totalDurMS  int
-		failCount   int
+		count      int
+		totalCost  float64
+		totalDurMS int
+		failCount  int
 	}
 	stepMap := make(map[string]*stepAccum)
 	for _, s := range steps {
@@ -293,7 +294,7 @@ func ComputeMetrics(tasks []entities.Task, runs []entities.Run, steps []entities
 		acc.count++
 		acc.totalCost += s.CostUSD
 		acc.totalDurMS += s.DurationMs
-		if s.Status == entities.StepFailed {
+		if s.Status == string(enums.StepStatusFailed) {
 			acc.failCount++
 		}
 	}
@@ -322,7 +323,7 @@ func ComputeMetrics(tasks []entities.Task, runs []entities.Run, steps []entities
 	if len(reviews) > 0 {
 		failedReviews := 0
 		for _, r := range reviews {
-			if r.Verdict == entities.ReviewFail {
+			if r.Verdict == string(enums.ReviewVerdictFail) {
 				failedReviews++
 			}
 		}
@@ -331,7 +332,7 @@ func ComputeMetrics(tasks []entities.Task, runs []entities.Run, steps []entities
 
 	// Error breakdown from failed runs.
 	for _, r := range runs {
-		if r.Status == entities.RunFailed && r.Error != "" {
+		if r.Status == string(enums.RunStatusFailed) && r.Error != "" {
 			key := categorizeError(r.Error)
 			m.ErrorBreakdown[key]++
 		}
@@ -398,15 +399,15 @@ func parseProcessAdvisorOutput(raw json.RawMessage) ([]processAdvisorInsightDef,
 // mapInsightCategory validates and maps category strings.
 func mapInsightCategory(category string) string {
 	switch category {
-	case entities.InsightRetryRate,
-		entities.InsightCostOptimization,
-		entities.InsightModelSelection,
-		entities.InsightSpecQuality,
-		entities.InsightGateEffectiveness,
-		entities.InsightWorkflowOptimization:
+	case string(enums.InsightCategoryRetryRate),
+		string(enums.InsightCategoryCostOptimization),
+		string(enums.InsightCategoryModelSelection),
+		string(enums.InsightCategorySpecQuality),
+		string(enums.InsightCategoryGateEffectiveness),
+		string(enums.InsightCategoryWorkflowOptimization):
 		return category
 	default:
-		return entities.InsightWorkflowOptimization
+		return string(enums.InsightCategoryWorkflowOptimization)
 	}
 }
 
@@ -429,4 +430,6 @@ func categorizeError(errMsg string) string {
 	}
 }
 
-func (s *ProcessAdvisorService) Description() string { return "Analyze factory process metrics and suggest improvements" }
+func (s *ProcessAdvisorService) Description() string {
+	return "Analyze factory process metrics and suggest improvements"
+}

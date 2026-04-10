@@ -7,6 +7,7 @@ import (
 	"github.com/yolo-hq/yolo/core/command"
 	"github.com/yolo-hq/yolo/core/entity"
 
+	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
@@ -40,7 +41,7 @@ func (c *ProjectAdd) Execute(ctx context.Context, cctx command.Context) error {
 		LocalPath:     input.LocalPath,
 		DefaultBranch: input.Branch,
 		DefaultModel:  input.Model,
-		Status:        entities.ProjectActive,
+		Status:        string(enums.ProjectStatusActive),
 	}
 	if p.DefaultBranch == "" {
 		p.DefaultBranch = "main"
