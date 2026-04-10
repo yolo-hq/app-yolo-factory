@@ -234,7 +234,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	now = time.Now()
 	run := entities.Run{
 		TaskID:      inTask.ID,
-		AgentType:   entities.AgentImplementer,
+		AgentType:   constants.AgentImplementer,
 		Status:      string(enums.RunStatusRunning),
 		Model:       model,
 		BranchName:  branchName,

@@ -1,8 +1,6 @@
-package entities
+package constants
 
-// --- Agent types ---
-// No generated enum equivalent; Agent is not an entity field with enum: tag.
-
+// Agent type identifiers used by the orchestrator to dispatch work.
 const (
 	AgentPlanner     = "planner"
 	AgentImplementer = "implementer"
