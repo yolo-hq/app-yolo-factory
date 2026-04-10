@@ -2,7 +2,7 @@ package inputs
 
 // SubmitPRDInput is the input for submitting a new PRD.
 type SubmitPRDInput struct {
-	ProjectID          string `json:"projectId" validate:"required"`
+	ProjectID          string `json:"projectId" validate:"required" resolves:"Project"`
 	Title              string `json:"title" validate:"required"`
 	Body               string `json:"body" validate:"required"`
 	AcceptanceCriteria string `json:"acceptanceCriteria" validate:"required"`
