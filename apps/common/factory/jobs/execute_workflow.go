@@ -13,11 +13,9 @@ import (
 )
 
 // ExecuteWorkflowJob runs the OrchestratorService for a single task.
+// Payload fields are on the struct so jobs.Defer(ctx, &ExecuteWorkflowJob{TaskID: id}) works.
 type ExecuteWorkflowJob struct {
 	jobs.Base
-}
-
-type executeWorkflowPayload struct {
 	TaskID string `json:"task_id"`
 }
 
@@ -32,7 +30,7 @@ func (j *ExecuteWorkflowJob) Config() jobs.Config {
 }
 
 func (j *ExecuteWorkflowJob) Handle(ctx context.Context, payload []byte) error {
-	var p executeWorkflowPayload
+	var p ExecuteWorkflowJob
 	if err := json.Unmarshal(payload, &p); err != nil {
 		return fmt.Errorf("parse payload: %w", err)
 	}

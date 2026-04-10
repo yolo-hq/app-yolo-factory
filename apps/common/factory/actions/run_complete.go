@@ -16,6 +16,7 @@ import (
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/events"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
+	factoryjobs "github.com/yolo-hq/app-yolo-factory/apps/common/factory/jobs"
 )
 
 // TaskRef is a minimal reference to a task used inside CompleteRunData slices.
@@ -59,15 +60,13 @@ type CompleteRunAction struct {
 	action.TypedInput[inputs.CompleteRunInput]
 	action.PublicAccess
 	action.TypedData[CompleteRunData]
-	JobClient   *jobs.Client
-	WorkflowJob jobs.Handler
 }
 
 func (a *CompleteRunAction) Description() string {
 	return "Record run completion and advance state machine"
 }
 
-func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) action.Result {
+func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) error {
 	data := a.Data(actx)
 	input := a.Input(actx)
 	now := time.Now()
@@ -78,7 +77,7 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) a
 		FromInput: input,
 		Set:       write.Set{fields.Run.CompletedAt.Value(&now)},
 	}); err != nil {
-		return action.Failure(err.Error())
+		return err
 	}
 
 	// 2. Branch on run outcome.
@@ -89,8 +88,7 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) a
 		a.handleFailed(ctx, actx, data, input)
 	}
 
-	actx.Resolve("Run", actx.EntityID)
-	return action.OK()
+	return nil
 }
 
 func (a *CompleteRunAction) handleCompleted(
@@ -115,8 +113,8 @@ func (a *CompleteRunAction) handleCompleted(
 		return
 	}
 
-	// b. Unblock dependents — iterate over the pre-loaded BlockedTasks slice.
-	var unblockedIDs []string
+	// b. Unblock dependents — build list then issue a single UpdateMany.
+	var toUnblock []string
 	for _, blocked := range data.Task.PRD.BlockedTasks {
 		if !helpers.ContainsDep(blocked.DependsOn, data.Task.ID) {
 			continue
@@ -127,11 +125,14 @@ func (a *CompleteRunAction) handleCompleted(
 				continue
 			}
 		}
-		if _, err := action.Write[entities.Task](actx).Exec(ctx, write.Update{
-			ID:  blocked.ID,
+		toUnblock = append(toUnblock, blocked.ID)
+	}
+	if len(toUnblock) > 0 {
+		if _, err := action.Write[entities.Task](actx).Exec(ctx, write.UpdateMany{
+			IDs: toUnblock,
 			Set: write.Set{fields.Task.Status.Value(string(enums.TaskStatusQueued))},
-		}); err == nil {
-			unblockedIDs = append(unblockedIDs, blocked.ID)
+		}); err != nil {
+			fmt.Printf("[factory] WARN: failed to unblock tasks: %v\n", err)
 		}
 	}
 
@@ -171,15 +172,13 @@ func (a *CompleteRunAction) handleCompleted(
 
 	// e. Dispatch next task — prefer newly unblocked, else pre-loaded queued.
 	nextID := ""
-	if len(unblockedIDs) > 0 {
-		nextID = unblockedIDs[0]
+	if len(toUnblock) > 0 {
+		nextID = toUnblock[0]
 	} else if len(data.Task.PRD.QueuedTasks) > 0 {
 		nextID = data.Task.PRD.QueuedTasks[0].ID
 	}
-	if nextID != "" && a.WorkflowJob != nil {
-		actx.DeferJob(a.WorkflowJob, map[string]string{
-			"task_id": nextID,
-		})
+	if nextID != "" {
+		jobs.Defer(ctx, &factoryjobs.ExecuteWorkflowJob{TaskID: nextID})
 	}
 }
 
@@ -204,11 +203,7 @@ func (a *CompleteRunAction) handleFailed(
 			fmt.Printf("[factory] ERROR: failed to requeue task %s: %v\n", data.Task.ID, err)
 			return
 		}
-		if a.WorkflowJob != nil {
-			actx.DeferJob(a.WorkflowJob, map[string]string{
-				"task_id": data.Task.ID,
-			})
-		}
+		jobs.Defer(ctx, &factoryjobs.ExecuteWorkflowJob{TaskID: data.Task.ID})
 		return
 	}
 

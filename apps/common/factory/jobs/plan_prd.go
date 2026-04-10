@@ -13,11 +13,9 @@ import (
 )
 
 // PlanPRDJob runs the PlannerService to plan and create tasks from a PRD.
+// Payload fields are on the struct so jobs.Defer(ctx, &PlanPRDJob{PRDID: id}) works.
 type PlanPRDJob struct {
 	jobs.Base
-}
-
-type planPRDPayload struct {
 	PRDID string `json:"prd_id"`
 }
 
@@ -32,7 +30,7 @@ func (j *PlanPRDJob) Config() jobs.Config {
 }
 
 func (j *PlanPRDJob) Handle(ctx context.Context, payload []byte) error {
-	var p planPRDPayload
+	var p PlanPRDJob
 	if err := json.Unmarshal(payload, &p); err != nil {
 		return fmt.Errorf("parse payload: %w", err)
 	}

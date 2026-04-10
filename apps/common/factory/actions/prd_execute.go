@@ -4,11 +4,13 @@ import (
 	"context"
 
 	"github.com/yolo-hq/yolo/core/action"
+	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/jobs"
 	"github.com/yolo-hq/yolo/core/write"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
+	factoryjobs "github.com/yolo-hq/app-yolo-factory/apps/common/factory/jobs"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
@@ -23,32 +25,32 @@ type ExecutePRDAction struct {
 	action.NoInput
 	action.RequirePolicy[policies.CanExecutePRDPolicy]
 	action.TypedData[ExecutePRDData]
-	JobClient *jobs.Client
-	PlanJob   jobs.Handler
 }
 
 func (a *ExecutePRDAction) Description() string { return "Execute a PRD by starting planning" }
 
-func (a *ExecutePRDAction) Execute(ctx context.Context, actx *action.Context) action.Result {
+func (a *ExecutePRDAction) Execute(ctx context.Context, actx *action.Context) error {
 	prd := a.Data(actx)
 
-	// Transition to planning.
+	// Transition to planning with conditional where for race-safety.
 	_, err := action.Write[entities.PRD](actx).Exec(ctx, write.Update{
 		ID: actx.EntityID,
+		Where: []entity.FilterCondition{
+			{Field: "status", Operator: entity.OpIn, Value: []string{
+				string(enums.PRDStatusDraft),
+				string(enums.PRDStatusApproved),
+			}},
+		},
 		Set: write.Set{
 			fields.PRD.Status.Value(string(enums.PRDStatusPlanning)),
 		},
 	})
 	if err != nil {
-		return action.Failure(err.Error())
+		return err
 	}
 
-	// Defer planning job until after the tx commits. If the update above
-	// rolls back, the job will not be dispatched.
-	actx.DeferJob(a.PlanJob, map[string]string{
-		"prd_id": prd.ID,
-	})
+	// Defer planning job until after the tx commits.
+	jobs.Defer(ctx, &factoryjobs.PlanPRDJob{PRDID: prd.ID})
 
-	actx.Resolve("PRD", actx.EntityID)
-	return action.OK(map[string]string{"status": string(enums.PRDStatusPlanning)})
+	return nil
 }
