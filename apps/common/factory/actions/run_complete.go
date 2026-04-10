@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/yolo-hq/yolo/core/action"
-	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/jobs"
 	"github.com/yolo-hq/yolo/core/write"
 
@@ -18,10 +17,47 @@ import (
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
 )
 
+// TaskRef is a minimal reference to a task used inside CompleteRunData slices.
+type TaskRef struct {
+	ID        string `field:"id"`
+	DependsOn string `field:"depends_on"`
+}
+
+// CompleteRunData declares the Run entity fields and relation data this action
+// reads. The framework resolves the belongs_to chain Run → Task → PRD and
+// pre-computes the aggregations + filtered has_many slices, replacing all the
+// manual loading helpers this action used to carry.
+type CompleteRunData struct {
+	Status string `field:"status"`
+	Task   struct {
+		ID         string  `field:"id"`
+		Status     string  `field:"status"`
+		CostUSD    float64 `field:"cost_usd"`
+		RunCount   int     `field:"run_count"`
+		MaxRetries int     `field:"max_retries"`
+		DependsOn  string  `field:"depends_on"`
+		PrdID      string  `field:"prd_id"`
+		PRD        struct {
+			ID string `field:"id"`
+
+			// Aggregations (replace updatePRDCounters helper).
+			CompletedCount int     `field:"tasks" aggregate:"count" filter:"status:done"`
+			FailedCount    int     `field:"tasks" aggregate:"count" filter:"status:failed"`
+			TotalCost      float64 `field:"tasks" aggregate:"sum:cost_usd"`
+			TotalCount     int     `field:"tasks" aggregate:"count"`
+
+			// Has-many slices (replace unblockDependents + findNextQueued helpers).
+			BlockedTasks []TaskRef `field:"tasks" filter:"status:blocked"`
+			QueuedTasks  []TaskRef `field:"tasks" filter:"status:queued" limit:"1"`
+		} `field:"prd"`
+	} `field:"task"`
+}
+
 // CompleteRunAction records run completion and drives the task/PRD state machine.
 type CompleteRunAction struct {
 	action.TypedInput[inputs.CompleteRunInput]
 	action.PublicAccess
+	action.TypedData[CompleteRunData]
 	JobClient   *jobs.Client
 	WorkflowJob jobs.Handler
 }
@@ -31,11 +67,7 @@ func (a *CompleteRunAction) Description() string {
 }
 
 func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) action.Result {
-	run, r := action.FindOrFail[entities.Run](ctx, action.ReadRepo[entities.Run](actx), actx.EntityID)
-	if r != nil {
-		return *r
-	}
-
+	data := a.Data(actx)
 	input := a.Input(actx)
 	now := time.Now()
 
@@ -48,18 +80,12 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) a
 		return action.Failure(err.Error())
 	}
 
-	// 2. Load the parent task.
-	task, err := action.ReadRepo[entities.Task](actx).FindOne(ctx, entity.FindOneOptions{ID: run.TaskID})
-	if err != nil || task == nil {
-		return action.Failure("failed to load task for run")
-	}
-
-	// 3. Dispatch based on run outcome.
+	// 2. Branch on run outcome.
 	switch input.Status {
 	case entities.RunCompleted:
-		a.handleCompleted(ctx, actx, task, input, now)
+		a.handleCompleted(ctx, actx, data, input, now)
 	case entities.RunFailed:
-		a.handleFailed(ctx, actx, task, input)
+		a.handleFailed(ctx, actx, data, input)
 	}
 
 	actx.Resolve("Run", actx.EntityID)
@@ -69,40 +95,85 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) a
 func (a *CompleteRunAction) handleCompleted(
 	ctx context.Context,
 	actx *action.Context,
-	task *entities.Task,
+	data CompleteRunData,
 	input inputs.CompleteRunInput,
 	now time.Time,
 ) {
 	// a. Mark task done, accumulate cost atomically.
-	summary := helpers.Truncate(input.Result, 500)
 	if _, err := action.Write[entities.Task](actx).Exec(ctx, write.Update{
-		ID: task.ID,
+		ID: data.Task.ID,
 		Set: write.Set{
 			fields.Task.Status.Value(entities.TaskDone),
 			fields.Task.CostUSD.Incr(input.CostUSD),
 			fields.Task.CommitHash.Value(input.CommitHash),
-			fields.Task.Summary.Value(summary),
+			fields.Task.Summary.Value(helpers.Truncate(input.Result, 500)),
 			fields.Task.CompletedAt.Value(&now),
 		},
 	}); err != nil {
-		fmt.Printf("[factory] ERROR: failed to update task %s to done: %v\n", task.ID, err)
+		fmt.Printf("[factory] ERROR: failed to update task %s to done: %v\n", data.Task.ID, err)
 		return
 	}
 
-	// b. Unblock dependent tasks.
-	unblockedIDs := a.unblockDependents(ctx, actx, task.ID)
-
-	// c. Update PRD counters and check completion (non-critical).
-	if err := a.updatePRDCounters(ctx, actx, task.PrdID); err != nil {
-		fmt.Printf("[factory] WARN: failed to update PRD counters for %s: %v\n", task.PrdID, err)
+	// b. Unblock dependents — iterate over the pre-loaded BlockedTasks slice.
+	var unblockedIDs []string
+	for _, blocked := range data.Task.PRD.BlockedTasks {
+		if !helpers.ContainsDep(blocked.DependsOn, data.Task.ID) {
+			continue
+		}
+		if svc.S.RunCompletion != nil {
+			allMet, err := svc.S.RunCompletion.AllDepsMet(ctx, helpers.ParseDeps(blocked.DependsOn))
+			if err != nil || !allMet {
+				continue
+			}
+		}
+		if _, err := action.Write[entities.Task](actx).Exec(ctx, write.Update{
+			ID:  blocked.ID,
+			Set: write.Set{fields.Task.Status.Value(entities.TaskQueued)},
+		}); err == nil {
+			unblockedIDs = append(unblockedIDs, blocked.ID)
+		}
 	}
 
-	// d. Trigger next queued task — prefer newly unblocked, else next by sequence.
+	// c. Update PRD counters from pre-computed aggregations.
+	newCompleted := data.Task.PRD.CompletedCount + 1
+	newCost := data.Task.PRD.TotalCost + input.CostUSD
+	if _, err := action.Write[entities.PRD](actx).Exec(ctx, write.Update{
+		ID: data.Task.PRD.ID,
+		Set: write.Set{
+			fields.PRD.CompletedTasks.Value(newCompleted),
+			fields.PRD.TotalCostUSD.Value(newCost),
+		},
+	}); err != nil {
+		fmt.Printf("[factory] WARN: failed to update PRD counters for %s: %v\n", data.Task.PRD.ID, err)
+	}
+
+	// d. Check PRD completion.
+	if data.Task.PRD.TotalCount > 0 && (newCompleted+data.Task.PRD.FailedCount) == data.Task.PRD.TotalCount {
+		status := entities.PRDCompleted
+		if data.Task.PRD.FailedCount > 0 {
+			status = entities.PRDFailed
+		}
+		if _, err := action.Write[entities.PRD](actx).Exec(ctx, write.Update{
+			ID: data.Task.PRD.ID,
+			Set: write.Set{
+				fields.PRD.Status.Value(status),
+				fields.PRD.CompletedAt.Value(&now),
+			},
+		}); err != nil {
+			fmt.Printf("[factory] WARN: failed to update PRD status %s: %v\n", data.Task.PRD.ID, err)
+		} else if data.Task.PRD.FailedCount > 0 {
+			events.PRDFailed.Emit(ctx, data.Task.PRD.ID)
+		} else {
+			events.PRDCompleted.Emit(ctx, data.Task.PRD.ID)
+		}
+	}
+
+	// e. Dispatch next task — prefer newly unblocked, else pre-loaded queued.
 	nextID := ""
 	if len(unblockedIDs) > 0 {
 		nextID = unblockedIDs[0]
-	} else {
-		nextID = a.findNextQueued(ctx, actx, task.PrdID)
+	} else if len(data.Task.PRD.QueuedTasks) > 0 {
+		nextID = data.Task.PRD.QueuedTasks[0].ID
 	}
 	if nextID != "" && a.JobClient != nil && a.WorkflowJob != nil {
 		if _, err := a.JobClient.Dispatch(ctx, a.WorkflowJob, map[string]string{
@@ -116,31 +187,29 @@ func (a *CompleteRunAction) handleCompleted(
 func (a *CompleteRunAction) handleFailed(
 	ctx context.Context,
 	actx *action.Context,
-	task *entities.Task,
+	data CompleteRunData,
 	input inputs.CompleteRunInput,
 ) {
-	newRunCount := task.RunCount + 1
+	newRunCount := data.Task.RunCount + 1
 
-	if newRunCount < task.MaxRetries {
+	if newRunCount < data.Task.MaxRetries {
 		// Retry: requeue task with atomic cost/run_count increment.
 		if _, err := action.Write[entities.Task](actx).Exec(ctx, write.Update{
-			ID: task.ID,
+			ID: data.Task.ID,
 			Set: write.Set{
 				fields.Task.Status.Value(entities.TaskQueued),
 				fields.Task.CostUSD.Incr(input.CostUSD),
 				fields.Task.RunCount.Incr(1),
 			},
 		}); err != nil {
-			fmt.Printf("[factory] ERROR: failed to requeue task %s: %v\n", task.ID, err)
+			fmt.Printf("[factory] ERROR: failed to requeue task %s: %v\n", data.Task.ID, err)
 			return
 		}
-
-		// Enqueue retry.
 		if a.JobClient != nil && a.WorkflowJob != nil {
 			if _, err := a.JobClient.Dispatch(ctx, a.WorkflowJob, map[string]string{
-				"task_id": task.ID,
+				"task_id": data.Task.ID,
 			}); err != nil {
-				fmt.Printf("[factory] WARN: failed to dispatch retry for task %s: %v\n", task.ID, err)
+				fmt.Printf("[factory] WARN: failed to dispatch retry for task %s: %v\n", data.Task.ID, err)
 			}
 		}
 		return
@@ -148,139 +217,34 @@ func (a *CompleteRunAction) handleFailed(
 
 	// Exhausted retries: mark failed.
 	if _, err := action.Write[entities.Task](actx).Exec(ctx, write.Update{
-		ID: task.ID,
+		ID: data.Task.ID,
 		Set: write.Set{
 			fields.Task.Status.Value(entities.TaskFailed),
 			fields.Task.CostUSD.Incr(input.CostUSD),
 			fields.Task.RunCount.Incr(1),
 		},
 	}); err != nil {
-		fmt.Printf("[factory] ERROR: failed to mark task %s as failed: %v\n", task.ID, err)
+		fmt.Printf("[factory] ERROR: failed to mark task %s as failed: %v\n", data.Task.ID, err)
 		return
 	}
 
 	// Cascade failure via the completion service (recursive graph walk).
 	if svc.S.RunCompletion != nil {
-		if err := svc.S.RunCompletion.CascadeFailure(ctx, task.ID, task.PrdID); err != nil {
-			fmt.Printf("[factory] WARN: cascade failed for %s: %v\n", task.ID, err)
+		if err := svc.S.RunCompletion.CascadeFailure(ctx, data.Task.ID, data.Task.PRD.ID); err != nil {
+			fmt.Printf("[factory] WARN: cascade failed for %s: %v\n", data.Task.ID, err)
 		}
 	}
 
-	// Update PRD counters (non-critical).
-	if err := a.updatePRDCounters(ctx, actx, task.PrdID); err != nil {
-		fmt.Printf("[factory] WARN: failed to update PRD counters for %s: %v\n", task.PrdID, err)
-	}
-}
-
-// unblockDependents finds blocked tasks depending on completedTaskID and
-// transitions them to "queued" when all their deps are satisfied. Uses the
-// RunCompletion service for the graph check.
-func (a *CompleteRunAction) unblockDependents(ctx context.Context, actx *action.Context, completedTaskID string) []string {
-	taskRead := action.ReadRepo[entities.Task](actx)
-	result, err := taskRead.FindMany(ctx, entity.FindOptions{
-		Filters: []entity.FilterCondition{
-			{Field: "status", Operator: entity.OpEq, Value: entities.TaskBlocked},
-		},
-	})
-	if err != nil {
-		return nil
-	}
-
-	var unblocked []string
-	for _, t := range result.Data {
-		if !helpers.ContainsDep(t.DependsOn, completedTaskID) {
-			continue
-		}
-		if svc.S.RunCompletion != nil {
-			ok, err := svc.S.RunCompletion.AllDepsMet(ctx, helpers.ParseDeps(t.DependsOn))
-			if err != nil || !ok {
-				continue
-			}
-		}
-		if _, err := action.Write[entities.Task](actx).Exec(ctx, write.Update{
-			ID:  t.ID,
-			Set: write.Set{fields.Task.Status.Value(entities.TaskQueued)},
-		}); err == nil {
-			unblocked = append(unblocked, t.ID)
-		}
-	}
-	return unblocked
-}
-
-// findNextQueued returns the next queued task ID in a PRD ordered by sequence.
-func (a *CompleteRunAction) findNextQueued(ctx context.Context, actx *action.Context, prdID string) string {
-	result, err := action.ReadRepo[entities.Task](actx).FindMany(ctx, entity.FindOptions{
-		Filters: []entity.FilterCondition{
-			{Field: "prd_id", Operator: entity.OpEq, Value: prdID},
-			{Field: "status", Operator: entity.OpEq, Value: entities.TaskQueued},
-		},
-		Sort:       &entity.SortParams{Field: "sequence", Order: "asc"},
-		Pagination: &entity.PaginationParams{Limit: 1},
-	})
-	if err != nil || len(result.Data) == 0 {
-		return ""
-	}
-	return result.Data[0].ID
-}
-
-// updatePRDCounters recalculates completed/failed counts and total cost from
-// tasks in the PRD, writes them back, and marks the PRD complete when all
-// tasks reach a terminal state.
-func (a *CompleteRunAction) updatePRDCounters(ctx context.Context, actx *action.Context, prdID string) error {
-	result, err := action.ReadRepo[entities.Task](actx).FindMany(ctx, entity.FindOptions{
-		Filters: []entity.FilterCondition{
-			{Field: "prd_id", Operator: entity.OpEq, Value: prdID},
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("load tasks for PRD %s: %w", prdID, err)
-	}
-
-	var completed, failed, total int
-	var totalCost float64
-	for _, t := range result.Data {
-		total++
-		totalCost += t.CostUSD
-		switch t.Status {
-		case entities.TaskDone:
-			completed++
-		case entities.TaskFailed:
-			failed++
-		}
-	}
-
+	// Update PRD counters using pre-computed aggregations.
+	newFailed := data.Task.PRD.FailedCount + 1
+	newCost := data.Task.PRD.TotalCost + input.CostUSD
 	if _, err := action.Write[entities.PRD](actx).Exec(ctx, write.Update{
-		ID: prdID,
+		ID: data.Task.PRD.ID,
 		Set: write.Set{
-			fields.PRD.CompletedTasks.Value(completed),
-			fields.PRD.FailedTasks.Value(failed),
-			fields.PRD.TotalCostUSD.Value(totalCost),
+			fields.PRD.FailedTasks.Value(newFailed),
+			fields.PRD.TotalCostUSD.Value(newCost),
 		},
 	}); err != nil {
-		return fmt.Errorf("update PRD counters %s: %w", prdID, err)
+		fmt.Printf("[factory] WARN: failed to update PRD counters for %s: %v\n", data.Task.PRD.ID, err)
 	}
-
-	// Check PRD completion: all tasks in a terminal state.
-	if total > 0 && (completed+failed) == total {
-		now := time.Now()
-		status := entities.PRDCompleted
-		if failed > 0 {
-			status = entities.PRDFailed
-		}
-		if _, err := action.Write[entities.PRD](actx).Exec(ctx, write.Update{
-			ID: prdID,
-			Set: write.Set{
-				fields.PRD.Status.Value(status),
-				fields.PRD.CompletedAt.Value(&now),
-			},
-		}); err != nil {
-			return fmt.Errorf("update PRD status %s: %w", prdID, err)
-		}
-		if failed > 0 {
-			events.PRDFailed.Emit(ctx, prdID)
-		} else {
-			events.PRDCompleted.Emit(ctx, prdID)
-		}
-	}
-	return nil
 }
