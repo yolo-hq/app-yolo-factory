@@ -175,12 +175,10 @@ func (a *CompleteRunAction) handleCompleted(
 	} else if len(data.Task.PRD.QueuedTasks) > 0 {
 		nextID = data.Task.PRD.QueuedTasks[0].ID
 	}
-	if nextID != "" && a.JobClient != nil && a.WorkflowJob != nil {
-		if _, err := a.JobClient.Dispatch(ctx, a.WorkflowJob, map[string]string{
+	if nextID != "" && a.WorkflowJob != nil {
+		actx.DeferJob(a.WorkflowJob, map[string]string{
 			"task_id": nextID,
-		}); err != nil {
-			fmt.Printf("[factory] WARN: failed to dispatch workflow for task %s: %v\n", nextID, err)
-		}
+		})
 	}
 }
 
@@ -205,12 +203,10 @@ func (a *CompleteRunAction) handleFailed(
 			fmt.Printf("[factory] ERROR: failed to requeue task %s: %v\n", data.Task.ID, err)
 			return
 		}
-		if a.JobClient != nil && a.WorkflowJob != nil {
-			if _, err := a.JobClient.Dispatch(ctx, a.WorkflowJob, map[string]string{
+		if a.WorkflowJob != nil {
+			actx.DeferJob(a.WorkflowJob, map[string]string{
 				"task_id": data.Task.ID,
-			}); err != nil {
-				fmt.Printf("[factory] WARN: failed to dispatch retry for task %s: %v\n", data.Task.ID, err)
-			}
+			})
 		}
 		return
 	}

@@ -2,7 +2,6 @@ package actions
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/yolo-hq/yolo/core/action"
@@ -47,15 +46,13 @@ func (a *ApprovePRDAction) Execute(ctx context.Context, actx *action.Context) ac
 		return action.Failure(err.Error())
 	}
 
-	// auto_start: if project has AutoStart, dispatch PlanPRDJob immediately.
+	// auto_start: if project has AutoStart, defer PlanPRDJob until after commit.
 	project, err := action.ReadRepo[entities.Project](actx).FindOne(ctx, entity.FindOneOptions{ID: prd.ProjectID})
 	if err == nil && project != nil && project.AutoStart {
-		if a.JobClient != nil && a.PlanPRDJob != nil {
-			if _, err := a.JobClient.Dispatch(ctx, a.PlanPRDJob, map[string]string{
+		if a.PlanPRDJob != nil {
+			actx.DeferJob(a.PlanPRDJob, map[string]string{
 				"prd_id": prd.ID,
-			}); err != nil {
-				fmt.Printf("[factory] WARN: auto_start failed to dispatch PlanPRDJob for %s: %v\n", prd.ID, err)
-			}
+			})
 		}
 	}
 

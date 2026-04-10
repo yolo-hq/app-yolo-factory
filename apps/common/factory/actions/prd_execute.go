@@ -42,13 +42,11 @@ func (a *ExecutePRDAction) Execute(ctx context.Context, actx *action.Context) ac
 		return action.Failure(err.Error())
 	}
 
-	// Enqueue planning job.
-	_, err = a.JobClient.Dispatch(ctx, a.PlanJob, map[string]string{
+	// Defer planning job until after the tx commits. If the update above
+	// rolls back, the job will not be dispatched.
+	actx.DeferJob(a.PlanJob, map[string]string{
 		"prd_id": prd.ID,
 	})
-	if err != nil {
-		return action.Failure("failed to enqueue planning job: " + err.Error())
-	}
 
 	actx.Resolve("PRD", actx.EntityID)
 	return action.OK(map[string]string{"status": entities.PRDPlanning})
