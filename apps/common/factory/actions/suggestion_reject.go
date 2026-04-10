@@ -21,7 +21,7 @@ type RejectSuggestionAction struct {
 
 func (a *RejectSuggestionAction) Description() string { return "Reject a pending suggestion" }
 
-func (a *RejectSuggestionAction) Execute(ctx context.Context, actx *action.Context) action.Result {
+func (a *RejectSuggestionAction) Execute(ctx context.Context, actx *action.Context) error {
 	// input consumed for validation; reason not stored on entity.
 	_ = a.Input(actx)
 
@@ -29,9 +29,5 @@ func (a *RejectSuggestionAction) Execute(ctx context.Context, actx *action.Conte
 		ID:  actx.EntityID,
 		Set: write.Set{fields.Suggestion.Status.Value(string(enums.SuggestionStatusRejected))},
 	})
-	if err != nil {
-		return action.Failure(err.Error())
-	}
-	actx.Resolve("Suggestion", actx.EntityID)
-	return action.OK()
+	return err
 }

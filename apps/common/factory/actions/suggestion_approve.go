@@ -21,7 +21,7 @@ type ApproveSuggestionAction struct {
 
 func (a *ApproveSuggestionAction) Description() string { return "Approve a pending suggestion" }
 
-func (a *ApproveSuggestionAction) Execute(ctx context.Context, actx *action.Context) action.Result {
+func (a *ApproveSuggestionAction) Execute(ctx context.Context, actx *action.Context) error {
 	input := a.Input(actx)
 
 	set := write.Set{
@@ -35,9 +35,5 @@ func (a *ApproveSuggestionAction) Execute(ctx context.Context, actx *action.Cont
 		ID:  actx.EntityID,
 		Set: set,
 	})
-	if err != nil {
-		return action.Failure(err.Error())
-	}
-	actx.Resolve("Suggestion", actx.EntityID)
-	return action.OK()
+	return err
 }

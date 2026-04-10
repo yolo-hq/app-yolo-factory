@@ -20,14 +20,10 @@ type PauseProjectAction struct {
 
 func (a *PauseProjectAction) Description() string { return "Pause an active project" }
 
-func (a *PauseProjectAction) Execute(ctx context.Context, actx *action.Context) action.Result {
+func (a *PauseProjectAction) Execute(ctx context.Context, actx *action.Context) error {
 	_, err := action.Write[entities.Project](actx).Exec(ctx, write.Update{
 		ID:  actx.EntityID,
 		Set: write.Set{fields.Project.Status.Value(string(enums.ProjectStatusPaused))},
 	})
-	if err != nil {
-		return action.Failure(err.Error())
-	}
-	actx.Resolve("Project", actx.EntityID)
-	return action.OK()
+	return err
 }

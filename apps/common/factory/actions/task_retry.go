@@ -21,7 +21,7 @@ type RetryTaskAction struct {
 
 func (a *RetryTaskAction) Description() string { return "Retry a failed task" }
 
-func (a *RetryTaskAction) Execute(ctx context.Context, actx *action.Context) action.Result {
+func (a *RetryTaskAction) Execute(ctx context.Context, actx *action.Context) error {
 	input := a.Input(actx)
 
 	set := write.Set{
@@ -35,10 +35,5 @@ func (a *RetryTaskAction) Execute(ctx context.Context, actx *action.Context) act
 		ID:  actx.EntityID,
 		Set: set,
 	})
-	if err != nil {
-		return action.Failure(err.Error())
-	}
-
-	actx.Resolve("Task", actx.EntityID)
-	return action.OK()
+	return err
 }

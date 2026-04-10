@@ -22,7 +22,7 @@ type AnswerQuestionAction struct {
 
 func (a *AnswerQuestionAction) Description() string { return "Answer an open question" }
 
-func (a *AnswerQuestionAction) Execute(ctx context.Context, actx *action.Context) action.Result {
+func (a *AnswerQuestionAction) Execute(ctx context.Context, actx *action.Context) error {
 	input := a.Input(actx)
 	now := time.Now()
 
@@ -35,10 +35,5 @@ func (a *AnswerQuestionAction) Execute(ctx context.Context, actx *action.Context
 			fields.Question.AnsweredAt.Value(&now),
 		},
 	})
-	if err != nil {
-		return action.Failure(err.Error())
-	}
-
-	actx.Resolve("Question", actx.EntityID)
-	return action.OK()
+	return err
 }

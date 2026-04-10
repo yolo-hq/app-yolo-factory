@@ -20,14 +20,10 @@ type AcknowledgeInsightAction struct {
 
 func (a *AcknowledgeInsightAction) Description() string { return "Acknowledge a pending insight" }
 
-func (a *AcknowledgeInsightAction) Execute(ctx context.Context, actx *action.Context) action.Result {
+func (a *AcknowledgeInsightAction) Execute(ctx context.Context, actx *action.Context) error {
 	_, err := action.Write[entities.Insight](actx).Exec(ctx, write.Update{
 		ID:  actx.EntityID,
 		Set: write.Set{fields.Insight.Status.Value(string(enums.InsightStatusAcknowledged))},
 	})
-	if err != nil {
-		return action.Failure(err.Error())
-	}
-	actx.Resolve("Insight", actx.EntityID)
-	return action.OK()
+	return err
 }

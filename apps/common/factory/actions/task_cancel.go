@@ -20,14 +20,10 @@ type CancelTaskAction struct {
 
 func (a *CancelTaskAction) Description() string { return "Cancel a non-terminal task" }
 
-func (a *CancelTaskAction) Execute(ctx context.Context, actx *action.Context) action.Result {
+func (a *CancelTaskAction) Execute(ctx context.Context, actx *action.Context) error {
 	_, err := action.Write[entities.Task](actx).Exec(ctx, write.Update{
 		ID:  actx.EntityID,
 		Set: write.Set{fields.Task.Status.Value(string(enums.TaskStatusCancelled))},
 	})
-	if err != nil {
-		return action.Failure(err.Error())
-	}
-	actx.Resolve("Task", actx.EntityID)
-	return action.OK()
+	return err
 }

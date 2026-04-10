@@ -21,7 +21,7 @@ type DismissInsightAction struct {
 
 func (a *DismissInsightAction) Description() string { return "Dismiss an insight with a reason" }
 
-func (a *DismissInsightAction) Execute(ctx context.Context, actx *action.Context) action.Result {
+func (a *DismissInsightAction) Execute(ctx context.Context, actx *action.Context) error {
 	// input consumed for validation; reason not stored on entity.
 	_ = a.Input(actx)
 
@@ -29,9 +29,5 @@ func (a *DismissInsightAction) Execute(ctx context.Context, actx *action.Context
 		ID:  actx.EntityID,
 		Set: write.Set{fields.Insight.Status.Value(string(enums.InsightStatusDismissed))},
 	})
-	if err != nil {
-		return action.Failure(err.Error())
-	}
-	actx.Resolve("Insight", actx.EntityID)
-	return action.OK()
+	return err
 }
