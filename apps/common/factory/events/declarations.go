@@ -1,0 +1,137 @@
+package events
+
+import (
+	"context"
+
+	"github.com/yolo-hq/yolo/core/service"
+)
+
+// Singleton event instances — use these to call Emit().
+var BudgetExceeded = &BudgetExceededEvent{}
+var BudgetWarning = &BudgetWarningEvent{}
+var PRDCompleted = &PRDCompletedEvent{}
+var PRDFailed = &PRDFailedEvent{}
+var PRDPlanningComplete = &PRDPlanningCompleteEvent{}
+var QuestionNeedsHuman = &QuestionNeedsHumanEvent{}
+var SentinelBuildBroken = &SentinelBuildBrokenEvent{}
+var SentinelSecurityVuln = &SentinelSecurityVulnEvent{}
+var TaskCompleted = &TaskCompletedEvent{}
+var TaskFailed = &TaskFailedEvent{}
+var TaskStarted = &TaskStartedEvent{}
+
+// Event name constants for direct reference (e.g. consumer registration).
+const BudgetExceededName = "budget.exceeded"
+const BudgetWarningName = "budget.warning"
+const PRDCompletedName = "prd.completed"
+const PRDFailedName = "prd.failed"
+const PRDPlanningCompleteName = "prd.planning-complete"
+const QuestionNeedsHumanName = "question.needs-human"
+const SentinelBuildBrokenName = "sentinel.build.broken"
+const SentinelSecurityVulnName = "sentinel.security.vuln"
+const TaskCompletedName = "task.completed"
+const TaskFailedName = "task.failed"
+const TaskStartedName = "task.started"
+
+func (e *BudgetExceededEvent) Emit(ctx context.Context, payload BudgetExceededPayload) {
+	service.EmitEvent(ctx, service.PendingEvent{
+		Name: "budget.exceeded",
+		Data: payload,
+	})
+}
+
+func (e *BudgetWarningEvent) Emit(ctx context.Context, payload BudgetWarningPayload) {
+	service.EmitEvent(ctx, service.PendingEvent{
+		Name: "budget.warning",
+		Data: payload,
+	})
+}
+
+func (e *PRDCompletedEvent) Emit(ctx context.Context, entityID string) {
+	service.EmitEvent(ctx, service.PendingEvent{
+		Name:       "prd.completed",
+		EntityType: "PRD",
+		EntityID:   entityID,
+	})
+}
+
+func (e *PRDFailedEvent) Emit(ctx context.Context, entityID string) {
+	service.EmitEvent(ctx, service.PendingEvent{
+		Name:       "prd.failed",
+		EntityType: "PRD",
+		EntityID:   entityID,
+	})
+}
+
+func (e *PRDPlanningCompleteEvent) Emit(ctx context.Context, entityID string) {
+	service.EmitEvent(ctx, service.PendingEvent{
+		Name:       "prd.planning-complete",
+		EntityType: "PRD",
+		EntityID:   entityID,
+	})
+}
+
+func (e *QuestionNeedsHumanEvent) Emit(ctx context.Context, entityID string) {
+	service.EmitEvent(ctx, service.PendingEvent{
+		Name:       "question.needs-human",
+		EntityType: "Question",
+		EntityID:   entityID,
+	})
+}
+
+func (e *SentinelBuildBrokenEvent) Emit(ctx context.Context, payload SentinelPayload) {
+	service.EmitEvent(ctx, service.PendingEvent{
+		Name: "sentinel.build.broken",
+		Data: payload,
+	})
+}
+
+func (e *SentinelSecurityVulnEvent) Emit(ctx context.Context, payload SentinelPayload) {
+	service.EmitEvent(ctx, service.PendingEvent{
+		Name: "sentinel.security.vuln",
+		Data: payload,
+	})
+}
+
+func (e *TaskCompletedEvent) Emit(ctx context.Context, entityID string) {
+	service.EmitEvent(ctx, service.PendingEvent{
+		Name:       "task.completed",
+		EntityType: "Task",
+		EntityID:   entityID,
+	})
+}
+
+func (e *TaskFailedEvent) Emit(ctx context.Context, entityID string) {
+	service.EmitEvent(ctx, service.PendingEvent{
+		Name:       "task.failed",
+		EntityType: "Task",
+		EntityID:   entityID,
+	})
+}
+
+func (e *TaskStartedEvent) Emit(ctx context.Context, entityID string) {
+	service.EmitEvent(ctx, service.PendingEvent{
+		Name:       "task.started",
+		EntityType: "Task",
+		EntityID:   entityID,
+	})
+}
+
+// Action auto-event name constants (auto-emitted by framework).
+const (
+	InsightAcknowledgeName = "insight.acknowledge"
+	InsightApplyName       = "insight.apply"
+	InsightDismissName     = "insight.dismiss"
+	PRDApproveName         = "prd.approve"
+	PRDExecuteName         = "prd.execute"
+	PRDSubmitName          = "prd.submit"
+	ProjectCreateName      = "project.create"
+	ProjectPauseName       = "project.pause"
+	ProjectResumeName      = "project.resume"
+	ProjectUpdateName      = "project.update"
+	QuestionAnswerName     = "question.answer"
+	RunCompleteName        = "run.complete"
+	SuggestionApproveName  = "suggestion.approve"
+	SuggestionRejectName   = "suggestion.reject"
+	TaskCancelName         = "task.cancel"
+	TaskRetryName          = "task.retry"
+)
