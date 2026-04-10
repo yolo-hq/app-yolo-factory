@@ -684,6 +684,11 @@
           "default": "0"
         },
         {
+          "name": "turns",
+          "type": "INTEGER",
+          "default": "0"
+        },
+        {
           "name": "duration_ms",
           "type": "INTEGER",
           "default": "0"

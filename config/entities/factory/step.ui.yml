@@ -58,7 +58,7 @@ detail:
       fields: [run_id, phase, skill, status, model, session_id]
     - label: Metrics
       columns: 2
-      fields: [cost_usd, tokens_in, tokens_out, duration_ms]
+      fields: [cost_usd, tokens_in, tokens_out, turns, duration_ms]
     - label: Summary
       fields: [input_summary, output_summary]
 

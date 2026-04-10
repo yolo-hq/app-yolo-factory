@@ -71,7 +71,6 @@ type StepParams struct {
 	Config     claude.Config
 	IsShell    bool     // true for test step (exec.Command, not agent)
 	Commands   []string // shell commands for test step
-	ResumeID   string   // session ID to resume (implement step)
 }
 
 // StepResult holds the output of a single step.
@@ -604,15 +603,8 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 		return result, nil
 	}
 
-	// Agent step: run or resume Claude.
-	var claudeResult *claude.Result
-	var err error
-
-	if params.ResumeID != "" {
-		claudeResult, err = s.Claude.Resume(ctx, params.ResumeID, params.Config, params.Prompt)
-	} else {
-		claudeResult, err = s.Claude.Run(ctx, params.Config, params.Prompt)
-	}
+	// Agent step: run Claude.
+	claudeResult, err := s.Claude.Run(ctx, params.Config, params.Prompt)
 
 	completedAt := time.Now()
 	step.DurationMs = int(completedAt.Sub(startedAt).Milliseconds())
