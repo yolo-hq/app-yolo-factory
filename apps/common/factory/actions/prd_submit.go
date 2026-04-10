@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/yolo-hq/yolo/core/action"
-	yolocontext "github.com/yolo-hq/yolo/core/context"
 	"github.com/yolo-hq/yolo/core/write"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
@@ -50,7 +49,6 @@ func (a *SubmitPRDAction) Execute(ctx context.Context, actx *action.Context) act
 		return action.Failure(err.Error())
 	}
 
-	yolocontext.TrackWrite(ctx, "", "PRD", res.ID(), yolocontext.OpCreate)
 	actx.Resolve("PRD", res.ID())
 	return action.OK()
 }
