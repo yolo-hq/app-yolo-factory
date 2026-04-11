@@ -1,0 +1,53 @@
+- in /Users/jomonjohnson/projects/yolo-hq/apps/factory/apps/common/factory/actions/prd_approve.go 
+	// auto_start: if project has AutoStart, defer PlanPRDJob until after commit.
+	project, err := action.ReadRepo[entities.Project](actx).FindOne(ctx, entity.FindOneOptions{ID: prd.ProjectID})
+	if err == nil && project != nil && project.AutoStart {
+		jobs.Defer(ctx, &factoryjobs.PlanPRDJob{PRDID: prd.ID})
+	} why not using actionData for fetchin project status?
+
+    - in /Users/jomonjohnson/projects/yolo-hq/apps/factory/apps/common/factory/actions/insight_acknowledge.go 
+    do we need to spicify action.NoInput for if not inputs?
+
+    - in some actions found to using input values eg in /Users/jomonjohnson/projects/yolo-hq/apps/factory/apps/common/factory/actions/insight_dismiss.go type DismissInsightInput struct {
+	Reason string `json:"reason" validate:"required"`
+}
+ no tusing reason
+ - can u remove all unwanted comments, only required valid comments
+ - about about adding name and description for all actions, commands, service, jobs, ...Etc
+ - also do we need a formating command , and it automatically run while yolo dev , eg: we need to keep an order name, description, execute ...etc for action, service , commands..etc
+ - in factory app do we need all commands? consider we have mcp,
+- also from command can execute actions, 
+- also i have an idea for can use action as command? what u think
+- i we have optimized actions well (no fully) so we can do the same pattern and philosopys on service, jobs, commands ...etc
+- i have an idea of adding hardocded values in input , eg in /Users/jomonjohnson/projects/yolo-hq/apps/factory/apps/common/factory/actions/suggestion_reject.go add status in RejectSuggestionInput alogn with reason but not accept input from urser, i think this is bad idea. u have any refined idea, so u can just use fromInput, 
+- i have idea extend generated fields that support condition eg in /Users/jomonjohnson/projects/yolo-hq/apps/factory/apps/common/factory/actions/suggestion_approve.go 
+	if input.PRDID != "" {
+		set = append(set, fields.Suggestion.ConvertedTaskID.Value(input.PRDID))
+	}
+ will be like ields.Suggestion.ConvertedTaskID.when(input.PRDID != "").Value(input.PRDID) please refine my idea
+ - we have made lot of changes recetly but /Users/jomonjohnson/projects/yolo-hq/apps/factory/apps/common/factory/actions/run_complete_test.go still has 250 lines
+ - in jobs i found repetations 	var p advisorPayload
+	if err := json.Unmarshal(payload, &p); err != nil {
+		return fmt.Errorf("parse payload: %w", err)
+	} how can simplify it
+
+- in action data we have resolve it in framework level, but what about can use jobs data? can use this data fromate to fetch data from db in strucurured way like graphql as general fro all? also  make base class for data, also it can be resovled manually? like postData.get(entityId);
+- can remove /Users/jomonjohnson/projects/yolo-hq/apps/factory/apps/common/factory/policies/doc.go ?
+- why it is not under helpers /Users/jomonjohnson/projects/yolo-hq/apps/factory/apps/common/factory/jsonutil/deps.go, 
+- why in /Users/jomonjohnson/projects/yolo-hq/apps/factory/apps/common/factory/actions/question_answer.go not using frominput 	_, err := action.Write[entities.Question](actx).Exec(ctx, write.Update{
+		ID: actx.EntityID,
+		Set: write.Set{
+			fields.Question.Status.Value(string(enums.QuestionStatusAnswered)),
+			fields.Question.Answer.Value(input.Answer),
+			fields.Question.AnsweredBy.Value("human"),
+			fields.Question.AnsweredAt.Value(&now),
+		},
+	})
+
+    in /Users/jomonjohnson/projects/yolo-hq/apps/factory/apps/common/factory/actions/prd_submit.go still using old approch? 
+	actx.Resolve("PRD", res.ID())
+
+
+    - did we mmigrated factory to new version of framework?
+    - do we need validators
+    - lets disucss about testing actions, service, commands ...etc

@@ -10,8 +10,8 @@ import (
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
-	factoryjobs "github.com/yolo-hq/app-yolo-factory/apps/common/factory/jobs"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
+	factoryjobs "github.com/yolo-hq/app-yolo-factory/apps/common/factory/jobs"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
 
