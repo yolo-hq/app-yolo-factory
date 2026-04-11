@@ -8,6 +8,7 @@ import (
 	yolostrings "github.com/yolo-hq/yolo/core/strings"
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/jobs"
+	"github.com/yolo-hq/yolo/core/projection"
 	"github.com/yolo-hq/yolo/core/write"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
@@ -31,6 +32,8 @@ type TaskRef struct {
 // pre-computes the aggregations + filtered has_many slices, replacing all the
 // manual loading helpers this action used to carry.
 type CompleteRunData struct {
+	projection.For[entities.Run]
+
 	Status string `field:"status"`
 	Task   struct {
 		ID         string  `field:"id"`
@@ -60,7 +63,7 @@ type CompleteRunData struct {
 type CompleteRunAction struct {
 	action.TypedInput[inputs.CompleteRunInput]
 	action.PublicAccess
-	action.TypedData[CompleteRunData]
+	action.Projection[CompleteRunData]
 }
 
 func (a *CompleteRunAction) Description() string {

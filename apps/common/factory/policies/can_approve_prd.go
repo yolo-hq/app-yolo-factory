@@ -4,19 +4,23 @@ import (
 	"context"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/policy"
+	"github.com/yolo-hq/yolo/core/projection"
 )
 
 // CanApprovePRDData declares the entity fields this policy reads.
 type CanApprovePRDData struct {
+	projection.For[entities.PRD]
+
 	Status string `field:"status"`
 }
 
 // CanApprovePRDPolicy denies if PRD status is not "draft".
 type CanApprovePRDPolicy struct {
 	policy.EntityPolicyBase
-	policy.TypedData[CanApprovePRDData]
+	policy.Projection[CanApprovePRDData]
 }
 
 func (p *CanApprovePRDPolicy) Evaluate(_ context.Context, actx *action.Context) policy.PolicyResult {

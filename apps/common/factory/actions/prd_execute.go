@@ -6,6 +6,7 @@ import (
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/jobs"
+	"github.com/yolo-hq/yolo/core/projection"
 	"github.com/yolo-hq/yolo/core/write"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
@@ -17,6 +18,8 @@ import (
 
 // ExecutePRDData declares the entity fields this action reads.
 type ExecutePRDData struct {
+	projection.For[entities.PRD]
+
 	ID string `field:"id"`
 }
 
@@ -24,7 +27,7 @@ type ExecutePRDData struct {
 type ExecutePRDAction struct {
 	action.NoInput
 	action.RequirePolicy[policies.CanExecutePRDPolicy]
-	action.TypedData[ExecutePRDData]
+	action.Projection[ExecutePRDData]
 }
 
 func (a *ExecutePRDAction) Description() string { return "Execute a PRD by starting planning" }

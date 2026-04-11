@@ -7,6 +7,7 @@ import (
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/jobs"
+	"github.com/yolo-hq/yolo/core/projection"
 	"github.com/yolo-hq/yolo/core/write"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
@@ -17,16 +18,22 @@ import (
 )
 
 // ApprovePRDData declares the entity fields this action reads.
+// The Project nested struct uses the PRD's belongs_to relation to load
+// auto_start in the same query — no manual ReadRepo call needed.
 type ApprovePRDData struct {
-	ID        string `field:"id"`
-	ProjectID string `field:"project_id"`
+	projection.For[entities.PRD]
+
+	ID      string `field:"id"`
+	Project struct {
+		AutoStart bool `field:"auto_start"`
+	} `field:"project"`
 }
 
 // ApprovePRDAction approves a draft PRD and optionally triggers planning.
 type ApprovePRDAction struct {
 	action.NoInput
 	action.RequirePolicy[policies.CanApprovePRDPolicy]
-	action.TypedData[ApprovePRDData]
+	action.Projection[ApprovePRDData]
 }
 
 func (a *ApprovePRDAction) Description() string { return "Approve a draft PRD" }
@@ -50,8 +57,7 @@ func (a *ApprovePRDAction) Execute(ctx context.Context, actx *action.Context) er
 	}
 
 	// auto_start: if project has AutoStart, defer PlanPRDJob until after commit.
-	project, err := action.ReadRepo[entities.Project](actx).FindOne(ctx, entity.FindOneOptions{ID: prd.ProjectID})
-	if err == nil && project != nil && project.AutoStart {
+	if prd.Project.AutoStart {
 		jobs.Defer(ctx, &factoryjobs.PlanPRDJob{PRDID: prd.ID})
 	}
 
