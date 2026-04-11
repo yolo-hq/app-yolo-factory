@@ -47,6 +47,15 @@
     in /Users/jomonjohnson/projects/yolo-hq/apps/factory/apps/common/factory/actions/prd_submit.go still using old approch? 
 	actx.Resolve("PRD", res.ID())
 
+	- consider we have prisma like strucure so can use read and write repo in differen way other than 
+
+		_, err := action.Write[entities.Project](actx).Exec(ctx, write.Update{
+		ID:  actx.EntityID,
+		Set: write.Set{fields.Project.Status.Value(string(enums.ProjectStatusActive))},
+	})
+
+	can generate entity read and write repos using codegen, refine my idea
+
 
     - did we mmigrated factory to new version of framework?
     - do we need validators
