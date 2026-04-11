@@ -13,7 +13,7 @@ import (
 	"github.com/yolo-hq/yolo/core/pkg/claude"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/jsonutil"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/services"
 )
 
@@ -146,9 +146,9 @@ func TestE2E_DependencyChain(t *testing.T) {
 	assert.Contains(t, err.Error(), "cycle detected")
 
 	// ParseDeps.
-	assert.Nil(t, jsonutil.ParseDeps(""))
-	assert.Nil(t, jsonutil.ParseDeps("[]"))
-	assert.Equal(t, []string{"a", "b"}, jsonutil.ParseDeps(`["a","b"]`))
+	assert.Nil(t, helpers.ParseDeps(""))
+	assert.Nil(t, helpers.ParseDeps("[]"))
+	assert.Equal(t, []string{"a", "b"}, helpers.ParseDeps(`["a","b"]`))
 }
 
 // TestE2E_BackupRoundTrip tests backup serialization and recovery.

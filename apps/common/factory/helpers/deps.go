@@ -1,5 +1,5 @@
-// Package jsonutil provides JSON helpers for task dependency arrays.
-package jsonutil
+// Package helpers provides utility helpers (e.g. task dependency JSON parsing).
+package helpers
 
 import "encoding/json"
 

@@ -31,7 +31,7 @@ func (a *SubmitPRDAction) Execute(ctx context.Context, actx *action.Context) err
 		source = string(enums.PRDSourceManual)
 	}
 
-	res, err := action.Write[entities.PRD](actx).Exec(ctx, write.Create{
+	_, err := action.Write[entities.PRD](actx).Exec(ctx, write.Create{
 		FromInput: input,
 		Set: write.Set{
 			fields.PRD.Status.Value(string(enums.PRDStatusDraft)),
@@ -39,10 +39,5 @@ func (a *SubmitPRDAction) Execute(ctx context.Context, actx *action.Context) err
 			fields.PRD.Source.Value(source),
 		},
 	})
-	if err != nil {
-		return err
-	}
-
-	actx.Resolve("PRD", res.ID())
-	return nil
+	return err
 }

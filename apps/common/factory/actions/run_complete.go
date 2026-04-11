@@ -16,7 +16,7 @@ import (
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/events"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/jsonutil"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 	factoryjobs "github.com/yolo-hq/app-yolo-factory/apps/common/factory/jobs"
 )
 
@@ -117,11 +117,11 @@ func (a *CompleteRunAction) handleCompleted(
 	// b. Unblock dependents — build list then issue a single UpdateMany.
 	var toUnblock []string
 	for _, blocked := range data.Task.PRD.BlockedTasks {
-		if !jsonutil.ContainsDep(blocked.DependsOn, data.Task.ID) {
+		if !helpers.ContainsDep(blocked.DependsOn, data.Task.ID) {
 			continue
 		}
 		if svc.S.RunCompletion != nil {
-			allMet, err := svc.S.RunCompletion.AllDepsMet(ctx, jsonutil.ParseDeps(blocked.DependsOn))
+			allMet, err := svc.S.RunCompletion.AllDepsMet(ctx, helpers.ParseDeps(blocked.DependsOn))
 			if err != nil || !allMet {
 				continue
 			}
@@ -129,7 +129,7 @@ func (a *CompleteRunAction) handleCompleted(
 		toUnblock = append(toUnblock, blocked.ID)
 	}
 	if len(toUnblock) > 0 {
-		if _, err := action.Write[entities.Task](actx).Exec(ctx, write.UpdateMany{
+		if _, err := action.Write[entities.Task](actx).Exec(ctx, write.UpdateManyOp{
 			IDs: toUnblock,
 			Set: write.Set{fields.Task.Status.Value(string(enums.TaskStatusQueued))},
 		}); err != nil {

@@ -11,7 +11,6 @@ func TestQuestionResolver_AutoResolve(t *testing.T) {
 
 ## Rules
 - Integration tests only — no mocks, real DB
-- actx.Resolve("Entity", id) + action.OK() — never return entity data directly
 - fields.{key}= for field selection — bare fields= is rejected
 - Framework first — if YOLO lacks a pattern, build in yolo/ before app code
 `

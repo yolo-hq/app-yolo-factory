@@ -17,7 +17,7 @@ import (
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/jsonutil"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 )
 
 // PlannerService spawns a Claude agent to break a PRD into implementation tasks.
@@ -138,7 +138,7 @@ func (s *PlannerService) Execute(ctx context.Context, in PlannerInput) (PlannerO
 
 	// 7. Validate dependencies (cycle detection).
 	for _, task := range tasks {
-		deps := jsonutil.ParseDeps(task.DependsOn)
+		deps := helpers.ParseDeps(task.DependsOn)
 		if len(deps) == 0 {
 			continue
 		}
@@ -260,7 +260,7 @@ func (s *PlannerService) convertToEntities(defs []TaskDef, in plannerEntitiesInp
 			depIDs = append(depIDs, depID)
 		}
 
-		tasks[i].DependsOn = jsonutil.ToJSON(depIDs)
+		tasks[i].DependsOn = helpers.ToJSON(depIDs)
 		tasks[i].Status = string(enums.TaskStatusBlocked)
 	}
 

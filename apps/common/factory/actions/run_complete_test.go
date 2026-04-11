@@ -5,7 +5,7 @@ import (
 
 	yolostrings "github.com/yolo-hq/yolo/core/strings"
 
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/jsonutil"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 )
 
 func TestParseDeps(t *testing.T) {
@@ -20,7 +20,7 @@ func TestParseDeps(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := jsonutil.ParseDeps(tt.input)
+			got := helpers.ParseDeps(tt.input)
 			if len(got) != len(tt.want) {
 				t.Fatalf("ParseDeps(%q) = %v, want %v", tt.input, got, tt.want)
 			}
@@ -46,7 +46,7 @@ func TestParseDeps_Empty(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := jsonutil.ParseDeps(tt.input)
+			got := helpers.ParseDeps(tt.input)
 			if got != nil {
 				t.Errorf("ParseDeps(%q) = %v, want nil", tt.input, got)
 			}
@@ -56,13 +56,13 @@ func TestParseDeps_Empty(t *testing.T) {
 
 func TestContainsDep(t *testing.T) {
 	depsJSON := `["a","b","c"]`
-	if !jsonutil.ContainsDep(depsJSON, "b") {
+	if !helpers.ContainsDep(depsJSON, "b") {
 		t.Error("ContainsDep should find 'b'")
 	}
-	if jsonutil.ContainsDep(depsJSON, "d") {
+	if helpers.ContainsDep(depsJSON, "d") {
 		t.Error("ContainsDep should not find 'd'")
 	}
-	if jsonutil.ContainsDep("[]", "a") {
+	if helpers.ContainsDep("[]", "a") {
 		t.Error("ContainsDep([]) should return false")
 	}
 }

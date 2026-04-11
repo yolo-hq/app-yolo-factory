@@ -9,7 +9,7 @@ import (
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/jsonutil"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 )
 
 // RunCompletionService handles graph traversal for run completion:
@@ -42,7 +42,7 @@ func (s *RunCompletionService) CascadeFailure(ctx context.Context, failedTaskID,
 		if t.Status == string(enums.TaskStatusDone) || t.Status == string(enums.TaskStatusFailed) || t.Status == string(enums.TaskStatusCancelled) {
 			continue
 		}
-		if !jsonutil.ContainsDep(t.DependsOn, failedTaskID) {
+		if !helpers.ContainsDep(t.DependsOn, failedTaskID) {
 			continue
 		}
 		if _, err := s.TaskWrite.Update(ctx).

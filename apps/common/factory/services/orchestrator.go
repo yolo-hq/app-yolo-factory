@@ -21,7 +21,7 @@ import (
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/events"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/jsonutil"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/lint"
 )
 
@@ -527,7 +527,7 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 	run.Status = string(enums.RunStatusCompleted)
 	run.CostUSD = totalCost
 	run.CommitHash = commitHash
-	run.FilesChanged = jsonutil.ToJSON(filesChanged)
+	run.FilesChanged = helpers.ToJSON(filesChanged)
 	run.CompletedAt = &completedAt
 	run.Result = summary
 
@@ -885,10 +885,10 @@ func parseReviewOutput(raw json.RawMessage, runID, taskID string, result *claude
 		SessionID:       result.SessionID,
 		Model:           "sonnet",
 		Verdict:         out.Verdict,
-		Reasons:         jsonutil.ToJSON(out.Reasons),
-		AntiPatterns:    jsonutil.ToJSON(out.AntiPatterns),
+		Reasons:         helpers.ToJSON(out.Reasons),
+		AntiPatterns:    helpers.ToJSON(out.AntiPatterns),
 		CriteriaResults: string(out.CriteriaResults),
-		Suggestions:     jsonutil.ToJSON(out.Suggestions),
+		Suggestions:     helpers.ToJSON(out.Suggestions),
 		CostUSD:         result.CostUSD,
 	}
 	review.ID = ulid.Make().String()
