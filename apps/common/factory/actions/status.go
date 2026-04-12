@@ -1,26 +1,26 @@
-package queries
+package actions
 
 import (
 	"context"
 	"fmt"
 
+	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/projection"
-	"github.com/yolo-hq/yolo/core/query"
 	"github.com/yolo-hq/yolo/core/read"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
-// TaskStatusRow holds task status data.
-type TaskStatusRow struct {
+// taskStatusRow holds task status data.
+type taskStatusRow struct {
 	projection.For[entities.Task]
 
 	Status string `field:"status"`
 }
 
-// ActivePRDRow holds PRD progress data.
-type ActivePRDRow struct {
+// activePRDRow holds PRD progress data.
+type activePRDRow struct {
 	projection.For[entities.PRD]
 
 	Title          string `field:"title"`
@@ -29,15 +29,15 @@ type ActivePRDRow struct {
 	Status         string `field:"status"`
 }
 
-// ProjectSpendRow holds project spend data.
-type ProjectSpendRow struct {
+// projectSpendRow holds project spend data.
+type projectSpendRow struct {
 	projection.For[entities.Project]
 
 	SpentThisMonthUSD float64 `field:"spentThisMonthUsd"`
 }
 
-// TaskCounts summarizes task counts by status.
-type TaskCounts struct {
+// taskCounts summarizes task counts by status.
+type taskCounts struct {
 	Queued    int `json:"queued"`
 	Running   int `json:"running"`
 	Done      int `json:"done"`
@@ -47,26 +47,37 @@ type TaskCounts struct {
 	Total     int `json:"total"`
 }
 
-// ActivePRDSummary summarizes a single in-progress PRD.
-type ActivePRDSummary struct {
+// activePRDSummary summarizes a single in-progress PRD.
+type activePRDSummary struct {
 	Title          string `json:"title"`
 	CompletedTasks int    `json:"completedTasks"`
 	TotalTasks     int    `json:"totalTasks"`
 	PercentDone    int    `json:"percentDone"`
 }
 
-// StatusQuery shows a factory dashboard summary.
-type StatusQuery struct {
-	query.Base
+// statusResponse is the typed response for StatusAction.
+type statusResponse struct {
+	Tasks           taskCounts         `json:"tasks"`
+	ActivePRDs      []activePRDSummary `json:"activePrds"`
+	MonthlySpendUSD float64            `json:"monthlySpendUsd"`
 }
 
-func (q *StatusQuery) Execute(ctx context.Context, qctx *query.Context) query.Result {
-	tasks, err := read.FindMany[TaskStatusRow](ctx)
+// StatusAction shows a factory dashboard summary.
+type StatusAction struct {
+	action.TypedResponse[statusResponse]
+	action.SkipAllPolicies
+}
+
+func (a *StatusAction) ReadOnly() bool     { return true }
+func (a *StatusAction) Description() string { return "Factory dashboard summary" }
+
+func (a *StatusAction) Execute(ctx context.Context, actx *action.Context) error {
+	tasks, err := read.FindMany[taskStatusRow](ctx)
 	if err != nil {
-		return query.Fail("read_error", fmt.Sprintf("status: list tasks: %v", err))
+		return fmt.Errorf("status: list tasks: %w", err)
 	}
 
-	counts := TaskCounts{Total: len(tasks)}
+	counts := taskCounts{Total: len(tasks)}
 	for _, t := range tasks {
 		switch t.Status {
 		case string(enums.TaskStatusQueued):
@@ -84,20 +95,20 @@ func (q *StatusQuery) Execute(ctx context.Context, qctx *query.Context) query.Re
 		}
 	}
 
-	activePRDRows, err := read.FindMany[ActivePRDRow](ctx,
+	activePRDRows, err := read.FindMany[activePRDRow](ctx,
 		read.Eq("status", string(enums.PRDStatusInProgress)),
 	)
 	if err != nil {
-		return query.Fail("read_error", fmt.Sprintf("status: list prds: %v", err))
+		return fmt.Errorf("status: list prds: %w", err)
 	}
 
-	activePRDs := make([]ActivePRDSummary, 0, len(activePRDRows))
+	activePRDs := make([]activePRDSummary, 0, len(activePRDRows))
 	for _, p := range activePRDRows {
 		pct := 0
 		if p.TotalTasks > 0 {
 			pct = p.CompletedTasks * 100 / p.TotalTasks
 		}
-		activePRDs = append(activePRDs, ActivePRDSummary{
+		activePRDs = append(activePRDs, activePRDSummary{
 			Title:          p.Title,
 			CompletedTasks: p.CompletedTasks,
 			TotalTasks:     p.TotalTasks,
@@ -105,9 +116,9 @@ func (q *StatusQuery) Execute(ctx context.Context, qctx *query.Context) query.Re
 		})
 	}
 
-	projects, err := read.FindMany[ProjectSpendRow](ctx)
+	projects, err := read.FindMany[projectSpendRow](ctx)
 	if err != nil {
-		return query.Fail("read_error", fmt.Sprintf("status: list projects: %v", err))
+		return fmt.Errorf("status: list projects: %w", err)
 	}
 
 	var totalSpent float64
@@ -115,9 +126,9 @@ func (q *StatusQuery) Execute(ctx context.Context, qctx *query.Context) query.Re
 		totalSpent += p.SpentThisMonthUSD
 	}
 
-	return query.OK(query.Extras{
-		"tasks":           counts,
-		"activePrds":      activePRDs,
-		"monthlySpendUsd": totalSpent,
+	return a.Respond(actx, statusResponse{
+		Tasks:           counts,
+		ActivePRDs:      activePRDs,
+		MonthlySpendUSD: totalSpent,
 	})
 }
