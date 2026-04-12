@@ -85,15 +85,15 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) e
 	// 2. Branch on run outcome.
 	switch input.Status {
 	case string(enums.RunStatusCompleted):
-		a.handleCompleted(ctx, actx, data, input, now)
+		handleCompleted(ctx, actx, data, input, now)
 	case string(enums.RunStatusFailed):
-		a.handleFailed(ctx, actx, data, input)
+		handleFailed(ctx, actx, data, input)
 	}
 
 	return nil
 }
 
-func (a *CompleteRunAction) handleCompleted(
+func handleCompleted(
 	ctx context.Context,
 	actx *action.Context,
 	data CompleteRunData,
@@ -113,8 +113,8 @@ func (a *CompleteRunAction) handleCompleted(
 	}
 
 	// b. Unblock dependents and advance PRD state.
-	toUnblock := a.unblockDependents(ctx, actx, data)
-	a.advancePRD(ctx, actx, data, now)
+	toUnblock := unblockDependents(ctx, actx, data)
+	advancePRD(ctx, actx, data, now)
 
 	// c. Dispatch next task — prefer newly unblocked, else pre-loaded queued.
 	nextID := ""
@@ -130,7 +130,7 @@ func (a *CompleteRunAction) handleCompleted(
 
 // unblockDependents transitions blocked tasks whose dependencies are all met to
 // "queued" and returns the IDs of tasks that were unblocked.
-func (a *CompleteRunAction) unblockDependents(
+func unblockDependents(
 	ctx context.Context,
 	actx *action.Context,
 	data CompleteRunData,
@@ -162,7 +162,7 @@ func (a *CompleteRunAction) unblockDependents(
 // to completed or failed, emitting the appropriate event.
 // CompletedTasks and TotalCostUSD are now virtual computed fields — no manual
 // counter updates needed.
-func (a *CompleteRunAction) advancePRD(
+func advancePRD(
 	ctx context.Context,
 	actx *action.Context,
 	data CompleteRunData,
@@ -191,7 +191,7 @@ func (a *CompleteRunAction) advancePRD(
 	}
 }
 
-func (a *CompleteRunAction) handleFailed(
+func handleFailed(
 	ctx context.Context,
 	actx *action.Context,
 	data CompleteRunData,
