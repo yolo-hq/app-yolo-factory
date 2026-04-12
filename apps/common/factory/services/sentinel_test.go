@@ -3,6 +3,7 @@ package services
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -70,6 +71,86 @@ func writeBrokenGoModule(t *testing.T, dir string) {
 	t.Helper()
 	writeFile(t, dir, "go.mod", "module test\n\ngo 1.21\n")
 	writeFile(t, dir, "main.go", "package main\n\nfunc main() { undefined_symbol }\n")
+}
+
+func TestSentinel_GoVet_Pass(t *testing.T) {
+	svc := &SentinelService{}
+	dir := t.TempDir()
+	writeGoModule(t, dir)
+
+	findings, err := svc.checkSecurity(t.Context(), entities.Project{LocalPath: dir})
+	assert.NoError(t, err)
+	// go vet should pass on a clean module.
+	vetFinding := findingByMessage(findings, "go vet clean")
+	assert.NotNil(t, vetFinding, "expected go vet clean finding")
+}
+
+func TestSentinel_GoVet_Fail(t *testing.T) {
+	svc := &SentinelService{}
+	dir := t.TempDir()
+	writeGoModule(t, dir)
+	// printf with wrong arg count triggers go vet.
+	writeFile(t, dir, "bad.go", `package main
+import "fmt"
+func bad() { fmt.Printf("%d %d", 1) }
+`)
+
+	findings, err := svc.checkSecurity(t.Context(), entities.Project{LocalPath: dir})
+	assert.NoError(t, err)
+	vetFinding := findingByWatch(findings, "security", "warning")
+	assert.NotNil(t, vetFinding, "expected a warning from go vet")
+	assert.Equal(t, "create_suggestion", vetFinding.Action)
+}
+
+func TestSentinel_ScanHardcodedCredentials_Found(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "config.go", `package main
+var x = password = "s3cr3t"
+`)
+
+	findings := scanHardcodedCredentials(dir)
+	assert.NotEmpty(t, findings, "should detect hardcoded credential")
+	assert.Equal(t, "warning", findings[0].Severity)
+	assert.Equal(t, "create_suggestion", findings[0].Action)
+}
+
+func TestSentinel_ScanHardcodedCredentials_SkipsTests(t *testing.T) {
+	dir := t.TempDir()
+	// credential in a _test.go file — should be ignored.
+	writeFile(t, dir, "config_test.go", `package main
+var x = password = "s3cr3t"
+`)
+
+	findings := scanHardcodedCredentials(dir)
+	assert.Empty(t, findings, "should skip test files")
+}
+
+func TestSentinel_ScanHardcodedCredentials_None(t *testing.T) {
+	dir := t.TempDir()
+	writeGoModule(t, dir)
+
+	findings := scanHardcodedCredentials(dir)
+	assert.Empty(t, findings)
+}
+
+// findingByMessage returns the first finding whose message contains s, or nil.
+func findingByMessage(findings []Finding, s string) *Finding {
+	for i := range findings {
+		if strings.Contains(findings[i].Message, s) {
+			return &findings[i]
+		}
+	}
+	return nil
+}
+
+// findingByWatch returns the first finding with matching watch and severity, or nil.
+func findingByWatch(findings []Finding, watch, severity string) *Finding {
+	for i := range findings {
+		if findings[i].Watch == watch && findings[i].Severity == severity {
+			return &findings[i]
+		}
+	}
+	return nil
 }
 
 func writeFile(t *testing.T, dir, name, content string) {

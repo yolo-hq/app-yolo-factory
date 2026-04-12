@@ -3,7 +3,10 @@ package services
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/oklog/ulid/v2"
@@ -193,31 +196,90 @@ func (s *SentinelService) checkTests(ctx context.Context, project entities.Proje
 }
 
 func (s *SentinelService) checkSecurity(ctx context.Context, project entities.Project) ([]Finding, error) {
-	// Best-effort: skip if govulncheck not installed.
+	var findings []Finding
+
+	// 1. go vet — standard static analysis.
+	if output, err := runCmd(ctx, project.LocalPath, "go", "vet", "./..."); err != nil {
+		findings = append(findings, Finding{
+			Watch:    "security",
+			Severity: "warning",
+			Message:  fmt.Sprintf("go vet issues: %s", yolostrings.Truncate(output, 300)),
+			Action:   "create_suggestion",
+		})
+	} else {
+		findings = append(findings, Finding{
+			Watch:    "security",
+			Severity: "info",
+			Message:  "go vet clean",
+			Action:   "none",
+		})
+	}
+
+	// 2. govulncheck — skip if not installed.
 	if _, err := exec.LookPath("govulncheck"); err != nil {
-		return []Finding{{
+		findings = append(findings, Finding{
 			Watch:    "security",
 			Severity: "info",
 			Message:  "govulncheck not installed, skipping",
 			Action:   "none",
-		}}, nil
+		})
+	} else if output, err := runCmd(ctx, project.LocalPath, "govulncheck", "./..."); err != nil {
+		findings = append(findings, Finding{
+			Watch:    "security",
+			Severity: "warning",
+			Message:  fmt.Sprintf("vulnerabilities found: %s", yolostrings.Truncate(output, 300)),
+			Action:   "create_suggestion",
+		})
+	} else {
+		findings = append(findings, Finding{
+			Watch:    "security",
+			Severity: "info",
+			Message:  "no vulnerabilities found",
+			Action:   "none",
+		})
 	}
 
-	output, err := runCmd(ctx, project.LocalPath, "govulncheck", "./...")
-	if err != nil {
-		return []Finding{{
-			Watch:    "security",
-			Severity: "critical",
-			Message:  fmt.Sprintf("vulnerabilities found: %s", yolostrings.Truncate(output, 300)),
-			Action:   "create_task",
-		}}, nil
-	}
-	return []Finding{{
-		Watch:    "security",
-		Severity: "info",
-		Message:  "no vulnerabilities found",
-		Action:   "none",
-	}}, nil
+	// 3. Scan for hardcoded credentials in Go source (excluding test files).
+	credFindings := scanHardcodedCredentials(project.LocalPath)
+	findings = append(findings, credFindings...)
+
+	return findings, nil
+}
+
+// credPattern matches Go string literals containing credential-like keys.
+var credPattern = regexp.MustCompile(`(?i)(password|secret|api_key)\s*=\s*"[^"]+"`)
+
+// scanHardcodedCredentials walks the project looking for hardcoded credentials in non-test Go files.
+func scanHardcodedCredentials(root string) []Finding {
+	var findings []Finding
+
+	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		name := d.Name()
+		if !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			return nil
+		}
+
+		data, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return nil
+		}
+
+		matches := credPattern.FindAllString(string(data), -1)
+		for _, m := range matches {
+			findings = append(findings, Finding{
+				Watch:    "security",
+				Severity: "warning",
+				Message:  fmt.Sprintf("possible hardcoded credential in %s: %s", path, yolostrings.Truncate(m, 100)),
+				Action:   "create_suggestion",
+			})
+		}
+		return nil
+	})
+
+	return findings
 }
 
 func (s *SentinelService) checkConventions(ctx context.Context, project entities.Project) ([]Finding, error) {
