@@ -12,7 +12,7 @@ type Run struct {
 	entity.BaseEntity
 	TaskID         string     `json:"taskId" bun:"task_id,notnull" fake:"rel:Task"`
 	AgentType      string     `json:"agentType" bun:"agent_type,notnull" fake:"oneof:claude-cli,claude-code,custom"`
-	Status         string     `json:"status" bun:"status,notnull,default:'running'" fake:"oneof:running,completed,failed,cancelled" enum:"running,completed,failed,cancelled"`
+	Status         string     `json:"status" bun:"status,notnull,default:'running'" fake:"oneof:running,completed,failed,cancelled" enum:"running,completed,failed,cancelled,blocked"`
 	Model          string     `json:"model" bun:"model,notnull" fake:"oneof:sonnet,opus,haiku"`
 	SessionID      string     `json:"sessionId" bun:"session_id" fake:"-"`
 	SessionName    string     `json:"sessionName" bun:"session_name" fake:"-"`

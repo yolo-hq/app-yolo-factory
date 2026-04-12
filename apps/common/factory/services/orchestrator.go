@@ -10,6 +10,7 @@ import (
 	"github.com/yolo-hq/yolo/core/service"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/events"
 )
@@ -69,9 +70,20 @@ type StepResult struct {
 	Step      entities.Step
 	SessionID string
 	Output    string
-	Failed    bool
-	Error     string
-	Review    *entities.Review
+	// Status is one of the StepResult* constants (done, done_with_concerns,
+	// needs_context, blocked, failed).  Use the Failed() helper for legacy checks.
+	Status   string
+	Error    string
+	Concerns string // populated when Status == StepResultDoneWithConcerns
+	Review   *entities.Review
+}
+
+// Failed returns true when the step result is a terminal failure.
+func (r *StepResult) Failed() bool { return r.Status == constants.StepResultFailed }
+
+// NeedsEscalation returns true when the run must pause for human input.
+func (r *StepResult) NeedsEscalation() bool {
+	return r.Status == constants.StepResultNeedsContext || r.Status == constants.StepResultBlocked
 }
 
 // orchEnv holds all shared state for a single Execute call.
@@ -107,14 +119,23 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 		return out, err
 	}
 
-	// Check if any step failed (results slice ends with a failed step).
-	if len(results) > 0 && results[len(results)-1].Failed {
-		lastResult := results[len(results)-1]
-		var review *entities.Review
-		if lastResult.Review != nil {
-			review = lastResult.Review
+	// Route based on structured status of the last step executed.
+	if len(results) > 0 {
+		last := results[len(results)-1]
+		switch last.Status {
+		case constants.StepResultFailed:
+			var review *entities.Review
+			if last.Review != nil {
+				review = last.Review
+			}
+			return s.buildFailure(ctx, env.task, env.project, env.run, env.steps, review, env.totalCost, last)
+		case constants.StepResultBlocked, constants.StepResultNeedsContext:
+			var review *entities.Review
+			if last.Review != nil {
+				review = last.Review
+			}
+			return s.buildEscalation(ctx, env.task, env.project, env.run, env.steps, review, env.totalCost, last, questions)
 		}
-		return s.buildFailure(ctx, env.task, env.project, env.run, env.steps, review, env.totalCost, lastResult)
 	}
 
 	// Collect review from results.

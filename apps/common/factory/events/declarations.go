@@ -15,6 +15,7 @@ var PRDPlanningComplete = &PRDPlanningCompleteEvent{}
 var QuestionNeedsHuman = &QuestionNeedsHumanEvent{}
 var SentinelBuildBroken = &SentinelBuildBrokenEvent{}
 var SentinelSecurityVuln = &SentinelSecurityVulnEvent{}
+var TaskBlocked = &TaskBlockedEvent{}
 var TaskCompleted = &TaskCompletedEvent{}
 var TaskFailed = &TaskFailedEvent{}
 var TaskStarted = &TaskStartedEvent{}
@@ -28,6 +29,7 @@ const PRDPlanningCompleteName = "prd.planning-complete"
 const QuestionNeedsHumanName = "question.needs-human"
 const SentinelBuildBrokenName = "sentinel.build.broken"
 const SentinelSecurityVulnName = "sentinel.security.vuln"
+const TaskBlockedName = "task.blocked"
 const TaskCompletedName = "task.completed"
 const TaskFailedName = "task.failed"
 const TaskStartedName = "task.started"
@@ -95,6 +97,14 @@ func (e *SentinelSecurityVulnEvent) Emit(ctx context.Context, payload SentinelPa
 func (e *TaskCompletedEvent) Emit(ctx context.Context, entityID string) {
 	service.EmitEvent(ctx, service.PendingEvent{
 		Name:       "task.completed",
+		EntityType: "Task",
+		EntityID:   entityID,
+	})
+}
+
+func (e *TaskBlockedEvent) Emit(ctx context.Context, entityID string) {
+	service.EmitEvent(ctx, service.PendingEvent{
+		Name:       "task.blocked",
 		EntityType: "Task",
 		EntityID:   entityID,
 	})

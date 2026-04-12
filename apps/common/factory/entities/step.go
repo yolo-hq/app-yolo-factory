@@ -14,6 +14,7 @@ type Step struct {
 	Phase         string     `json:"phase" bun:"phase,notnull" fake:"oneof:setup,execute,verify,review" enum:"plan,implement,test,lint,audit,review"`
 	Skill         string     `json:"skill" bun:"skill,notnull" fake:"oneof:code,test,review,fix"`
 	Status        string     `json:"status" bun:"status,notnull,default:'running'" fake:"oneof:running,completed,failed" enum:"running,completed,failed,skipped"`
+	ResultStatus  string     `json:"resultStatus" bun:"result_status" fake:"oneof:done,done_with_concerns,needs_context,blocked,failed" enum:"done,done_with_concerns,needs_context,blocked,failed"`
 	Model         string     `json:"model" bun:"model,notnull" fake:"oneof:sonnet,opus,haiku"`
 	SessionID     string     `json:"sessionId" bun:"session_id" fake:"-"`
 	CostUSD       float64    `json:"costUsd" bun:"cost_usd,default:0" fake:"float:0,10"`

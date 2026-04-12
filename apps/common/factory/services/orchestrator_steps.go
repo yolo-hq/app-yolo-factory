@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -16,8 +17,8 @@ import (
 )
 
 // runAllSteps executes steps 6-10 (plan, implement, test, lint, audit, review).
-// On step failure it appends the failed step to env.steps and returns early so
-// Execute can call buildFailure. It never returns a hard error for step failures.
+// On step failure/escalation it appends the step to env.steps and returns early so
+// Execute can route correctly. It never returns a hard error for step-level failures.
 //
 // Returns the per-step results (for review extraction), detected questions,
 // and any hard error.
@@ -53,9 +54,10 @@ func (s *OrchestratorService) runAllSteps(ctx context.Context, env *orchEnv) ([]
 	}
 	env.steps = append(env.steps, planResult.Step)
 	env.totalCost += planResult.Step.CostUSD
-	if planResult.Failed {
+	if !stepCanContinue(planResult) {
 		return []*StepResult{planResult}, nil, nil
 	}
+	logConcerns(planResult)
 
 	// 7. Step 2: IMPLEMENT — resume plan session.
 	implCtx, err := s.Context.Execute(ctx, ContextInput{
@@ -95,9 +97,10 @@ func (s *OrchestratorService) runAllSteps(ctx context.Context, env *orchEnv) ([]
 	}
 	env.steps = append(env.steps, implResult.Step)
 	env.totalCost += implResult.Step.CostUSD
-	if implResult.Failed {
+	if !stepCanContinue(implResult) {
 		return []*StepResult{implResult}, nil, nil
 	}
+	logConcerns(implResult)
 
 	// 7b. Detect questions in implementation output.
 	var questions []entities.Question
@@ -123,7 +126,7 @@ func (s *OrchestratorService) runAllSteps(ctx context.Context, env *orchEnv) ([]
 		return nil, nil, fmt.Errorf("test step: %w", err)
 	}
 	env.steps = append(env.steps, testResult.Step)
-	if testResult.Failed {
+	if !stepCanContinue(testResult) {
 		return []*StepResult{testResult}, questions, nil
 	}
 
@@ -133,7 +136,7 @@ func (s *OrchestratorService) runAllSteps(ctx context.Context, env *orchEnv) ([]
 		return nil, nil, fmt.Errorf("lint step: %w", err)
 	}
 	env.steps = append(env.steps, lintResult.Step)
-	if lintResult.Failed {
+	if !stepCanContinue(lintResult) {
 		return []*StepResult{lintResult}, questions, nil
 	}
 
@@ -174,11 +177,11 @@ func (s *OrchestratorService) runAllSteps(ctx context.Context, env *orchEnv) ([]
 	}
 	env.steps = append(env.steps, auditResult.Step)
 	env.totalCost += auditResult.Step.CostUSD
-	if auditResult.Failed {
+	if !stepCanContinue(auditResult) {
 		return []*StepResult{auditResult}, questions, nil
 	}
 
-	// 10. Step 5: REVIEW — Sonnet, read-only, NEW session.
+	// 11. Step 6: REVIEW — Sonnet, read-only, NEW session.
 	reviewDiffOut, _ := s.Git.Execute(ctx, GitInput{
 		Operation: "diff_files",
 		RepoPath:  env.workDir,
@@ -218,6 +221,22 @@ func (s *OrchestratorService) runAllSteps(ctx context.Context, env *orchEnv) ([]
 	return []*StepResult{planResult, implResult, testResult, lintResult, auditResult, reviewResult}, questions, nil
 }
 
+// stepCanContinue returns true when it is safe to proceed to the next step.
+// done and done_with_concerns both allow continuation; all other statuses stop the pipeline.
+func stepCanContinue(r *StepResult) bool {
+	return r.Status == constants.StepResultDone || r.Status == constants.StepResultDoneWithConcerns
+}
+
+// logConcerns emits a warning when a step completed with concerns.
+func logConcerns(r *StepResult) {
+	if r.Status == constants.StepResultDoneWithConcerns && r.Concerns != "" {
+		slog.Warn("step completed with concerns",
+			"phase", r.Step.Phase,
+			"concerns", r.Concerns,
+		)
+	}
+}
+
 // executeStep runs a single step (agent or shell) and returns the result.
 func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams) (*StepResult, error) {
 	stepID := ulid.Make().String()
@@ -244,11 +263,12 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 			if err != nil {
 				completedAt := time.Now()
 				step.Status = string(enums.StepStatusFailed)
+				step.ResultStatus = constants.StepResultFailed
 				step.CompletedAt = &completedAt
 				step.DurationMs = int(completedAt.Sub(startedAt).Milliseconds())
 				step.OutputSummary = yolostrings.Truncate(combinedOutput.String(), 500)
 				result.Step = step
-				result.Failed = true
+				result.Status = constants.StepResultFailed
 				result.Error = fmt.Sprintf("command failed: %s: %s", cmd, cmdOut)
 				result.Output = combinedOutput.String()
 				return result, nil
@@ -256,10 +276,12 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 		}
 		completedAt := time.Now()
 		step.Status = string(enums.StepStatusCompleted)
+		step.ResultStatus = constants.StepResultDone
 		step.CompletedAt = &completedAt
 		step.DurationMs = int(completedAt.Sub(startedAt).Milliseconds())
 		step.OutputSummary = yolostrings.Truncate(combinedOutput.String(), 500)
 		result.Step = step
+		result.Status = constants.StepResultDone
 		result.Output = combinedOutput.String()
 		return result, nil
 	}
@@ -273,9 +295,10 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 
 	if err != nil {
 		step.Status = string(enums.StepStatusFailed)
+		step.ResultStatus = constants.StepResultFailed
 		step.OutputSummary = yolostrings.Truncate(err.Error(), 500)
 		result.Step = step
-		result.Failed = true
+		result.Status = constants.StepResultFailed
 		result.Error = err.Error()
 		return result, nil
 	}
@@ -291,9 +314,10 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 
 	if claudeResult.IsError {
 		step.Status = string(enums.StepStatusFailed)
+		step.ResultStatus = constants.StepResultFailed
 		step.OutputSummary = yolostrings.Truncate(claudeResult.Text, 500)
 		result.Step = step
-		result.Failed = true
+		result.Status = constants.StepResultFailed
 		result.Error = claudeResult.Text
 		return result, nil
 	}
@@ -304,9 +328,10 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 		failed, errMsg := parseAuditOutput(claudeResult.StructuredOutput)
 		if failed {
 			step.Status = string(enums.StepStatusFailed)
+			step.ResultStatus = constants.StepResultFailed
 			step.OutputSummary = yolostrings.Truncate(errMsg, 500)
 			result.Step = step
-			result.Failed = true
+			result.Status = constants.StepResultFailed
 			result.Error = errMsg
 			return result, nil
 		}
@@ -315,17 +340,20 @@ func (s *OrchestratorService) executeStep(ctx context.Context, params StepParams
 		result.Review = review
 		if failed {
 			step.Status = string(enums.StepStatusFailed)
+			step.ResultStatus = constants.StepResultFailed
 			step.OutputSummary = yolostrings.Truncate(errMsg, 500)
 			result.Step = step
-			result.Failed = true
+			result.Status = constants.StepResultFailed
 			result.Error = errMsg
 			return result, nil
 		}
 	}
 
 	step.Status = string(enums.StepStatusCompleted)
+	step.ResultStatus = constants.StepResultDone
 	step.OutputSummary = yolostrings.Truncate(claudeResult.Text, 500)
 	result.Step = step
+	result.Status = constants.StepResultDone
 	return result, nil
 }
 
@@ -357,10 +385,11 @@ func (s *OrchestratorService) executeLintStep(ctx context.Context, task entities
 	if err != nil {
 		completedAt := time.Now()
 		step.Status = string(enums.StepStatusFailed)
+		step.ResultStatus = constants.StepResultFailed
 		step.CompletedAt = &completedAt
 		step.DurationMs = int(completedAt.Sub(startedAt).Milliseconds())
 		step.OutputSummary = yolostrings.Truncate(err.Error(), 500)
-		return &StepResult{Step: step, Failed: true, Error: err.Error()}, nil
+		return &StepResult{Step: step, Status: constants.StepResultFailed, Error: err.Error()}, nil
 	}
 
 	completedAt := time.Now()
@@ -380,13 +409,15 @@ func (s *OrchestratorService) executeLintStep(ctx context.Context, task entities
 		}
 		errText := strings.Join(errParts, "\n")
 		step.Status = string(enums.StepStatusFailed)
+		step.ResultStatus = constants.StepResultFailed
 		step.OutputSummary = yolostrings.Truncate(summary+"\n"+errText, 500)
-		return &StepResult{Step: step, Failed: true, Error: errText, Output: summary}, nil
+		return &StepResult{Step: step, Status: constants.StepResultFailed, Error: errText, Output: summary}, nil
 	}
 
 	step.Status = string(enums.StepStatusCompleted)
+	step.ResultStatus = constants.StepResultDone
 	step.OutputSummary = summary
-	return &StepResult{Step: step, Output: summary}, nil
+	return &StepResult{Step: step, Status: constants.StepResultDone, Output: summary}, nil
 }
 
 // findImplOutput extracts the output from the implement step, used as commit summary.

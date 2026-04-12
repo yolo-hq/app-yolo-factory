@@ -41,6 +41,11 @@ type TaskStartedEvent struct {
 	event.EntityEvent[entities.Task]
 }
 
+// TaskBlockedEvent is emitted when a task cannot continue without human input.
+type TaskBlockedEvent struct {
+	event.FailedEvent[entities.Task]
+}
+
 // BudgetExceededEvent is emitted when a project exceeds its budget.
 type BudgetExceededEvent struct {
 	event.CustomEvent[BudgetExceededPayload]
