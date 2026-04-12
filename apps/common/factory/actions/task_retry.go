@@ -24,16 +24,12 @@ func (a *RetryTaskAction) Description() string { return "Retry a failed task" }
 func (a *RetryTaskAction) Execute(ctx context.Context, actx *action.Context) error {
 	input := a.Input(actx)
 
-	set := write.Set{
-		fields.Task.Status.Value(string(enums.TaskStatusQueued)),
-	}
-	if input.Model != "" {
-		set = append(set, fields.Task.Model.Value(input.Model))
-	}
-
 	_, err := action.Write[entities.Task](actx).Exec(ctx, write.Update{
-		ID:  actx.EntityID,
-		Set: set,
+		ID: actx.EntityID,
+		Set: write.Set{
+			fields.Task.Status.Value(string(enums.TaskStatusQueued)),
+			fields.Task.Model.When(input.Model != "").Value(input.Model),
+		},
 	})
 	return err
 }

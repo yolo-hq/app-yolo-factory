@@ -36,6 +36,7 @@ advisor:
 apps:
   api:
     type: server
+    policies: []
     name: YOLO Factory API
     listeners:
       - protocol: http
@@ -88,6 +89,7 @@ apps:
 
   worker:
     type: worker
+    policies: []
     name: YOLO Factory Worker
     concurrency: 5
     queues:
@@ -106,6 +108,7 @@ apps:
 
   cli:
     type: cli
+    policies: []
     name: YOLO Factory CLI
     domains:
       factory: "*"

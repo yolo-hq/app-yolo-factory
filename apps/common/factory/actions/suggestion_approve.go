@@ -24,16 +24,12 @@ func (a *ApproveSuggestionAction) Description() string { return "Approve a pendi
 func (a *ApproveSuggestionAction) Execute(ctx context.Context, actx *action.Context) error {
 	input := a.Input(actx)
 
-	set := write.Set{
-		fields.Suggestion.Status.Value(string(enums.SuggestionStatusApproved)),
-	}
-	if input.PRDID != "" {
-		set = append(set, fields.Suggestion.ConvertedTaskID.Value(input.PRDID))
-	}
-
 	_, err := action.Write[entities.Suggestion](actx).Exec(ctx, write.Update{
-		ID:  actx.EntityID,
-		Set: set,
+		ID: actx.EntityID,
+		Set: write.Set{
+			fields.Suggestion.Status.Value(string(enums.SuggestionStatusApproved)),
+			fields.Suggestion.ConvertedTaskID.When(input.PRDID != "").Value(input.PRDID),
+		},
 	})
 	return err
 }
