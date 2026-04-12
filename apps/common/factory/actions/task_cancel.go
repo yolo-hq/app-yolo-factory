@@ -14,8 +14,8 @@ import (
 
 // CancelTaskAction cancels a task.
 type CancelTaskAction struct {
-	action.NoInput
 	action.RequirePolicy[policies.CanCancelTaskPolicy]
+	action.NoInput
 }
 
 func (a *CancelTaskAction) Description() string { return "Cancel a non-terminal task" }

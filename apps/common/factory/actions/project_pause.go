@@ -14,8 +14,8 @@ import (
 
 // PauseProjectAction pauses an active project.
 type PauseProjectAction struct {
-	action.NoInput
 	action.RequirePolicy[policies.CanPauseProjectPolicy]
+	action.NoInput
 }
 
 func (a *PauseProjectAction) Description() string { return "Pause an active project" }

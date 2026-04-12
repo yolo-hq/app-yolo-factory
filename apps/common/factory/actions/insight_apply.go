@@ -14,8 +14,8 @@ import (
 
 // ApplyInsightAction applies an acknowledged insight.
 type ApplyInsightAction struct {
-	action.NoInput
 	action.RequirePolicy[policies.CanApplyInsightPolicy]
+	action.NoInput
 }
 
 func (a *ApplyInsightAction) Description() string { return "Apply an acknowledged insight" }

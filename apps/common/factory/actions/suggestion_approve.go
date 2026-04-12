@@ -15,8 +15,8 @@ import (
 
 // ApproveSuggestionAction approves a suggestion.
 type ApproveSuggestionAction struct {
-	action.TypedInput[inputs.ApproveSuggestionInput]
 	action.RequirePolicy[policies.CanApproveSuggestionPolicy]
+	action.TypedInput[inputs.ApproveSuggestionInput]
 }
 
 func (a *ApproveSuggestionAction) Description() string { return "Approve a pending suggestion" }

@@ -25,8 +25,8 @@ type ExecutePRDData struct {
 
 // ExecutePRDAction kicks off PRD planning by enqueuing a PlanPRDJob.
 type ExecutePRDAction struct {
-	action.NoInput
 	action.RequirePolicy[policies.CanExecutePRDPolicy]
+	action.NoInput
 	action.Projection[ExecutePRDData]
 }
 

@@ -5,7 +5,8 @@ YOLO Factory — autonomous dev engine. Domain-driven, action-pipeline architect
 ## Rules
 - actx.Resolve("Entity", id) + action.OK() — never return entity data directly
 - fields.{key}= for field selection — bare fields= is rejected
-- Every action embeds `action.RequirePolicy[P]` or `action.PublicAccess`
+- Default policies in `app.yml` under `apps.<name>.policies`; use `action.RequirePolicy[P]` (additive), `action.SkipPolicy[P]` (remove one default), or `action.SkipAllPolicies` (remove all defaults)
+- Input-less actions omit `TypedInput` entirely
 - Policy naming: `Can{Action}{Entity}Policy` — one per action in `policies/`
 - Actions only have `Execute()` — complex logic in `services/`
 - Use `action.Write[T](actx).Exec(ctx, op)` for all writes — one consistent pattern

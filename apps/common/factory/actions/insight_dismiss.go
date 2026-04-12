@@ -15,8 +15,8 @@ import (
 
 // DismissInsightAction dismisses an insight with a reason.
 type DismissInsightAction struct {
-	action.TypedInput[inputs.DismissInsightInput]
 	action.RequirePolicy[policies.CanDismissInsightPolicy]
+	action.TypedInput[inputs.DismissInsightInput]
 }
 
 func (a *DismissInsightAction) Description() string { return "Dismiss an insight with a reason" }

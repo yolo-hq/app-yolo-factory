@@ -17,8 +17,8 @@ import (
 // The input's resolves:"Project" tag promotes ProjectID as the primary entity
 // so that CanSubmitPRDPolicy can load and check the project status.
 type SubmitPRDAction struct {
-	action.TypedInput[inputs.SubmitPRDInput]
 	action.RequirePolicy[policies.CanSubmitPRDPolicy]
+	action.TypedInput[inputs.SubmitPRDInput]
 }
 
 func (a *SubmitPRDAction) Description() string { return "Submit a new PRD for a project" }

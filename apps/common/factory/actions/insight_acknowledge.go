@@ -14,8 +14,8 @@ import (
 
 // AcknowledgeInsightAction acknowledges a pending insight.
 type AcknowledgeInsightAction struct {
-	action.NoInput
 	action.RequirePolicy[policies.CanAcknowledgeInsightPolicy]
+	action.NoInput
 }
 
 func (a *AcknowledgeInsightAction) Description() string { return "Acknowledge a pending insight" }

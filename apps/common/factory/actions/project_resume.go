@@ -14,8 +14,8 @@ import (
 
 // ResumeProjectAction resumes a paused project.
 type ResumeProjectAction struct {
-	action.NoInput
 	action.RequirePolicy[policies.CanResumeProjectPolicy]
+	action.NoInput
 }
 
 func (a *ResumeProjectAction) Description() string { return "Resume a paused project" }

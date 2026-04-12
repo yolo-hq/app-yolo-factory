@@ -31,8 +31,8 @@ type ApprovePRDData struct {
 
 // ApprovePRDAction approves a draft PRD and optionally triggers planning.
 type ApprovePRDAction struct {
-	action.NoInput
 	action.RequirePolicy[policies.CanApprovePRDPolicy]
+	action.NoInput
 	action.Projection[ApprovePRDData]
 }
 

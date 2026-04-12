@@ -9,8 +9,8 @@ import (
 
 // CreateProjectAction creates a new project.
 type CreateProjectAction struct {
-	action.BaseCreate[entities.Project, inputs.CreateProjectInput]
 	action.SkipAllPolicies
+	action.BaseCreate[entities.Project, inputs.CreateProjectInput]
 }
 
 func (a *CreateProjectAction) Description() string { return "Create a new project" }

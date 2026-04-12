@@ -15,8 +15,8 @@ import (
 
 // RetryTaskAction retries a failed task, resetting it to queued.
 type RetryTaskAction struct {
-	action.TypedInput[inputs.RetryTaskInput]
 	action.RequirePolicy[policies.CanRetryTaskPolicy]
+	action.TypedInput[inputs.RetryTaskInput]
 }
 
 func (a *RetryTaskAction) Description() string { return "Retry a failed task" }

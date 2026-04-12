@@ -61,8 +61,8 @@ type CompleteRunData struct {
 
 // CompleteRunAction records run completion and drives the task/PRD state machine.
 type CompleteRunAction struct {
-	action.TypedInput[inputs.CompleteRunInput]
 	action.SkipAllPolicies
+	action.TypedInput[inputs.CompleteRunInput]
 	action.Projection[CompleteRunData]
 }
 

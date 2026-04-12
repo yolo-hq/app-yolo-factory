@@ -15,8 +15,8 @@ import (
 
 // RejectSuggestionAction rejects a suggestion with a reason.
 type RejectSuggestionAction struct {
-	action.TypedInput[inputs.RejectSuggestionInput]
 	action.RequirePolicy[policies.CanRejectSuggestionPolicy]
+	action.TypedInput[inputs.RejectSuggestionInput]
 }
 
 func (a *RejectSuggestionAction) Description() string { return "Reject a pending suggestion" }

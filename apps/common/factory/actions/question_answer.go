@@ -16,8 +16,8 @@ import (
 
 // AnswerQuestionAction answers an open question.
 type AnswerQuestionAction struct {
-	action.TypedInput[inputs.AnswerQuestionInput]
 	action.RequirePolicy[policies.CanAnswerQuestionPolicy]
+	action.TypedInput[inputs.AnswerQuestionInput]
 }
 
 func (a *AnswerQuestionAction) Description() string { return "Answer an open question" }
