@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/oklog/ulid/v2"
 	yolostrings "github.com/yolo-hq/yolo/core/strings"
@@ -20,11 +21,15 @@ import (
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/events"
 )
 
+// OrphanedRunThreshold is how long a run may stay in "running" before it's orphaned.
+const OrphanedRunThreshold = 2 * time.Hour
+
 // SentinelService runs health checks against a project and produces findings.
 type SentinelService struct {
 	service.Base
 	Claude          *claude.Client
 	ProjectRead     entity.ReadRepository[entities.Project]
+	RunRead         entity.ReadRepository[entities.Run]
 	TaskWrite       entity.WriteRepository[entities.Task]
 	SuggestionWrite entity.WriteRepository[entities.Suggestion]
 }
@@ -149,6 +154,8 @@ func (s *SentinelService) runWatch(ctx context.Context, watch string, project en
 		return s.checkSecurity(ctx, project)
 	case "convention_drift":
 		return s.checkConventions(ctx, project)
+	case "orphaned_runs":
+		return s.checkOrphanedRuns(ctx, project)
 	default:
 		return []Finding{{
 			Watch:    watch,
@@ -300,6 +307,51 @@ func (s *SentinelService) checkConventions(ctx context.Context, project entities
 	}}, nil
 }
 
+// checkOrphanedRuns finds runs stuck in "running" status past OrphanedRunThreshold.
+func (s *SentinelService) checkOrphanedRuns(ctx context.Context, project entities.Project) ([]Finding, error) {
+	if s.RunRead == nil {
+		return []Finding{{
+			Watch:    "orphaned_runs",
+			Severity: "info",
+			Message:  "RunRead not wired, skipping orphaned run check",
+			Action:   "none",
+		}}, nil
+	}
+
+	cutoff := time.Now().Add(-OrphanedRunThreshold)
+	result, err := s.RunRead.FindMany(ctx, entity.FindOptions{
+		Filters: []entity.FilterCondition{
+			{Field: "status", Operator: entity.OpEq, Value: string(enums.RunStatusRunning)},
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("query runs: %w", err)
+	}
+
+	var findings []Finding
+	for _, r := range result.Data {
+		if r.StartedAt.Before(cutoff) {
+			findings = append(findings, Finding{
+				Watch:    "orphaned_runs",
+				Severity: "warning",
+				Message:  fmt.Sprintf("run %s stuck in running since %s (task %s)", r.ID, r.StartedAt.Format(time.RFC3339), r.TaskID),
+				Action:   "create_suggestion",
+			})
+		}
+	}
+
+	if len(findings) == 0 {
+		findings = append(findings, Finding{
+			Watch:    "orphaned_runs",
+			Severity: "info",
+			Message:  "no orphaned runs",
+			Action:   "none",
+		})
+	}
+
+	return findings, nil
+}
+
 // categoryFromWatch maps watch types to suggestion categories.
 func categoryFromWatch(watch string) string {
 	switch watch {
@@ -309,6 +361,8 @@ func categoryFromWatch(watch string) string {
 		return "bug"
 	case "convention_drift":
 		return "refactor"
+	case "orphaned_runs":
+		return "bug"
 	default:
 		return "refactor"
 	}

@@ -111,6 +111,32 @@ func TestCheckTodoThreshold(t *testing.T) {
 	}
 }
 
+func TestCheckResolveBeforeOK_Finds(t *testing.T) {
+	findings, err := CheckResolveBeforeOK(optsForFile("actions/bad_resolve.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(findings) == 0 {
+		t.Fatal("expected findings for missing actx.Resolve")
+	}
+	if findings[0].Check != "resolve-before-ok" {
+		t.Fatalf("wrong check: %s", findings[0].Check)
+	}
+	if findings[0].Severity != SeverityError {
+		t.Fatalf("expected error severity, got %s", findings[0].Severity)
+	}
+}
+
+func TestCheckResolveBeforeOK_Clean(t *testing.T) {
+	findings, err := CheckResolveBeforeOK(optsForFile("good.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(findings) != 0 {
+		t.Fatalf("expected no findings, got %d", len(findings))
+	}
+}
+
 func TestRunAll(t *testing.T) {
 	opts := Options{
 		Path:          testdataPath(),
@@ -121,8 +147,8 @@ func TestRunAll(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.ChecksRun != 7 {
-		t.Fatalf("expected 7 checks, got %d", result.ChecksRun)
+	if result.ChecksRun != 8 {
+		t.Fatalf("expected 8 checks, got %d", result.ChecksRun)
 	}
 	if !result.Passed {
 		t.Fatal("expected clean file to pass")

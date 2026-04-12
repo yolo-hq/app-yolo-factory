@@ -51,6 +51,7 @@ func RunAll(opts Options) (*Result, error) {
 		CheckDuplicateFunctions,
 		CheckStubFunctions,
 		CheckTodoThreshold,
+		CheckResolveBeforeOK,
 	}
 
 	result := &Result{}

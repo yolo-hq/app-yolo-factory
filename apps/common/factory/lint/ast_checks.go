@@ -209,6 +209,61 @@ func CheckEntityMethods(opts Options) ([]Finding, error) {
 	return findings, err
 }
 
+// CheckResolveBeforeOK checks that actions calling action.OK() have actx.Resolve() called first.
+// Pattern: in files under actions/, any function calling action.OK() must also call actx.Resolve().
+func CheckResolveBeforeOK(opts Options) ([]Finding, error) {
+	var findings []Finding
+
+	err := walkGoFiles(opts, func(fset *token.FileSet, file *ast.File, path string) error {
+		if !strings.Contains(path, "actions/") && !strings.Contains(path, "actions\\") {
+			return nil
+		}
+
+		for _, decl := range file.Decls {
+			funcDecl, ok := decl.(*ast.FuncDecl)
+			if !ok || funcDecl.Body == nil {
+				continue
+			}
+
+			var hasOK, hasResolve bool
+			var okPos token.Pos
+
+			ast.Inspect(funcDecl.Body, func(n ast.Node) bool {
+				call, ok := n.(*ast.CallExpr)
+				if !ok {
+					return true
+				}
+				name := callFuncName(call)
+				if name == "action.OK" {
+					hasOK = true
+					if okPos == token.NoPos {
+						okPos = call.Pos()
+					}
+				}
+				if name == "actx.Resolve" {
+					hasResolve = true
+				}
+				return true
+			})
+
+			if hasOK && !hasResolve {
+				pos := fset.Position(okPos)
+				findings = append(findings, Finding{
+					Check:    "resolve-before-ok",
+					Severity: SeverityError,
+					File:     path,
+					Line:     pos.Line,
+					Message:  funcDecl.Name.Name + " calls action.OK() without actx.Resolve() — load entity data first",
+				})
+			}
+		}
+
+		return nil
+	})
+
+	return findings, err
+}
+
 // callFuncName extracts "pkg.Func" from a call expression.
 func callFuncName(call *ast.CallExpr) string {
 	sel, ok := call.Fun.(*ast.SelectorExpr)
