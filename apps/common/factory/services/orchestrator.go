@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/yolo-hq/yolo/core/entity"
@@ -24,6 +25,7 @@ type OrchestratorService struct {
 	Context     *ContextService
 	Dependency  *DependencyService
 	Linter      *LinterService
+	Wiki        *WikiService
 	TaskRead    entity.ReadRepository[entities.Task]
 	TaskWrite   entity.WriteRepository[entities.Task]
 	PRDRead     entity.ReadRepository[entities.PRD]
@@ -88,16 +90,17 @@ func (r *StepResult) NeedsEscalation() bool {
 
 // orchEnv holds all shared state for a single Execute call.
 type orchEnv struct {
-	task       entities.Task
-	prd        entities.PRD
-	project    entities.Project
-	workDir    string
-	branchName string
-	model      string
-	claudeMD   string
-	run        entities.Run
-	steps      []entities.Step
-	totalCost  float64
+	task        entities.Task
+	prd         entities.PRD
+	project     entities.Project
+	workDir     string
+	branchName  string
+	model       string
+	claudeMD    string
+	wikiContent string
+	run         entities.Run
+	steps       []entities.Step
+	totalCost   float64
 }
 
 // Execute runs the full task workflow and returns the result.
@@ -220,6 +223,23 @@ func (s *OrchestratorService) commitAndPersist(ctx context.Context, env *orchEnv
 	if review != nil {
 		if _, err := s.ReviewWrite.Insert(ctx, review); err != nil {
 			return out, fmt.Errorf("insert review: %w", err)
+		}
+	}
+
+	// 19. Update project wiki (non-fatal).
+	if s.Wiki != nil {
+		reviewText := ""
+		if review != nil {
+			reviewText = review.Suggestions
+		}
+		if wikiErr := s.Wiki.Update(ctx, WikiInput{
+			ProjectPath:  env.project.LocalPath,
+			TaskID:       env.task.ID,
+			TaskTitle:    env.task.Title,
+			TaskOutput:   implOutput,
+			ReviewOutput: reviewText,
+		}); wikiErr != nil {
+			slog.Warn("wiki update failed (non-fatal)", "task_id", env.task.ID, "error", wikiErr)
 		}
 	}
 

@@ -107,8 +107,13 @@ func (s *OrchestratorService) setup(ctx context.Context, in OrchestratorInput) (
 	// 2. Determine model (with escalation support).
 	model := determineModel(inTask, inProject)
 
-	// 3. Read CLAUDE.md from working dir.
+	// 3. Read CLAUDE.md and wiki from working dir.
 	claudeMD := readCLAUDEMD(inProject.LocalPath)
+	wikiContent := readProjectWiki(inProject.LocalPath)
+	// Append wiki to agent context so all phases benefit from accumulated knowledge.
+	if wikiContent != "" {
+		claudeMD = claudeMD + "\n\n---\n\n" + wikiContent
+	}
 
 	// 4. Git setup: pull latest, create branch.
 	branchName := ""
@@ -174,14 +179,15 @@ func (s *OrchestratorService) setup(ctx context.Context, in OrchestratorInput) (
 	}
 
 	return &orchEnv{
-		task:       inTask,
-		prd:        inPRD,
-		project:    inProject,
-		workDir:    wDir,
-		branchName: branchName,
-		model:      model,
-		claudeMD:   claudeMD,
-		run:        run,
+		task:        inTask,
+		prd:         inPRD,
+		project:     inProject,
+		workDir:     wDir,
+		branchName:  branchName,
+		model:       model,
+		claudeMD:    claudeMD,
+		wikiContent: wikiContent,
+		run:         run,
 	}, nil, nil
 }
 
