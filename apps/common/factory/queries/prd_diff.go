@@ -1,4 +1,4 @@
-package actions
+package queries
 
 import (
 	"bytes"
@@ -7,13 +7,12 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/projection"
+	"github.com/yolo-hq/yolo/core/query"
 	"github.com/yolo-hq/yolo/core/read"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
 )
 
 // PRDDiffInfo holds the PRD fields needed for diffing.
@@ -39,42 +38,28 @@ type TaskCommitRow struct {
 	CommitHash string `field:"commitHash"`
 }
 
-// DiffPRDResponse is the typed response for DiffPRDAction.
-type DiffPRDResponse struct {
-	PRDID        string `json:"prdId"`
-	PRDTitle     string `json:"prdTitle"`
-	Diff         string `json:"diff"`
-	FilesChanged int    `json:"filesChanged"`
-	TasksDone    int    `json:"tasksDone"`
-	Commits      int    `json:"commits"`
+// DiffPRDQuery computes the combined git diff for a completed PRD.
+type DiffPRDQuery struct {
+	query.Base
+
+	PRDID string `arg:"prdId" validate:"required"`
 }
 
-// DiffPRDAction computes the combined git diff for a completed PRD.
-type DiffPRDAction struct {
-	action.SkipAllPolicies
-	action.TypedInput[inputs.DiffPRDInput]
-	action.TypedResponse[DiffPRDResponse]
-}
-
-func (a *DiffPRDAction) Description() string { return "Show combined git diff for a completed PRD" }
-
-func (a *DiffPRDAction) Execute(ctx context.Context, actx *action.Context) error {
-	input := a.Input(actx)
-
-	prd, err := read.FindOne[PRDDiffInfo](ctx, input.PRDID)
+func (q *DiffPRDQuery) Execute(ctx context.Context, qctx *query.Context) query.Result {
+	prd, err := read.FindOne[PRDDiffInfo](ctx, q.PRDID)
 	if err != nil {
-		return fmt.Errorf("diff-prd: load prd: %w", err)
+		return query.Fail("read_error", fmt.Sprintf("diff-prd: load prd: %v", err))
 	}
 	if prd.ID == "" {
-		return fmt.Errorf("PRD %s not found", input.PRDID)
+		return query.Fail("not_found", fmt.Sprintf("PRD %s not found", q.PRDID))
 	}
 
 	project, err := read.FindOne[ProjectPathInfo](ctx, prd.ProjectID)
 	if err != nil {
-		return fmt.Errorf("diff-prd: load project: %w", err)
+		return query.Fail("read_error", fmt.Sprintf("diff-prd: load project: %v", err))
 	}
 	if project.LocalPath == "" {
-		return fmt.Errorf("project for PRD %s has no local path", input.PRDID)
+		return query.Fail("invalid_state", fmt.Sprintf("project for PRD %s has no local path", q.PRDID))
 	}
 
 	doneTasks, err := read.FindMany[TaskCommitRow](ctx,
@@ -83,7 +68,7 @@ func (a *DiffPRDAction) Execute(ctx context.Context, actx *action.Context) error
 		read.OrderBy("sequence", read.Asc),
 	)
 	if err != nil {
-		return fmt.Errorf("diff-prd: list tasks: %w", err)
+		return query.Fail("read_error", fmt.Sprintf("diff-prd: list tasks: %v", err))
 	}
 
 	var commits []string
@@ -94,26 +79,28 @@ func (a *DiffPRDAction) Execute(ctx context.Context, actx *action.Context) error
 	}
 
 	if len(commits) == 0 {
-		return a.Respond(actx, DiffPRDResponse{
-			PRDID:     prd.ID,
-			PRDTitle:  prd.Title,
-			TasksDone: len(doneTasks),
+		return query.OK(query.Extras{
+			"prdId":     prd.ID,
+			"prdTitle":  prd.Title,
+			"diff":      "",
+			"tasksDone": len(doneTasks),
+			"commits":   0,
 		})
 	}
 
 	first, last := commits[0], commits[len(commits)-1]
 	diff, filesChanged, err := runGitDiff(ctx, project.LocalPath, first, last)
 	if err != nil {
-		return fmt.Errorf("diff-prd: %w", err)
+		return query.Fail("git_error", fmt.Sprintf("diff-prd: %v", err))
 	}
 
-	return a.Respond(actx, DiffPRDResponse{
-		PRDID:        prd.ID,
-		PRDTitle:     prd.Title,
-		Diff:         diff,
-		FilesChanged: filesChanged,
-		TasksDone:    len(doneTasks),
-		Commits:      len(commits),
+	return query.OK(query.Extras{
+		"prdId":        prd.ID,
+		"prdTitle":     prd.Title,
+		"diff":         diff,
+		"filesChanged": filesChanged,
+		"tasksDone":    len(doneTasks),
+		"commits":      len(commits),
 	})
 }
 
@@ -127,7 +114,7 @@ func runGitDiff(ctx context.Context, repoPath, first, last string) (string, int,
 
 	if err := cmd.Run(); err != nil {
 		// Fallback: try without ^ (first commit might be root).
-		if len(first) > 0 && first == last {
+		if first == last {
 			diffRange = fmt.Sprintf("%s^..%s", first, first)
 		} else {
 			diffRange = fmt.Sprintf("%s..%s", first, last)

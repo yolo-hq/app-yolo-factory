@@ -1,15 +1,14 @@
-package actions
+package queries
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/projection"
+	"github.com/yolo-hq/yolo/core/query"
 	"github.com/yolo-hq/yolo/core/read"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
 )
 
 // RunCostRow holds cost data from a single run.
@@ -27,33 +26,22 @@ type ModelCost struct {
 	Runs    int     `json:"runs"`
 }
 
-// CostResponse is the typed response for CostAction.
-type CostResponse struct {
-	Breakdown []ModelCost `json:"breakdown"`
-	TotalCost float64     `json:"totalCost"`
-	TotalRuns int         `json:"totalRuns"`
+// CostQuery shows a cost breakdown grouped by model.
+type CostQuery struct {
+	query.Base
+
+	ProjectID string `arg:"projectId"`
 }
 
-// CostAction shows a cost breakdown grouped by model.
-type CostAction struct {
-	action.SkipAllPolicies
-	action.TypedInput[inputs.CostInput]
-	action.TypedResponse[CostResponse]
-}
-
-func (a *CostAction) Description() string { return "Show cost breakdown by model" }
-
-func (a *CostAction) Execute(ctx context.Context, actx *action.Context) error {
-	input := a.Input(actx)
-
+func (q *CostQuery) Execute(ctx context.Context, qctx *query.Context) query.Result {
 	opts := []read.Option{read.OrderBy("created_at", read.Desc)}
-	if input.ProjectID != "" {
-		opts = append(opts, read.Eq("project_id", input.ProjectID))
+	if q.ProjectID != "" {
+		opts = append(opts, read.Eq("project_id", q.ProjectID))
 	}
 
 	runs, err := read.FindMany[RunCostRow](ctx, opts...)
 	if err != nil {
-		return fmt.Errorf("cost: %w", err)
+		return query.Fail("read_error", fmt.Sprintf("cost: %v", err))
 	}
 
 	byModel := map[string]*ModelCost{}
@@ -74,9 +62,9 @@ func (a *CostAction) Execute(ctx context.Context, actx *action.Context) error {
 		breakdown = append(breakdown, *mc)
 	}
 
-	return a.Respond(actx, CostResponse{
-		Breakdown: breakdown,
-		TotalCost: total,
-		TotalRuns: len(runs),
+	return query.OK(query.Extras{
+		"breakdown": breakdown,
+		"totalCost": total,
+		"totalRuns": len(runs),
 	})
 }

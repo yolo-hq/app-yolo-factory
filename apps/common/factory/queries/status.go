@@ -1,11 +1,11 @@
-package actions
+package queries
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/projection"
+	"github.com/yolo-hq/yolo/core/query"
 	"github.com/yolo-hq/yolo/core/read"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
@@ -55,26 +55,15 @@ type ActivePRDSummary struct {
 	PercentDone    int    `json:"percentDone"`
 }
 
-// StatusResponse is the typed response for StatusAction.
-type StatusResponse struct {
-	Tasks          TaskCounts         `json:"tasks"`
-	ActivePRDs     []ActivePRDSummary `json:"activePrds"`
-	MonthlySpendUSD float64           `json:"monthlySpendUsd"`
+// StatusQuery shows a factory dashboard summary.
+type StatusQuery struct {
+	query.Base
 }
 
-// StatusAction shows a factory dashboard summary.
-type StatusAction struct {
-	action.SkipAllPolicies
-	action.NoInput
-	action.TypedResponse[StatusResponse]
-}
-
-func (a *StatusAction) Description() string { return "Show factory status summary" }
-
-func (a *StatusAction) Execute(ctx context.Context, actx *action.Context) error {
+func (q *StatusQuery) Execute(ctx context.Context, qctx *query.Context) query.Result {
 	tasks, err := read.FindMany[TaskStatusRow](ctx)
 	if err != nil {
-		return fmt.Errorf("status: list tasks: %w", err)
+		return query.Fail("read_error", fmt.Sprintf("status: list tasks: %v", err))
 	}
 
 	counts := TaskCounts{Total: len(tasks)}
@@ -99,7 +88,7 @@ func (a *StatusAction) Execute(ctx context.Context, actx *action.Context) error 
 		read.Eq("status", string(enums.PRDStatusInProgress)),
 	)
 	if err != nil {
-		return fmt.Errorf("status: list prds: %w", err)
+		return query.Fail("read_error", fmt.Sprintf("status: list prds: %v", err))
 	}
 
 	activePRDs := make([]ActivePRDSummary, 0, len(activePRDRows))
@@ -118,7 +107,7 @@ func (a *StatusAction) Execute(ctx context.Context, actx *action.Context) error 
 
 	projects, err := read.FindMany[ProjectSpendRow](ctx)
 	if err != nil {
-		return fmt.Errorf("status: list projects: %w", err)
+		return query.Fail("read_error", fmt.Sprintf("status: list projects: %v", err))
 	}
 
 	var totalSpent float64
@@ -126,9 +115,9 @@ func (a *StatusAction) Execute(ctx context.Context, actx *action.Context) error 
 		totalSpent += p.SpentThisMonthUSD
 	}
 
-	return a.Respond(actx, StatusResponse{
-		Tasks:           counts,
-		ActivePRDs:      activePRDs,
-		MonthlySpendUSD: totalSpent,
+	return query.OK(query.Extras{
+		"tasks":           counts,
+		"activePrds":      activePRDs,
+		"monthlySpendUsd": totalSpent,
 	})
 }
