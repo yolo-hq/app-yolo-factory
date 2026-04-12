@@ -30,7 +30,7 @@ type activePRDRow struct {
 type projectSpendRow struct {
 	projection.For[entities.Project]
 
-	SpentThisMonthUSD float64 `field:"spentThisMonthUsd"`
+	SpentThisMonthUSD float64 `field:"spent_this_month_usd"`
 }
 
 // activePRDSummary summarizes a single in-progress PRD.

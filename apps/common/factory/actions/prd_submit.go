@@ -31,10 +31,16 @@ func (a *SubmitPRDAction) Execute(ctx context.Context, actx *action.Context) err
 		source = string(enums.PRDSourceManual)
 	}
 
-	_, err := repos.PRD.CreateFromInput(ctx, actx, input,
+	result, err := repos.PRD.CreateFromInput(ctx, actx, input,
 		fields.PRD.Status.Value(string(enums.PRDStatusDraft)),
 		fields.PRD.CreatedBy.Value(constants.ActorHuman),
 		fields.PRD.Source.Value(source),
 	)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Resolve the created PRD (not the Project from input.resolves:"Project").
+	actx.Resolve("PRD", result.ID())
+	return nil
 }
