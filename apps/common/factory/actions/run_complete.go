@@ -47,11 +47,10 @@ type CompleteRunData struct {
 		PRD        struct {
 			ID string `field:"id"`
 
-			// Aggregations (replace updatePRDCounters helper).
-			CompletedCount int     `field:"tasks" aggregate:"count" filter:"status:done"`
-			FailedCount    int     `field:"tasks" aggregate:"count" filter:"status:failed"`
-			TotalCost      float64 `field:"tasks" aggregate:"sum:cost_usd"`
-			TotalCount     int     `field:"tasks" aggregate:"count"`
+			// Aggregations for terminal-check logic.
+			CompletedCount int `field:"tasks" aggregate:"count" filter:"status:done"`
+			FailedCount    int `field:"tasks" aggregate:"count" filter:"status:failed"`
+			TotalCount     int `field:"tasks" aggregate:"count"`
 
 			// Has-many slices (replace unblockDependents + findNextQueued helpers).
 			BlockedTasks []TaskRef `field:"tasks" filter:"status:blocked"`
@@ -113,11 +112,9 @@ func (a *CompleteRunAction) handleCompleted(
 		return
 	}
 
-	// b. Unblock dependents and update PRD state.
+	// b. Unblock dependents and advance PRD state.
 	toUnblock := a.unblockDependents(ctx, actx, data)
-	newCompleted := data.Task.PRD.CompletedCount + 1
-	newCost := data.Task.PRD.TotalCost + input.CostUSD
-	a.advancePRD(ctx, actx, data, newCompleted, newCost, now)
+	a.advancePRD(ctx, actx, data, now)
 
 	// c. Dispatch next task — prefer newly unblocked, else pre-loaded queued.
 	nextID := ""
@@ -161,23 +158,17 @@ func (a *CompleteRunAction) unblockDependents(
 	return toUnblock
 }
 
-// advancePRD updates PRD cost/completion counters and, when all tasks are
-// terminal, transitions the PRD to completed or failed and emits the event.
+// advancePRD checks whether all tasks are terminal and transitions the PRD
+// to completed or failed, emitting the appropriate event.
+// CompletedTasks and TotalCostUSD are now virtual computed fields — no manual
+// counter updates needed.
 func (a *CompleteRunAction) advancePRD(
 	ctx context.Context,
 	actx *action.Context,
 	data CompleteRunData,
-	newCompleted int,
-	newCost float64,
 	now time.Time,
 ) {
-	if _, err := repos.PRD.Update(ctx, actx, data.Task.PRD.ID, write.Set{
-		fields.PRD.CompletedTasks.Value(newCompleted),
-		fields.PRD.TotalCostUSD.Value(newCost),
-	}); err != nil {
-		slog.Warn("failed to update PRD counters", "prd_id", data.Task.PRD.ID, "error", err)
-	}
-
+	newCompleted := data.Task.PRD.CompletedCount + 1
 	if data.Task.PRD.TotalCount == 0 || (newCompleted+data.Task.PRD.FailedCount) != data.Task.PRD.TotalCount {
 		return
 	}
@@ -239,12 +230,10 @@ func (a *CompleteRunAction) handleFailed(
 		}
 	}
 
-	// Update PRD counters using pre-computed aggregations.
+	// Update PRD failed counter. TotalCostUSD is now a virtual computed field.
 	newFailed := data.Task.PRD.FailedCount + 1
-	newCost := data.Task.PRD.TotalCost + input.CostUSD
 	if _, err := repos.PRD.Update(ctx, actx, data.Task.PRD.ID, write.Set{
 		fields.PRD.FailedTasks.Value(newFailed),
-		fields.PRD.TotalCostUSD.Value(newCost),
 	}); err != nil {
 		slog.Warn("failed to update PRD counters", "prd_id", data.Task.PRD.ID, "error", err)
 	}
