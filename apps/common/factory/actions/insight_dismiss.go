@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/write"
@@ -23,5 +24,8 @@ func (a *DismissInsightAction) Execute(ctx context.Context, actx *action.Context
 	_, err := repos.Insight.UpdateEntity(ctx, actx, write.Set{
 		fields.Insight.Status.Value(string(enums.InsightStatusDismissed)),
 	})
-	return err
+	if err != nil {
+		return fmt.Errorf("dismiss-insight: %w", err)
+	}
+	return nil
 }

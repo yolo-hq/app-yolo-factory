@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/write"
@@ -28,5 +29,8 @@ func (a *RejectSuggestionAction) Execute(ctx context.Context, actx *action.Conte
 	_, err := repos.Suggestion.UpdateEntity(ctx, actx, write.Set{
 		fields.Suggestion.Status.Value(string(enums.SuggestionStatusRejected)),
 	})
-	return err
+	if err != nil {
+		return fmt.Errorf("reject-suggestion: %w", err)
+	}
+	return nil
 }

@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/write"
@@ -24,5 +25,8 @@ func (a *ResumeProjectAction) Execute(ctx context.Context, actx *action.Context)
 	_, err := repos.Project.UpdateEntity(ctx, actx, write.Set{
 		fields.Project.Status.Value(string(enums.ProjectStatusActive)),
 	})
-	return err
+	if err != nil {
+		return fmt.Errorf("resume-project: %w", err)
+	}
+	return nil
 }

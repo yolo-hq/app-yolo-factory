@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/write"
@@ -28,5 +29,8 @@ func (a *RetryTaskAction) Execute(ctx context.Context, actx *action.Context) err
 		fields.Task.Status.Value(string(enums.TaskStatusQueued)),
 		fields.Task.Model.When(input.Model != "").Value(input.Model),
 	})
-	return err
+	if err != nil {
+		return fmt.Errorf("retry-task: %w", err)
+	}
+	return nil
 }

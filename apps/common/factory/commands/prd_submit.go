@@ -9,6 +9,7 @@ import (
 	"github.com/yolo-hq/yolo/core/entity"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
@@ -67,7 +68,7 @@ func (c *PRDSubmit) Execute(ctx context.Context, cctx command.Context) error {
 		AcceptanceCriteria: input.Criteria,
 		Status:             string(enums.PRDStatusDraft),
 		Source:             string(enums.PRDSourceManual),
-		CreatedBy:          "human",
+		CreatedBy:          constants.ActorHuman,
 	}
 
 	created, err := w.Insert(ctx, prd)

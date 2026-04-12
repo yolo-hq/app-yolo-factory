@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/yolo-hq/yolo/core/entity"
@@ -74,7 +75,7 @@ func (s *TimeoutService) Execute(ctx context.Context, _ TimeoutInput) (TimeoutOu
 			Set("error", "timeout").
 			Set("completed_at", now).
 			Exec(ctx); err != nil {
-			fmt.Printf("[factory] ERROR: failed to timeout run %s: %v\n", run.ID, err)
+			slog.Error("failed to timeout run", "run_id", run.ID, "error", err)
 			continue
 		}
 
@@ -88,7 +89,7 @@ func (s *TimeoutService) Execute(ctx context.Context, _ TimeoutInput) (TimeoutOu
 				Set("status", string(enums.TaskStatusQueued)).
 				Set("run_count", newRunCount).
 				Exec(ctx); err != nil {
-				fmt.Printf("[factory] ERROR: failed to requeue task %s: %v\n", task.ID, err)
+				slog.Error("failed to requeue task", "task_id", task.ID, "error", err)
 			}
 		} else {
 			if _, err := s.TaskWrite.Update(ctx).
@@ -96,7 +97,7 @@ func (s *TimeoutService) Execute(ctx context.Context, _ TimeoutInput) (TimeoutOu
 				Set("status", string(enums.TaskStatusFailed)).
 				Set("run_count", newRunCount).
 				Exec(ctx); err != nil {
-				fmt.Printf("[factory] ERROR: failed to fail task %s: %v\n", task.ID, err)
+				slog.Error("failed to fail task", "task_id", task.ID, "error", err)
 			}
 		}
 	}

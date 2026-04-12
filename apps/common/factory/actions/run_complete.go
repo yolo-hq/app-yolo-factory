@@ -2,7 +2,7 @@ package actions
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 	"time"
 
 	yolostrings "github.com/yolo-hq/yolo/core/strings"
@@ -109,7 +109,7 @@ func (a *CompleteRunAction) handleCompleted(
 		fields.Task.Summary.Value(yolostrings.Truncate(input.Result, 500)),
 		fields.Task.CompletedAt.Value(&now),
 	}); err != nil {
-		fmt.Printf("[factory] ERROR: failed to update task %s to done: %v\n", data.Task.ID, err)
+		slog.Error("failed to update task to done", "task_id", data.Task.ID, "error", err)
 		return
 	}
 
@@ -131,7 +131,7 @@ func (a *CompleteRunAction) handleCompleted(
 		if _, err := repos.Task.UpdateMany(ctx, actx, toUnblock, write.Set{
 			fields.Task.Status.Value(string(enums.TaskStatusQueued)),
 		}); err != nil {
-			fmt.Printf("[factory] WARN: failed to unblock tasks: %v\n", err)
+			slog.Warn("failed to unblock tasks", "error", err)
 		}
 	}
 
@@ -142,7 +142,7 @@ func (a *CompleteRunAction) handleCompleted(
 		fields.PRD.CompletedTasks.Value(newCompleted),
 		fields.PRD.TotalCostUSD.Value(newCost),
 	}); err != nil {
-		fmt.Printf("[factory] WARN: failed to update PRD counters for %s: %v\n", data.Task.PRD.ID, err)
+		slog.Warn("failed to update PRD counters", "prd_id", data.Task.PRD.ID, "error", err)
 	}
 
 	// d. Check PRD completion.
@@ -155,7 +155,7 @@ func (a *CompleteRunAction) handleCompleted(
 			fields.PRD.Status.Value(status),
 			fields.PRD.CompletedAt.Value(&now),
 		}); err != nil {
-			fmt.Printf("[factory] WARN: failed to update PRD status %s: %v\n", data.Task.PRD.ID, err)
+			slog.Warn("failed to update PRD status", "prd_id", data.Task.PRD.ID, "error", err)
 		} else if data.Task.PRD.FailedCount > 0 {
 			events.PRDFailed.Emit(ctx, data.Task.PRD.ID)
 		} else {
@@ -190,7 +190,7 @@ func (a *CompleteRunAction) handleFailed(
 			fields.Task.CostUSD.Incr(input.CostUSD),
 			fields.Task.RunCount.Incr(1),
 		}); err != nil {
-			fmt.Printf("[factory] ERROR: failed to requeue task %s: %v\n", data.Task.ID, err)
+			slog.Error("failed to requeue task", "task_id", data.Task.ID, "error", err)
 			return
 		}
 		jobs.Defer(ctx, &factoryjobs.ExecuteWorkflowJob{TaskID: data.Task.ID})
@@ -203,14 +203,14 @@ func (a *CompleteRunAction) handleFailed(
 		fields.Task.CostUSD.Incr(input.CostUSD),
 		fields.Task.RunCount.Incr(1),
 	}); err != nil {
-		fmt.Printf("[factory] ERROR: failed to mark task %s as failed: %v\n", data.Task.ID, err)
+		slog.Error("failed to mark task as failed", "task_id", data.Task.ID, "error", err)
 		return
 	}
 
 	// Cascade failure via the completion service (recursive graph walk).
 	if svc.S.RunCompletion != nil {
 		if err := svc.S.RunCompletion.CascadeFailure(ctx, data.Task.ID, data.Task.PRD.ID); err != nil {
-			fmt.Printf("[factory] WARN: cascade failed for %s: %v\n", data.Task.ID, err)
+			slog.Warn("cascade failure failed", "task_id", data.Task.ID, "error", err)
 		}
 	}
 
@@ -221,6 +221,6 @@ func (a *CompleteRunAction) handleFailed(
 		fields.PRD.FailedTasks.Value(newFailed),
 		fields.PRD.TotalCostUSD.Value(newCost),
 	}); err != nil {
-		fmt.Printf("[factory] WARN: failed to update PRD counters for %s: %v\n", data.Task.PRD.ID, err)
+		slog.Warn("failed to update PRD counters", "prd_id", data.Task.PRD.ID, "error", err)
 	}
 }

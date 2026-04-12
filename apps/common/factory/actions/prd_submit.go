@@ -8,6 +8,7 @@ import (
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/repos"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
@@ -32,7 +33,7 @@ func (a *SubmitPRDAction) Execute(ctx context.Context, actx *action.Context) err
 
 	_, err := repos.PRD.CreateFromInput(ctx, actx, input,
 		fields.PRD.Status.Value(string(enums.PRDStatusDraft)),
-		fields.PRD.CreatedBy.Value("human"),
+		fields.PRD.CreatedBy.Value(constants.ActorHuman),
 		fields.PRD.Source.Value(source),
 	)
 	return err

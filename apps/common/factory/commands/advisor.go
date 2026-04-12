@@ -46,7 +46,7 @@ func (c *AdvisorRun) Execute(ctx context.Context, cctx command.Context) error {
 
 	// Advisor needs Claude client for analysis. Run inline with nil Claude — will fail
 	// at agent call but shows the intent. Use worker for full execution.
-	// TODO: Wire Claude client when command DI is available.
+	// Wire Claude client when command DI is available (tracked in factory issues).
 	svc := &services.AdvisorService{}
 
 	cctx.Print("Running advisor %s analysis on %s...", analysis, project.Name)

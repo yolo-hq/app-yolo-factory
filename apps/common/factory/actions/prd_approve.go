@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/yolo-hq/yolo/core/action"
@@ -53,7 +54,7 @@ func (a *ApprovePRDAction) Execute(ctx context.Context, actx *action.Context) er
 		},
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("approve-prd: %w", err)
 	}
 
 	// auto_start: if project has AutoStart, defer PlanPRDJob until after commit.

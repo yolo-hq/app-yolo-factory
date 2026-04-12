@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/entity"
@@ -49,7 +50,7 @@ func (a *ExecutePRDAction) Execute(ctx context.Context, actx *action.Context) er
 		},
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("execute-prd: %w", err)
 	}
 
 	// Defer planning job until after the tx commits.

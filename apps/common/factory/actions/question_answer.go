@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/yolo-hq/yolo/core/action"
@@ -10,6 +11,7 @@ import (
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/repos"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
@@ -29,8 +31,11 @@ func (a *AnswerQuestionAction) Execute(ctx context.Context, actx *action.Context
 	_, err := repos.Question.UpdateEntity(ctx, actx, write.Set{
 		fields.Question.Status.Value(string(enums.QuestionStatusAnswered)),
 		fields.Question.Answer.Value(input.Answer),
-		fields.Question.AnsweredBy.Value("human"),
+		fields.Question.AnsweredBy.Value(constants.ActorHuman),
 		fields.Question.AnsweredAt.Value(&now),
 	})
-	return err
+	if err != nil {
+		return fmt.Errorf("answer-question: %w", err)
+	}
+	return nil
 }

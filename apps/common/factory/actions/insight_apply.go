@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/write"
@@ -24,5 +25,8 @@ func (a *ApplyInsightAction) Execute(ctx context.Context, actx *action.Context) 
 	_, err := repos.Insight.UpdateEntity(ctx, actx, write.Set{
 		fields.Insight.Status.Value(string(enums.InsightStatusApplied)),
 	})
-	return err
+	if err != nil {
+		return fmt.Errorf("apply-insight: %w", err)
+	}
+	return nil
 }

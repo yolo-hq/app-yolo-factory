@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/write"
@@ -24,5 +25,8 @@ func (a *CancelTaskAction) Execute(ctx context.Context, actx *action.Context) er
 	_, err := repos.Task.UpdateEntity(ctx, actx, write.Set{
 		fields.Task.Status.Value(string(enums.TaskStatusCancelled)),
 	})
-	return err
+	if err != nil {
+		return fmt.Errorf("cancel-task: %w", err)
+	}
+	return nil
 }

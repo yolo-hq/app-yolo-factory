@@ -10,6 +10,7 @@ import (
 	"github.com/yolo-hq/yolo/core/entity"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
@@ -37,7 +38,7 @@ func (c *QuestionAnswer) Execute(ctx context.Context, cctx command.Context) erro
 	if _, err := w.Update(ctx).WhereID(id).
 		Set("status", string(enums.QuestionStatusAnswered)).
 		Set("answer", answer).
-		Set("answered_by", "human").
+		Set("answered_by", constants.ActorHuman).
 		Set("answered_at", now).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("answer question: %w", err)

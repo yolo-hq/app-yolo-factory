@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/service"
@@ -44,7 +45,7 @@ func (s *BudgetResetService) Execute(ctx context.Context, _ BudgetResetInput) (B
 			WhereID(p.ID).
 			Set("spent_this_month_usd", 0).
 			Exec(ctx); err != nil {
-			fmt.Printf("[factory] ERROR: failed to reset budget for project %s: %v\n", p.ID, err)
+			slog.Error("failed to reset budget for project", "project_id", p.ID, "error", err)
 			continue
 		}
 		out.ResetCount++

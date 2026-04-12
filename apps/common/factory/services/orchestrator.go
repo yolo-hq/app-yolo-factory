@@ -514,10 +514,10 @@ func (s *OrchestratorService) Execute(ctx context.Context, in OrchestratorInput)
 		slog.Warn("git branch cleanup failed", "task_id", inTask.ID, "error", err)
 	}
 
-	// 15. TODO: Trigger integration review after every N completed tasks.
-	// Use ShouldRunIntegrationReview(completedCount, defaultIntegrationReviewEvery)
-	// to decide. The job layer should count completed tasks in the PRD and call
-	// IntegrationReviewService.Execute with the combined diff from recent tasks.
+	// 15. Trigger integration review after every N completed tasks.
+	// See: https://github.com/yolo-hq/app-yolo-factory/issues — wire
+	// ShouldRunIntegrationReview(completedCount, defaultIntegrationReviewEvery)
+	// and IntegrationReviewService.Execute with combined diff from recent tasks.
 
 	// 16. Emit task completed event.
 	events.TaskCompleted.Emit(ctx, inTask.ID)
