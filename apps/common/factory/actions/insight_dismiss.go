@@ -9,22 +9,17 @@ import (
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
 
-// DismissInsightAction dismisses an insight with a reason.
+// DismissInsightAction dismisses an insight.
 type DismissInsightAction struct {
 	action.RequirePolicy[policies.CanDismissInsightPolicy]
-	action.TypedInput[inputs.DismissInsightInput]
 }
 
-func (a *DismissInsightAction) Description() string { return "Dismiss an insight with a reason" }
+func (a *DismissInsightAction) Description() string { return "Dismiss an insight" }
 
 func (a *DismissInsightAction) Execute(ctx context.Context, actx *action.Context) error {
-	// input consumed for validation; reason not stored on entity.
-	_ = a.Input(actx)
-
 	_, err := action.Write[entities.Insight](actx).Exec(ctx, write.Update{
 		ID:  actx.EntityID,
 		Set: write.Set{fields.Insight.Status.Value(string(enums.InsightStatusDismissed))},
