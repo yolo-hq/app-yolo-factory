@@ -64,7 +64,6 @@ func (s *GitService) Execute(ctx context.Context, in GitInput) (GitOutput, error
 		if err != nil {
 			return out, err
 		}
-		// Get the commit hash.
 		hashOut, err := s.run(ctx, in.RepoPath, "git", "rev-parse", "HEAD")
 		if err == nil {
 			out.CommitHash = strings.TrimSpace(hashOut.RawOutput)
