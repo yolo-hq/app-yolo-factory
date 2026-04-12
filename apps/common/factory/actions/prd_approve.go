@@ -12,6 +12,7 @@ import (
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
+	"github.com/yolo-hq/app-yolo-factory/.yolo/repos"
 	factoryjobs "github.com/yolo-hq/app-yolo-factory/apps/common/factory/jobs"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
@@ -42,16 +43,15 @@ func (a *ApprovePRDAction) Execute(ctx context.Context, actx *action.Context) er
 	prd := a.Data(actx)
 
 	now := time.Now()
-	_, err := action.Write[entities.PRD](actx).Exec(ctx, write.Update{
-		ID: actx.EntityID,
-		Where: []entity.FilterCondition{
+	_, err := repos.PRD.UpdateWhere(ctx, actx, actx.EntityID,
+		[]entity.FilterCondition{
 			{Field: "status", Operator: entity.OpEq, Value: string(enums.PRDStatusDraft)},
 		},
-		Set: write.Set{
+		write.Set{
 			fields.PRD.Status.Value(string(enums.PRDStatusApproved)),
 			fields.PRD.ApprovedAt.Value(&now),
 		},
-	})
+	)
 	if err != nil {
 		return err
 	}

@@ -8,7 +8,7 @@ import (
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/.yolo/repos"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
 
@@ -20,9 +20,8 @@ type DismissInsightAction struct {
 func (a *DismissInsightAction) Description() string { return "Dismiss an insight" }
 
 func (a *DismissInsightAction) Execute(ctx context.Context, actx *action.Context) error {
-	_, err := action.Write[entities.Insight](actx).Exec(ctx, write.Update{
-		ID:  actx.EntityID,
-		Set: write.Set{fields.Insight.Status.Value(string(enums.InsightStatusDismissed))},
+	_, err := repos.Insight.UpdateEntity(ctx, actx, write.Set{
+		fields.Insight.Status.Value(string(enums.InsightStatusDismissed)),
 	})
 	return err
 }

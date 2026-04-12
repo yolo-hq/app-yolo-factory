@@ -4,11 +4,10 @@ import (
 	"context"
 
 	"github.com/yolo-hq/yolo/core/action"
-	"github.com/yolo-hq/yolo/core/write"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/.yolo/repos"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
@@ -31,13 +30,10 @@ func (a *SubmitPRDAction) Execute(ctx context.Context, actx *action.Context) err
 		source = string(enums.PRDSourceManual)
 	}
 
-	_, err := action.Write[entities.PRD](actx).Exec(ctx, write.Create{
-		FromInput: input,
-		Set: write.Set{
-			fields.PRD.Status.Value(string(enums.PRDStatusDraft)),
-			fields.PRD.CreatedBy.Value("human"),
-			fields.PRD.Source.Value(source),
-		},
-	})
+	_, err := repos.PRD.CreateFromInput(ctx, actx, input,
+		fields.PRD.Status.Value(string(enums.PRDStatusDraft)),
+		fields.PRD.CreatedBy.Value("human"),
+		fields.PRD.Source.Value(source),
+	)
 	return err
 }

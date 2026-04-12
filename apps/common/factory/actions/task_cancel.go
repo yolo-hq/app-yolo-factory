@@ -8,7 +8,7 @@ import (
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/.yolo/repos"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
 
@@ -21,9 +21,8 @@ type CancelTaskAction struct {
 func (a *CancelTaskAction) Description() string { return "Cancel a non-terminal task" }
 
 func (a *CancelTaskAction) Execute(ctx context.Context, actx *action.Context) error {
-	_, err := action.Write[entities.Task](actx).Exec(ctx, write.Update{
-		ID:  actx.EntityID,
-		Set: write.Set{fields.Task.Status.Value(string(enums.TaskStatusCancelled))},
+	_, err := repos.Task.UpdateEntity(ctx, actx, write.Set{
+		fields.Task.Status.Value(string(enums.TaskStatusCancelled)),
 	})
 	return err
 }

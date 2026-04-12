@@ -8,7 +8,7 @@ import (
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/.yolo/repos"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
 
@@ -21,9 +21,8 @@ type ApplyInsightAction struct {
 func (a *ApplyInsightAction) Description() string { return "Apply an acknowledged insight" }
 
 func (a *ApplyInsightAction) Execute(ctx context.Context, actx *action.Context) error {
-	_, err := action.Write[entities.Insight](actx).Exec(ctx, write.Update{
-		ID:  actx.EntityID,
-		Set: write.Set{fields.Insight.Status.Value(string(enums.InsightStatusApplied))},
+	_, err := repos.Insight.UpdateEntity(ctx, actx, write.Set{
+		fields.Insight.Status.Value(string(enums.InsightStatusApplied)),
 	})
 	return err
 }

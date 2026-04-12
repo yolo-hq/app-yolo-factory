@@ -8,7 +8,7 @@ import (
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/.yolo/repos"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
 
@@ -21,9 +21,8 @@ type PauseProjectAction struct {
 func (a *PauseProjectAction) Description() string { return "Pause an active project" }
 
 func (a *PauseProjectAction) Execute(ctx context.Context, actx *action.Context) error {
-	_, err := action.Write[entities.Project](actx).Exec(ctx, write.Update{
-		ID:  actx.EntityID,
-		Set: write.Set{fields.Project.Status.Value(string(enums.ProjectStatusPaused))},
+	_, err := repos.Project.UpdateEntity(ctx, actx, write.Set{
+		fields.Project.Status.Value(string(enums.ProjectStatusPaused)),
 	})
 	return err
 }

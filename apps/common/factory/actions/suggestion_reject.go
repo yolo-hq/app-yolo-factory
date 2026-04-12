@@ -8,7 +8,7 @@ import (
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/.yolo/repos"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
@@ -25,9 +25,8 @@ func (a *RejectSuggestionAction) Execute(ctx context.Context, actx *action.Conte
 	// input consumed for validation; reason not stored on entity.
 	_ = a.Input(actx)
 
-	_, err := action.Write[entities.Suggestion](actx).Exec(ctx, write.Update{
-		ID:  actx.EntityID,
-		Set: write.Set{fields.Suggestion.Status.Value(string(enums.SuggestionStatusRejected))},
+	_, err := repos.Suggestion.UpdateEntity(ctx, actx, write.Set{
+		fields.Suggestion.Status.Value(string(enums.SuggestionStatusRejected)),
 	})
 	return err
 }

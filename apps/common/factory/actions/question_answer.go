@@ -9,7 +9,7 @@ import (
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/.yolo/repos"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
@@ -26,14 +26,11 @@ func (a *AnswerQuestionAction) Execute(ctx context.Context, actx *action.Context
 	input := a.Input(actx)
 	now := time.Now()
 
-	_, err := action.Write[entities.Question](actx).Exec(ctx, write.Update{
-		ID: actx.EntityID,
-		Set: write.Set{
-			fields.Question.Status.Value(string(enums.QuestionStatusAnswered)),
-			fields.Question.Answer.Value(input.Answer),
-			fields.Question.AnsweredBy.Value("human"),
-			fields.Question.AnsweredAt.Value(&now),
-		},
+	_, err := repos.Question.UpdateEntity(ctx, actx, write.Set{
+		fields.Question.Status.Value(string(enums.QuestionStatusAnswered)),
+		fields.Question.Answer.Value(input.Answer),
+		fields.Question.AnsweredBy.Value("human"),
+		fields.Question.AnsweredAt.Value(&now),
 	})
 	return err
 }

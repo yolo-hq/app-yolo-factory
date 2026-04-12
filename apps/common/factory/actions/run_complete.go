@@ -13,6 +13,7 @@ import (
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
+	"github.com/yolo-hq/app-yolo-factory/.yolo/repos"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/svc"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/events"
@@ -76,11 +77,9 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) e
 	now := time.Now()
 
 	// 1. Update the run with completion data.
-	if _, err := action.Write[entities.Run](actx).Exec(ctx, write.Update{
-		ID:        actx.EntityID,
-		FromInput: input,
-		Set:       write.Set{fields.Run.CompletedAt.Value(&now)},
-	}); err != nil {
+	if _, err := repos.Run.UpdateFromInput(ctx, actx, actx.EntityID, input,
+		fields.Run.CompletedAt.Value(&now),
+	); err != nil {
 		return err
 	}
 
@@ -103,15 +102,12 @@ func (a *CompleteRunAction) handleCompleted(
 	now time.Time,
 ) {
 	// a. Mark task done, accumulate cost atomically.
-	if _, err := action.Write[entities.Task](actx).Exec(ctx, write.Update{
-		ID: data.Task.ID,
-		Set: write.Set{
-			fields.Task.Status.Value(string(enums.TaskStatusDone)),
-			fields.Task.CostUSD.Incr(input.CostUSD),
-			fields.Task.CommitHash.Value(input.CommitHash),
-			fields.Task.Summary.Value(yolostrings.Truncate(input.Result, 500)),
-			fields.Task.CompletedAt.Value(&now),
-		},
+	if _, err := repos.Task.Update(ctx, actx, data.Task.ID, write.Set{
+		fields.Task.Status.Value(string(enums.TaskStatusDone)),
+		fields.Task.CostUSD.Incr(input.CostUSD),
+		fields.Task.CommitHash.Value(input.CommitHash),
+		fields.Task.Summary.Value(yolostrings.Truncate(input.Result, 500)),
+		fields.Task.CompletedAt.Value(&now),
 	}); err != nil {
 		fmt.Printf("[factory] ERROR: failed to update task %s to done: %v\n", data.Task.ID, err)
 		return
@@ -132,9 +128,8 @@ func (a *CompleteRunAction) handleCompleted(
 		toUnblock = append(toUnblock, blocked.ID)
 	}
 	if len(toUnblock) > 0 {
-		if _, err := action.Write[entities.Task](actx).Exec(ctx, write.UpdateManyOp{
-			IDs: toUnblock,
-			Set: write.Set{fields.Task.Status.Value(string(enums.TaskStatusQueued))},
+		if _, err := repos.Task.UpdateMany(ctx, actx, toUnblock, write.Set{
+			fields.Task.Status.Value(string(enums.TaskStatusQueued)),
 		}); err != nil {
 			fmt.Printf("[factory] WARN: failed to unblock tasks: %v\n", err)
 		}
@@ -143,12 +138,9 @@ func (a *CompleteRunAction) handleCompleted(
 	// c. Update PRD counters from pre-computed aggregations.
 	newCompleted := data.Task.PRD.CompletedCount + 1
 	newCost := data.Task.PRD.TotalCost + input.CostUSD
-	if _, err := action.Write[entities.PRD](actx).Exec(ctx, write.Update{
-		ID: data.Task.PRD.ID,
-		Set: write.Set{
-			fields.PRD.CompletedTasks.Value(newCompleted),
-			fields.PRD.TotalCostUSD.Value(newCost),
-		},
+	if _, err := repos.PRD.Update(ctx, actx, data.Task.PRD.ID, write.Set{
+		fields.PRD.CompletedTasks.Value(newCompleted),
+		fields.PRD.TotalCostUSD.Value(newCost),
 	}); err != nil {
 		fmt.Printf("[factory] WARN: failed to update PRD counters for %s: %v\n", data.Task.PRD.ID, err)
 	}
@@ -159,12 +151,9 @@ func (a *CompleteRunAction) handleCompleted(
 		if data.Task.PRD.FailedCount > 0 {
 			status = string(enums.PRDStatusFailed)
 		}
-		if _, err := action.Write[entities.PRD](actx).Exec(ctx, write.Update{
-			ID: data.Task.PRD.ID,
-			Set: write.Set{
-				fields.PRD.Status.Value(status),
-				fields.PRD.CompletedAt.Value(&now),
-			},
+		if _, err := repos.PRD.Update(ctx, actx, data.Task.PRD.ID, write.Set{
+			fields.PRD.Status.Value(status),
+			fields.PRD.CompletedAt.Value(&now),
 		}); err != nil {
 			fmt.Printf("[factory] WARN: failed to update PRD status %s: %v\n", data.Task.PRD.ID, err)
 		} else if data.Task.PRD.FailedCount > 0 {
@@ -196,13 +185,10 @@ func (a *CompleteRunAction) handleFailed(
 
 	if newRunCount < data.Task.MaxRetries {
 		// Retry: requeue task with atomic cost/run_count increment.
-		if _, err := action.Write[entities.Task](actx).Exec(ctx, write.Update{
-			ID: data.Task.ID,
-			Set: write.Set{
-				fields.Task.Status.Value(string(enums.TaskStatusQueued)),
-				fields.Task.CostUSD.Incr(input.CostUSD),
-				fields.Task.RunCount.Incr(1),
-			},
+		if _, err := repos.Task.Update(ctx, actx, data.Task.ID, write.Set{
+			fields.Task.Status.Value(string(enums.TaskStatusQueued)),
+			fields.Task.CostUSD.Incr(input.CostUSD),
+			fields.Task.RunCount.Incr(1),
 		}); err != nil {
 			fmt.Printf("[factory] ERROR: failed to requeue task %s: %v\n", data.Task.ID, err)
 			return
@@ -212,13 +198,10 @@ func (a *CompleteRunAction) handleFailed(
 	}
 
 	// Exhausted retries: mark failed.
-	if _, err := action.Write[entities.Task](actx).Exec(ctx, write.Update{
-		ID: data.Task.ID,
-		Set: write.Set{
-			fields.Task.Status.Value(string(enums.TaskStatusFailed)),
-			fields.Task.CostUSD.Incr(input.CostUSD),
-			fields.Task.RunCount.Incr(1),
-		},
+	if _, err := repos.Task.Update(ctx, actx, data.Task.ID, write.Set{
+		fields.Task.Status.Value(string(enums.TaskStatusFailed)),
+		fields.Task.CostUSD.Incr(input.CostUSD),
+		fields.Task.RunCount.Incr(1),
 	}); err != nil {
 		fmt.Printf("[factory] ERROR: failed to mark task %s as failed: %v\n", data.Task.ID, err)
 		return
@@ -234,12 +217,9 @@ func (a *CompleteRunAction) handleFailed(
 	// Update PRD counters using pre-computed aggregations.
 	newFailed := data.Task.PRD.FailedCount + 1
 	newCost := data.Task.PRD.TotalCost + input.CostUSD
-	if _, err := action.Write[entities.PRD](actx).Exec(ctx, write.Update{
-		ID: data.Task.PRD.ID,
-		Set: write.Set{
-			fields.PRD.FailedTasks.Value(newFailed),
-			fields.PRD.TotalCostUSD.Value(newCost),
-		},
+	if _, err := repos.PRD.Update(ctx, actx, data.Task.PRD.ID, write.Set{
+		fields.PRD.FailedTasks.Value(newFailed),
+		fields.PRD.TotalCostUSD.Value(newCost),
 	}); err != nil {
 		fmt.Printf("[factory] WARN: failed to update PRD counters for %s: %v\n", data.Task.PRD.ID, err)
 	}

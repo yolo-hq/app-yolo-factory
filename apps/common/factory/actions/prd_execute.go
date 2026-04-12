@@ -11,6 +11,7 @@ import (
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
+	"github.com/yolo-hq/app-yolo-factory/.yolo/repos"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	factoryjobs "github.com/yolo-hq/app-yolo-factory/apps/common/factory/jobs"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
@@ -36,18 +37,17 @@ func (a *ExecutePRDAction) Execute(ctx context.Context, actx *action.Context) er
 	prd := a.Data(actx)
 
 	// Transition to planning with conditional where for race-safety.
-	_, err := action.Write[entities.PRD](actx).Exec(ctx, write.Update{
-		ID: actx.EntityID,
-		Where: []entity.FilterCondition{
+	_, err := repos.PRD.UpdateWhere(ctx, actx, actx.EntityID,
+		[]entity.FilterCondition{
 			{Field: "status", Operator: entity.OpIn, Value: []string{
 				string(enums.PRDStatusDraft),
 				string(enums.PRDStatusApproved),
 			}},
 		},
-		Set: write.Set{
+		write.Set{
 			fields.PRD.Status.Value(string(enums.PRDStatusPlanning)),
 		},
-	})
+	)
 	if err != nil {
 		return err
 	}

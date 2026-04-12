@@ -8,7 +8,7 @@ import (
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
+	"github.com/yolo-hq/app-yolo-factory/.yolo/repos"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
@@ -24,12 +24,9 @@ func (a *RetryTaskAction) Description() string { return "Retry a failed task" }
 func (a *RetryTaskAction) Execute(ctx context.Context, actx *action.Context) error {
 	input := a.Input(actx)
 
-	_, err := action.Write[entities.Task](actx).Exec(ctx, write.Update{
-		ID: actx.EntityID,
-		Set: write.Set{
-			fields.Task.Status.Value(string(enums.TaskStatusQueued)),
-			fields.Task.Model.When(input.Model != "").Value(input.Model),
-		},
+	_, err := repos.Task.UpdateEntity(ctx, actx, write.Set{
+		fields.Task.Status.Value(string(enums.TaskStatusQueued)),
+		fields.Task.Model.When(input.Model != "").Value(input.Model),
 	})
 	return err
 }
