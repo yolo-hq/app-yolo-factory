@@ -23,8 +23,7 @@ type TaskStatusCounts struct {
 type activePRDRow struct {
 	projection.For[entities.PRD]
 
-	Title    string `field:"title"`
-	Progress int    `field:"progress"`
+	Title string `field:"title"`
 }
 
 // projectSpendRow holds project spend data.
@@ -73,7 +72,7 @@ func (q *StatusQuery) Execute(ctx context.Context, qctx *query.Context) error {
 	}
 	activePRDs := make([]activePRDSummary, 0, len(activePRDRows))
 	for _, p := range activePRDRows {
-		activePRDs = append(activePRDs, activePRDSummary{Title: p.Title, Progress: p.Progress})
+		activePRDs = append(activePRDs, activePRDSummary{Title: p.Title})
 	}
 
 	projects, err := read.FindMany[projectSpendRow](ctx)

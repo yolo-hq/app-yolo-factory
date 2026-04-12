@@ -6,6 +6,7 @@ require (
 	github.com/oklog/ulid/v2 v2.1.0
 	github.com/stretchr/testify v1.11.1
 	github.com/uptrace/bun v1.2.18
+	github.com/yolo-hq/yolo v0.0.0-00010101000000-000000000000
 	github.com/yolo-hq/yolo/core v0.0.0-00010101000000-000000000000
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -33,7 +34,6 @@ require (
 	github.com/puzpuzpuz/xsync/v3 v3.5.1 // indirect
 	github.com/redis/go-redis/v9 v9.18.0 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
-	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/uptrace/bun/dialect/pgdialect v1.2.18 // indirect
@@ -41,7 +41,6 @@ require (
 	github.com/uptrace/bun/driver/pgdriver v1.2.18 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	github.com/yolo-hq/yolo v0.0.0-00010101000000-000000000000 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	go.opentelemetry.io/otel v1.41.0 // indirect
 	go.opentelemetry.io/otel/trace v1.41.0 // indirect
