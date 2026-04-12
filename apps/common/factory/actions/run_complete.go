@@ -113,7 +113,31 @@ func (a *CompleteRunAction) handleCompleted(
 		return
 	}
 
-	// b. Unblock dependents — build list then issue a single UpdateMany.
+	// b. Unblock dependents and update PRD state.
+	toUnblock := a.unblockDependents(ctx, actx, data)
+	newCompleted := data.Task.PRD.CompletedCount + 1
+	newCost := data.Task.PRD.TotalCost + input.CostUSD
+	a.advancePRD(ctx, actx, data, newCompleted, newCost, now)
+
+	// c. Dispatch next task — prefer newly unblocked, else pre-loaded queued.
+	nextID := ""
+	if len(toUnblock) > 0 {
+		nextID = toUnblock[0]
+	} else if len(data.Task.PRD.QueuedTasks) > 0 {
+		nextID = data.Task.PRD.QueuedTasks[0].ID
+	}
+	if nextID != "" {
+		jobs.Defer(ctx, &factoryjobs.ExecuteWorkflowJob{TaskID: nextID})
+	}
+}
+
+// unblockDependents transitions blocked tasks whose dependencies are all met to
+// "queued" and returns the IDs of tasks that were unblocked.
+func (a *CompleteRunAction) unblockDependents(
+	ctx context.Context,
+	actx *action.Context,
+	data CompleteRunData,
+) []string {
 	var toUnblock []string
 	for _, blocked := range data.Task.PRD.BlockedTasks {
 		if !helpers.ContainsDep(blocked.DependsOn, data.Task.ID) {
@@ -134,10 +158,19 @@ func (a *CompleteRunAction) handleCompleted(
 			slog.Warn("failed to unblock tasks", "error", err)
 		}
 	}
+	return toUnblock
+}
 
-	// c. Update PRD counters from pre-computed aggregations.
-	newCompleted := data.Task.PRD.CompletedCount + 1
-	newCost := data.Task.PRD.TotalCost + input.CostUSD
+// advancePRD updates PRD cost/completion counters and, when all tasks are
+// terminal, transitions the PRD to completed or failed and emits the event.
+func (a *CompleteRunAction) advancePRD(
+	ctx context.Context,
+	actx *action.Context,
+	data CompleteRunData,
+	newCompleted int,
+	newCost float64,
+	now time.Time,
+) {
 	if _, err := repos.PRD.Update(ctx, actx, data.Task.PRD.ID, write.Set{
 		fields.PRD.CompletedTasks.Value(newCompleted),
 		fields.PRD.TotalCostUSD.Value(newCost),
@@ -145,33 +178,25 @@ func (a *CompleteRunAction) handleCompleted(
 		slog.Warn("failed to update PRD counters", "prd_id", data.Task.PRD.ID, "error", err)
 	}
 
-	// d. Check PRD completion.
-	if data.Task.PRD.TotalCount > 0 && (newCompleted+data.Task.PRD.FailedCount) == data.Task.PRD.TotalCount {
-		status := string(enums.PRDStatusCompleted)
-		if data.Task.PRD.FailedCount > 0 {
-			status = string(enums.PRDStatusFailed)
-		}
-		if _, err := repos.PRD.Update(ctx, actx, data.Task.PRD.ID, write.Set{
-			fields.PRD.Status.Value(status),
-			fields.PRD.CompletedAt.Value(&now),
-		}); err != nil {
-			slog.Warn("failed to update PRD status", "prd_id", data.Task.PRD.ID, "error", err)
-		} else if data.Task.PRD.FailedCount > 0 {
-			events.PRDFailed.Emit(ctx, data.Task.PRD.ID)
-		} else {
-			events.PRDCompleted.Emit(ctx, data.Task.PRD.ID)
-		}
+	if data.Task.PRD.TotalCount == 0 || (newCompleted+data.Task.PRD.FailedCount) != data.Task.PRD.TotalCount {
+		return
 	}
 
-	// e. Dispatch next task — prefer newly unblocked, else pre-loaded queued.
-	nextID := ""
-	if len(toUnblock) > 0 {
-		nextID = toUnblock[0]
-	} else if len(data.Task.PRD.QueuedTasks) > 0 {
-		nextID = data.Task.PRD.QueuedTasks[0].ID
+	status := string(enums.PRDStatusCompleted)
+	if data.Task.PRD.FailedCount > 0 {
+		status = string(enums.PRDStatusFailed)
 	}
-	if nextID != "" {
-		jobs.Defer(ctx, &factoryjobs.ExecuteWorkflowJob{TaskID: nextID})
+	if _, err := repos.PRD.Update(ctx, actx, data.Task.PRD.ID, write.Set{
+		fields.PRD.Status.Value(status),
+		fields.PRD.CompletedAt.Value(&now),
+	}); err != nil {
+		slog.Warn("failed to update PRD status", "prd_id", data.Task.PRD.ID, "error", err)
+		return
+	}
+	if data.Task.PRD.FailedCount > 0 {
+		events.PRDFailed.Emit(ctx, data.Task.PRD.ID)
+	} else {
+		events.PRDCompleted.Emit(ctx, data.Task.PRD.ID)
 	}
 }
 
