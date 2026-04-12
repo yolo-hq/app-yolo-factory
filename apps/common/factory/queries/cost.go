@@ -1,11 +1,11 @@
-package actions
+package queries
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/projection"
+	"github.com/yolo-hq/yolo/core/query"
 	"github.com/yolo-hq/yolo/core/read"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
@@ -20,25 +20,24 @@ type CostByModel struct {
 	Runs  int     `aggregate:"count"`
 }
 
-// costResponse is the typed response for CostAction.
-type costResponse struct {
+// CostResponse is the typed response for CostQuery.
+type CostResponse struct {
 	Breakdown []CostByModel `json:"breakdown"`
 	TotalCost float64       `json:"totalCost"`
 	TotalRuns int           `json:"totalRuns"`
 }
 
-// CostAction shows a cost breakdown grouped by model.
-type CostAction struct {
-	action.TypedInput[inputs.CostInput]
-	action.TypedResponse[costResponse]
-	action.SkipAllPolicies
+// CostQuery shows a cost breakdown grouped by model.
+type CostQuery struct {
+	query.Base
+	query.TypedInput[inputs.CostInput]
+	query.Returns[CostResponse]
 }
 
-func (a *CostAction) ReadOnly() bool      { return true }
-func (a *CostAction) Description() string { return "Cost breakdown by model and period" }
+func (q *CostQuery) Description() string { return "Cost breakdown by model and period" }
 
-func (a *CostAction) Execute(ctx context.Context, actx *action.Context) error {
-	input := a.Input(actx)
+func (q *CostQuery) Execute(ctx context.Context, qctx *query.Context) error {
+	input := q.Input(qctx)
 
 	opts := []read.Option{}
 	if input.ProjectID != "" {
@@ -57,7 +56,7 @@ func (a *CostAction) Execute(ctx context.Context, actx *action.Context) error {
 		totalRuns += b.Runs
 	}
 
-	return a.Respond(actx, costResponse{
+	return q.Respond(qctx, CostResponse{
 		Breakdown: breakdown,
 		TotalCost: total,
 		TotalRuns: totalRuns,

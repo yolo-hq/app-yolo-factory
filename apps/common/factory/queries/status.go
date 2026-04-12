@@ -1,11 +1,11 @@
-package actions
+package queries
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/projection"
+	"github.com/yolo-hq/yolo/core/query"
 	"github.com/yolo-hq/yolo/core/read"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
@@ -40,23 +40,22 @@ type activePRDSummary struct {
 	Progress int    `json:"progress"`
 }
 
-// statusResponse is the typed response for StatusAction.
-type statusResponse struct {
+// StatusResponse is the typed response for StatusQuery.
+type StatusResponse struct {
 	TasksByStatus   map[string]int     `json:"tasksByStatus"`
 	ActivePRDs      []activePRDSummary `json:"activePrds"`
 	MonthlySpendUSD float64            `json:"monthlySpendUsd"`
 }
 
-// StatusAction shows a factory dashboard summary.
-type StatusAction struct {
-	action.TypedResponse[statusResponse]
-	action.SkipAllPolicies
+// StatusQuery shows a factory dashboard summary.
+type StatusQuery struct {
+	query.Base
+	query.Returns[StatusResponse]
 }
 
-func (a *StatusAction) ReadOnly() bool      { return true }
-func (a *StatusAction) Description() string { return "Factory dashboard summary" }
+func (q *StatusQuery) Description() string { return "Factory dashboard summary" }
 
-func (a *StatusAction) Execute(ctx context.Context, actx *action.Context) error {
+func (q *StatusQuery) Execute(ctx context.Context, qctx *query.Context) error {
 	counts, err := read.FindMany[TaskStatusCounts](ctx)
 	if err != nil {
 		return fmt.Errorf("status: task counts: %w", err)
@@ -86,7 +85,7 @@ func (a *StatusAction) Execute(ctx context.Context, actx *action.Context) error 
 		totalSpent += p.SpentThisMonthUSD
 	}
 
-	return a.Respond(actx, statusResponse{
+	return q.Respond(qctx, StatusResponse{
 		TasksByStatus:   byStatus,
 		ActivePRDs:      activePRDs,
 		MonthlySpendUSD: totalSpent,

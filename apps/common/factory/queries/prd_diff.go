@@ -1,4 +1,4 @@
-package actions
+package queries
 
 import (
 	"bytes"
@@ -9,6 +9,7 @@ import (
 
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/projection"
+	"github.com/yolo-hq/yolo/core/query"
 	"github.com/yolo-hq/yolo/core/read"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
@@ -39,8 +40,8 @@ type taskCommitRow struct {
 	CommitHash string `field:"commitHash"`
 }
 
-// prdDiffResponse is the typed response for DiffPRDAction.
-type prdDiffResponse struct {
+// DiffPRDResponse is the typed response for DiffPRDQuery.
+type DiffPRDResponse struct {
 	PRDID        string `json:"prdId"`
 	PRDTitle     string `json:"prdTitle"`
 	Diff         string `json:"diff"`
@@ -49,18 +50,17 @@ type prdDiffResponse struct {
 	Commits      int    `json:"commits"`
 }
 
-// DiffPRDAction computes the combined git diff for a completed PRD.
-type DiffPRDAction struct {
-	action.TypedInput[inputs.DiffPRDInput]
-	action.TypedResponse[prdDiffResponse]
-	action.SkipAllPolicies
+// PrdDiffQuery computes the combined git diff for a completed PRD.
+type PrdDiffQuery struct {
+	query.Base
+	query.TypedInput[inputs.DiffPRDInput]
+	query.Returns[DiffPRDResponse]
 }
 
-func (a *DiffPRDAction) ReadOnly() bool     { return true }
-func (a *DiffPRDAction) Description() string { return "Combined git diff for a completed PRD" }
+func (q *PrdDiffQuery) Description() string { return "Combined git diff for a completed PRD" }
 
-func (a *DiffPRDAction) Execute(ctx context.Context, actx *action.Context) error {
-	input := a.Input(actx)
+func (q *PrdDiffQuery) Execute(ctx context.Context, qctx *query.Context) error {
+	input := q.Input(qctx)
 
 	prd, err := read.FindOne[prdDiffInfo](ctx, input.PRDID)
 	if err != nil {
@@ -95,7 +95,7 @@ func (a *DiffPRDAction) Execute(ctx context.Context, actx *action.Context) error
 	}
 
 	if len(commits) == 0 {
-		return a.Respond(actx, prdDiffResponse{
+		return q.Respond(qctx, DiffPRDResponse{
 			PRDID:     prd.ID,
 			PRDTitle:  prd.Title,
 			TasksDone: len(doneTasks),
@@ -109,7 +109,7 @@ func (a *DiffPRDAction) Execute(ctx context.Context, actx *action.Context) error
 		return action.FailWithCode("GIT_ERROR", fmt.Sprintf("diff-prd: %v", err))
 	}
 
-	return a.Respond(actx, prdDiffResponse{
+	return q.Respond(qctx, DiffPRDResponse{
 		PRDID:        prd.ID,
 		PRDTitle:     prd.Title,
 		Diff:         diff,
