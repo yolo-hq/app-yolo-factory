@@ -1,6 +1,5 @@
 package inputs
 
-// CreateProjectInput is the input for creating a project.
 type CreateProjectInput struct {
 	Name             string  `json:"name" validate:"required"`
 	RepoURL          string  `json:"repoUrl" validate:"required"`

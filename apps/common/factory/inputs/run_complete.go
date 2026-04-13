@@ -1,6 +1,5 @@
 package inputs
 
-// CompleteRunInput is the input for completing a run with metrics.
 type CompleteRunInput struct {
 	Status       string  `json:"status" validate:"required"`
 	CostUSD      float64 `json:"costUsd"`

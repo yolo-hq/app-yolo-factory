@@ -1,6 +1,5 @@
 package inputs
 
-// UpdateProjectInput is the input for updating a project.
 type UpdateProjectInput struct {
 	Name             *string  `json:"name"`
 	Status           *string  `json:"status"`

@@ -1,3 +1,5 @@
+//go:build integration
+
 package jobs
 
 import (
@@ -23,12 +25,12 @@ import (
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/services"
 )
 
-// openTestDB opens a *bun.DB from DATABASE_URL. Skips if not set.
+// openTestDB opens a *bun.DB from DATABASE_URL. Fails if not set.
 func openTestDB(t *testing.T) (*bun.DB, bun.Tx, func()) {
 	t.Helper()
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		t.Skip("DATABASE_URL not set")
+		t.Fatal("DATABASE_URL required for integration tests")
 	}
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
 	db := bun.NewDB(sqldb, pgdialect.New())

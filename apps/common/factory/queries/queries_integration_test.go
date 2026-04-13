@@ -1,3 +1,5 @@
+//go:build integration
+
 package queries
 
 import (
@@ -38,7 +40,7 @@ func openDB(t testing.TB) (*bun.DB, bun.Tx, func()) {
 	t.Helper()
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		t.Skip("DATABASE_URL not set")
+		t.Fatal("DATABASE_URL required for integration tests")
 	}
 
 	sharedDBOnce.Do(func() {
