@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/yolo-hq/yolo/core/entity"
+	"github.com/yolo-hq/yolo/core/read"
 	"github.com/yolo-hq/yolo/core/service"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
@@ -20,12 +21,7 @@ import (
 // BackupService writes entity state to a git-backed directory.
 type BackupService struct {
 	service.Base
-	StatePath      string
-	ProjectRead    entity.ReadRepository[entities.Project]
-	PRDRead        entity.ReadRepository[entities.PRD]
-	TaskRead       entity.ReadRepository[entities.Task]
-	QuestionRead   entity.ReadRepository[entities.Question]
-	SuggestionRead entity.ReadRepository[entities.Suggestion]
+	StatePath string
 }
 
 // BackupInput describes what to back up.
@@ -227,39 +223,44 @@ func (s *BackupService) gitPush(ctx context.Context) error {
 
 // snapshotAll backs up all entities of every type.
 func (s *BackupService) snapshotAll(ctx context.Context) (BackupOutput, error) {
-	if err := backupEntities(ctx, s, "project", s.ProjectRead); err != nil {
+	if err := backupEntities[entities.Project](ctx, s, "project"); err != nil {
 		return BackupOutput{}, fmt.Errorf("backup projects: %w", err)
 	}
-	if err := backupEntities(ctx, s, "prd", s.PRDRead); err != nil {
+	if err := backupEntities[entities.PRD](ctx, s, "prd"); err != nil {
 		return BackupOutput{}, fmt.Errorf("backup prds: %w", err)
 	}
-	if err := backupEntities(ctx, s, "task", s.TaskRead); err != nil {
+	if err := backupEntities[entities.Task](ctx, s, "task"); err != nil {
 		return BackupOutput{}, fmt.Errorf("backup tasks: %w", err)
 	}
-	if err := backupEntities(ctx, s, "question", s.QuestionRead); err != nil {
+	if err := backupEntities[entities.Question](ctx, s, "question"); err != nil {
 		return BackupOutput{}, fmt.Errorf("backup questions: %w", err)
 	}
-	if err := backupEntities(ctx, s, "suggestion", s.SuggestionRead); err != nil {
+	if err := backupEntities[entities.Suggestion](ctx, s, "suggestion"); err != nil {
 		return BackupOutput{}, fmt.Errorf("backup suggestions: %w", err)
 	}
 	return BackupOutput{}, nil
 }
 
-// backupEntities iterates all entities from a read repo and backs each one up.
-func backupEntities[T entity.Entity](ctx context.Context, s *BackupService, entityType string, repo entity.ReadRepository[T]) error {
-	result, err := repo.FindMany(ctx, entity.FindOptions{})
+// backupEntities loads every entity of type T via read.FindMany and writes
+// each one to the backup directory.
+func backupEntities[T entity.Entity](ctx context.Context, s *BackupService, entityType string) error {
+	rows, err := read.FindMany[T](ctx, read.Limit(10000))
 	if err != nil {
 		return err
 	}
-	for _, e := range result.Data {
+	for _, row := range rows {
+		// T is constrained to entity.Entity so GetID is available on a value
+		// of type T via a method on a pointer receiver of the concrete type.
+		entRow := any(&row).(entity.Entity)
+		id := entRow.GetID()
 		_, err := s.Execute(ctx, BackupInput{
 			Trigger:    "snapshot",
 			EntityType: entityType,
-			EntityID:   e.GetID(),
-			EntityData: e,
+			EntityID:   id,
+			EntityData: row,
 		})
 		if err != nil {
-			return fmt.Errorf("backup %s %s: %w", entityType, e.GetID(), err)
+			return fmt.Errorf("backup %s %s: %w", entityType, id, err)
 		}
 	}
 	return nil

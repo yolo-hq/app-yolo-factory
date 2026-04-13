@@ -14,6 +14,7 @@ import (
 	yolostrings "github.com/yolo-hq/yolo/core/strings"
 	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/pkg/claude"
+	"github.com/yolo-hq/yolo/core/read"
 	"github.com/yolo-hq/yolo/core/service"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
@@ -29,8 +30,6 @@ const OrphanedRunThreshold = 2 * time.Hour
 type SentinelService struct {
 	service.Base
 	Claude          *claude.Client
-	ProjectRead     entity.ReadRepository[entities.Project]
-	RunRead         entity.ReadRepository[entities.Run]
 	TaskWrite       entity.WriteRepository[entities.Task]
 	SuggestionWrite entity.WriteRepository[entities.Suggestion]
 }
@@ -61,16 +60,16 @@ func (s *SentinelService) Execute(ctx context.Context, in SentinelInput) (Sentin
 	var out SentinelOutput
 
 	// Load project.
-	project, err := s.ProjectRead.FindOne(ctx, entity.FindOneOptions{ID: in.ProjectID})
+	project, err := read.FindOne[entities.Project](ctx, in.ProjectID)
 	if err != nil {
 		return out, fmt.Errorf("load project: %w", err)
 	}
-	if project == nil {
+	if project.ID == "" {
 		return out, fmt.Errorf("project %s not found", in.ProjectID)
 	}
 
 	for _, watch := range in.Watches {
-		findings, err := s.runWatch(ctx, watch, *project)
+		findings, err := s.runWatch(ctx, watch, project)
 		if err != nil {
 			// Non-fatal: record as info finding.
 			out.Findings = append(out.Findings, Finding{
@@ -310,27 +309,17 @@ func (s *SentinelService) checkConventions(ctx context.Context, project entities
 
 // checkOrphanedRuns finds runs stuck in "running" status past OrphanedRunThreshold.
 func (s *SentinelService) checkOrphanedRuns(ctx context.Context, project entities.Project) ([]Finding, error) {
-	if s.RunRead == nil {
-		return []Finding{{
-			Watch:    "orphaned_runs",
-			Severity: "info",
-			Message:  "RunRead not wired, skipping orphaned run check",
-			Action:   "none",
-		}}, nil
-	}
-
 	cutoff := time.Now().Add(-OrphanedRunThreshold)
-	result, err := s.RunRead.FindMany(ctx, entity.FindOptions{
-		Filters: []entity.FilterCondition{
-			{Field: fields.Run.Status.Name(), Operator: entity.OpEq, Value: string(enums.RunStatusRunning)},
-		},
-	})
+	runs, err := read.FindMany[entities.Run](ctx,
+		read.Eq(fields.Run.Status.Name(), string(enums.RunStatusRunning)),
+		read.Limit(1000),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("query runs: %w", err)
 	}
 
 	var findings []Finding
-	for _, r := range result.Data {
+	for _, r := range runs {
 		if r.StartedAt.Before(cutoff) {
 			findings = append(findings, Finding{
 				Watch:    "orphaned_runs",

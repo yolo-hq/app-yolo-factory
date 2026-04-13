@@ -10,6 +10,7 @@ import (
 	"github.com/oklog/ulid/v2"
 	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/pkg/claude"
+	"github.com/yolo-hq/yolo/core/read"
 	"github.com/yolo-hq/yolo/core/service"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
@@ -21,14 +22,8 @@ import (
 // ProcessAdvisorService analyzes execution history and generates process improvement insights.
 type ProcessAdvisorService struct {
 	service.Base
-	Claude         *claude.Client
-	ProjectRead    entity.ReadRepository[entities.Project]
-	TaskRead       entity.ReadRepository[entities.Task]
-	RunRead        entity.ReadRepository[entities.Run]
-	StepRead       entity.ReadRepository[entities.Step]
-	ReviewRead     entity.ReadRepository[entities.Review]
-	LintResultRead entity.ReadRepository[entities.LintResult]
-	InsightWrite   entity.WriteRepository[entities.Insight]
+	Claude       *claude.Client
+	InsightWrite entity.WriteRepository[entities.Insight]
 }
 
 // ProcessAdvisorInput holds the data needed for process analysis.
@@ -96,41 +91,33 @@ func (s *ProcessAdvisorService) Execute(ctx context.Context, in ProcessAdvisorIn
 	}
 
 	// 1. Load all data for the project.
-	taskResult, err := s.TaskRead.FindMany(ctx, entity.FindOptions{
-		Filters: []entity.FilterCondition{
-			{Field: fields.Task.ProjectID.Name(), Operator: entity.OpEq, Value: in.ProjectID},
-		},
-	})
+	tasks, err := read.FindMany[entities.Task](ctx,
+		read.Eq(fields.Task.ProjectID.Name(), in.ProjectID),
+		read.Limit(1000),
+	)
 	if err != nil {
 		return ProcessAdvisorOutput{}, fmt.Errorf("load tasks: %w", err)
 	}
-	tasks := taskResult.Data
 
-	runResult, err := s.RunRead.FindMany(ctx, entity.FindOptions{
-		Pagination: &entity.PaginationParams{Limit: 500},
-		Sort:       &entity.SortParams{Field: fields.Run.CreatedAt.Name(), Order: "desc"},
-	})
+	runs, err := read.FindMany[entities.Run](ctx,
+		read.OrderBy(fields.Run.CreatedAt.Name(), read.Desc),
+		read.Limit(500),
+	)
 	if err != nil {
 		return ProcessAdvisorOutput{}, fmt.Errorf("load runs: %w", err)
 	}
 
-	stepResult, err := s.StepRead.FindMany(ctx, entity.FindOptions{
-		Pagination: &entity.PaginationParams{Limit: 1000},
-	})
+	steps, err := read.FindMany[entities.Step](ctx, read.Limit(1000))
 	if err != nil {
 		return ProcessAdvisorOutput{}, fmt.Errorf("load steps: %w", err)
 	}
 
-	reviewResult, err := s.ReviewRead.FindMany(ctx, entity.FindOptions{
-		Pagination: &entity.PaginationParams{Limit: 500},
-	})
+	reviews, err := read.FindMany[entities.Review](ctx, read.Limit(500))
 	if err != nil {
 		return ProcessAdvisorOutput{}, fmt.Errorf("load reviews: %w", err)
 	}
 
-	lintResult, err := s.LintResultRead.FindMany(ctx, entity.FindOptions{
-		Pagination: &entity.PaginationParams{Limit: 500},
-	})
+	lintResults, err := read.FindMany[entities.LintResult](ctx, read.Limit(500))
 	if err != nil {
 		return ProcessAdvisorOutput{}, fmt.Errorf("load lint results: %w", err)
 	}
@@ -150,7 +137,7 @@ func (s *ProcessAdvisorService) Execute(ctx context.Context, in ProcessAdvisorIn
 	}
 
 	// 3. Compute metrics.
-	metrics := ComputeMetrics(tasks, runResult.Data, stepResult.Data, reviewResult.Data, lintResult.Data)
+	metrics := ComputeMetrics(tasks, runs, steps, reviews, lintResults)
 
 	// 3. Format metrics summary.
 	summary := FormatMetrics(metrics)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/yolo-hq/yolo/core/entity"
+	"github.com/yolo-hq/yolo/core/read"
 	"github.com/yolo-hq/yolo/core/service"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
@@ -16,7 +17,6 @@ import (
 // DependencyService validates task dependencies and unblocks tasks when deps complete.
 type DependencyService struct {
 	service.Base
-	TaskRead  entity.ReadRepository[entities.Task]
 	TaskWrite entity.WriteRepository[entities.Task]
 }
 
@@ -50,27 +50,26 @@ func (s *DependencyService) Execute(ctx context.Context, in DependencyInput) (De
 	}
 
 	// Load the task being checked to get its PRD scope.
-	task, err := s.TaskRead.FindOne(ctx, entity.FindOneOptions{ID: in.TaskID})
+	task, err := read.FindOne[entities.Task](ctx, in.TaskID)
 	if err != nil {
 		return DependencyOutput{}, fmt.Errorf("load task %s: %w", in.TaskID, err)
 	}
-	if task == nil {
+	if task.ID == "" {
 		return DependencyOutput{Valid: false, CycleError: fmt.Sprintf("task %s not found", in.TaskID)}, nil
 	}
 
 	// Load only tasks from the same PRD for cycle detection.
-	result, err := s.TaskRead.FindMany(ctx, entity.FindOptions{
-		Filters: []entity.FilterCondition{
-			{Field: fields.Task.PrdID.Name(), Operator: entity.OpEq, Value: task.PrdID},
-		},
-	})
+	tasks, err := read.FindMany[entities.Task](ctx,
+		read.Eq(fields.Task.PrdID.Name(), task.PrdID),
+		read.Limit(1000),
+	)
 	if err != nil {
 		return DependencyOutput{}, fmt.Errorf("load tasks for prd %s: %w", task.PrdID, err)
 	}
 
-	taskMap := make(map[string]*entities.Task, len(result.Data))
-	for i := range result.Data {
-		taskMap[result.Data[i].ID] = &result.Data[i]
+	taskMap := make(map[string]*entities.Task, len(tasks))
+	for i := range tasks {
+		taskMap[tasks[i].ID] = &tasks[i]
 	}
 
 	// Validate all deps exist.
@@ -113,16 +112,15 @@ func (s *DependencyService) Unblock(ctx context.Context, in UnblockInput) (Unblo
 	var out UnblockOutput
 
 	// Load all blocked tasks.
-	result, err := s.TaskRead.FindMany(ctx, entity.FindOptions{
-		Filters: []entity.FilterCondition{
-			{Field: fields.Task.Status.Name(), Operator: entity.OpEq, Value: string(enums.TaskStatusBlocked)},
-		},
-	})
+	blocked, err := read.FindMany[entities.Task](ctx,
+		read.Eq(fields.Task.Status.Name(), string(enums.TaskStatusBlocked)),
+		read.Limit(1000),
+	)
 	if err != nil {
 		return out, fmt.Errorf("find blocked tasks: %w", err)
 	}
 
-	for _, task := range result.Data {
+	for _, task := range blocked {
 		deps := helpers.ParseDeps(task.DependsOn)
 		if !containsStr(deps, in.CompletedTaskID) {
 			continue
@@ -153,11 +151,11 @@ func (s *DependencyService) Unblock(ctx context.Context, in UnblockInput) (Unblo
 
 func (s *DependencyService) allDepsDone(ctx context.Context, depIDs []string) (bool, error) {
 	for _, id := range depIDs {
-		t, err := s.TaskRead.FindOne(ctx, entity.FindOneOptions{ID: id})
+		t, err := read.FindOne[entities.Task](ctx, id)
 		if err != nil {
 			return false, err
 		}
-		if t == nil || t.Status != string(enums.TaskStatusDone) {
+		if t.ID == "" || t.Status != string(enums.TaskStatusDone) {
 			return false, nil
 		}
 	}

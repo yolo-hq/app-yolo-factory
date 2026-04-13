@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/yolo-hq/yolo/core/entity"
+	"github.com/yolo-hq/yolo/core/read"
 	"github.com/yolo-hq/yolo/core/service"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
@@ -17,11 +18,8 @@ import (
 // TimeoutService finds running runs that have exceeded their timeout and fails them.
 type TimeoutService struct {
 	service.Base
-	RunRead     entity.ReadRepository[entities.Run]
-	RunWrite    entity.WriteRepository[entities.Run]
-	TaskRead    entity.ReadRepository[entities.Task]
-	TaskWrite   entity.WriteRepository[entities.Task]
-	ProjectRead entity.ReadRepository[entities.Project]
+	RunWrite  entity.WriteRepository[entities.Run]
+	TaskWrite entity.WriteRepository[entities.Task]
 }
 
 // TimeoutInput is empty — this service scans all running runs.
@@ -37,25 +35,24 @@ func (s *TimeoutService) Execute(ctx context.Context, _ TimeoutInput) (TimeoutOu
 	var out TimeoutOutput
 
 	// Find all running runs.
-	result, err := s.RunRead.FindMany(ctx, entity.FindOptions{
-		Filters: []entity.FilterCondition{
-			{Field: fields.Run.Status.Name(), Operator: entity.OpEq, Value: string(enums.RunStatusRunning)},
-		},
-	})
+	runs, err := read.FindMany[entities.Run](ctx,
+		read.Eq(fields.Run.Status.Name(), string(enums.RunStatusRunning)),
+		read.Limit(1000),
+	)
 	if err != nil {
 		return out, fmt.Errorf("find running runs: %w", err)
 	}
 
-	for _, run := range result.Data {
+	for _, run := range runs {
 		// Load the task to get timeout and retry config.
-		task, err := s.TaskRead.FindOne(ctx, entity.FindOneOptions{ID: run.TaskID})
-		if err != nil || task == nil {
+		task, err := read.FindOne[entities.Task](ctx, run.TaskID)
+		if err != nil || task.ID == "" {
 			continue
 		}
 
 		// Load project for timeout setting.
-		project, err := s.ProjectRead.FindOne(ctx, entity.FindOneOptions{ID: task.ProjectID})
-		if err != nil || project == nil {
+		project, err := read.FindOne[entities.Project](ctx, task.ProjectID)
+		if err != nil || project.ID == "" {
 			continue
 		}
 

@@ -12,6 +12,7 @@ import (
 	"github.com/oklog/ulid/v2"
 	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/pkg/claude"
+	"github.com/yolo-hq/yolo/core/read"
 	"github.com/yolo-hq/yolo/core/service"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
@@ -24,13 +25,11 @@ import (
 // PlannerService spawns a Claude agent to break a PRD into implementation tasks.
 type PlannerService struct {
 	service.Base
-	Claude      *claude.Client
-	Context     *ContextService
-	Dependency  *DependencyService
-	PRDRead     entity.ReadRepository[entities.PRD]
-	PRDWrite    entity.WriteRepository[entities.PRD]
-	TaskWrite   entity.WriteRepository[entities.Task]
-	ProjectRead entity.ReadRepository[entities.Project]
+	Claude     *claude.Client
+	Context    *ContextService
+	Dependency *DependencyService
+	PRDWrite   entity.WriteRepository[entities.PRD]
+	TaskWrite  entity.WriteRepository[entities.Task]
 }
 
 // PlannerInput holds the data needed for planning.
@@ -69,20 +68,20 @@ type planTasksOutput struct {
 // Execute loads the PRD and project, runs the planner agent, persists tasks, and updates the PRD.
 func (s *PlannerService) Execute(ctx context.Context, in PlannerInput) (PlannerOutput, error) {
 	// 1. Load PRD.
-	prd, err := s.PRDRead.FindOne(ctx, entity.FindOneOptions{ID: in.PRDID})
+	prd, err := read.FindOne[entities.PRD](ctx, in.PRDID)
 	if err != nil {
 		return PlannerOutput{}, fmt.Errorf("load prd: %w", err)
 	}
-	if prd == nil {
+	if prd.ID == "" {
 		return PlannerOutput{}, fmt.Errorf("prd %s not found", in.PRDID)
 	}
 
 	// 2. Load Project.
-	project, err := s.ProjectRead.FindOne(ctx, entity.FindOneOptions{ID: prd.ProjectID})
+	project, err := read.FindOne[entities.Project](ctx, prd.ProjectID)
 	if err != nil {
 		return PlannerOutput{}, fmt.Errorf("load project: %w", err)
 	}
-	if project == nil {
+	if project.ID == "" {
 		return PlannerOutput{}, fmt.Errorf("project %s not found", prd.ProjectID)
 	}
 
@@ -91,8 +90,8 @@ func (s *PlannerService) Execute(ctx context.Context, in PlannerInput) (PlannerO
 
 	ctxOut, err := s.Context.Execute(ctx, ContextInput{
 		Phase:           "plan_tasks",
-		PRD:             *prd,
-		Project:         *project,
+		PRD:             prd,
+		Project:         project,
 		CLAUDEMDContent: claudeMD,
 	})
 	if err != nil {
@@ -130,7 +129,7 @@ func (s *PlannerService) Execute(ctx context.Context, in PlannerInput) (PlannerO
 	}
 
 	// 6. Convert to entities.
-	planInput := plannerEntitiesInput{PRD: *prd, Project: *project}
+	planInput := plannerEntitiesInput{PRD: prd, Project: project}
 	tasks, err := s.convertToEntities(defs, planInput)
 	if err != nil {
 		s.markPRDFailed(ctx, prd.ID)

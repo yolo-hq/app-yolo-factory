@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/yolo-hq/yolo/core/entity"
+	"github.com/yolo-hq/yolo/core/read"
 	"github.com/yolo-hq/yolo/core/service"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
@@ -16,7 +17,6 @@ import (
 // BudgetResetService resets monthly budget counters for all active projects.
 type BudgetResetService struct {
 	service.Base
-	ProjectRead  entity.ReadRepository[entities.Project]
 	ProjectWrite entity.WriteRepository[entities.Project]
 }
 
@@ -32,16 +32,15 @@ type BudgetResetOutput struct {
 func (s *BudgetResetService) Execute(ctx context.Context, _ BudgetResetInput) (BudgetResetOutput, error) {
 	var out BudgetResetOutput
 
-	result, err := s.ProjectRead.FindMany(ctx, entity.FindOptions{
-		Filters: []entity.FilterCondition{
-			{Field: fields.Project.Status.Name(), Operator: entity.OpEq, Value: string(enums.ProjectStatusActive)},
-		},
-	})
+	projects, err := read.FindMany[entities.Project](ctx,
+		read.Eq(fields.Project.Status.Name(), string(enums.ProjectStatusActive)),
+		read.Limit(1000),
+	)
 	if err != nil {
 		return out, fmt.Errorf("find active projects: %w", err)
 	}
 
-	for _, p := range result.Data {
+	for _, p := range projects {
 		if _, err := s.ProjectWrite.Update(ctx).
 			WhereID(p.ID).
 			Set(fields.Project.SpentThisMonthUSD.Name(), 0).

@@ -72,7 +72,6 @@ func TestResetBudgetsJob_ResetsActiveProjects(t *testing.T) {
 
 	// Wire service with repos that use the same *bun.DB (they'll pick up tx via context).
 	svc.S.BudgetReset = &services.BudgetResetService{
-		ProjectRead:  bunrepo.NewReadRepository[entities.Project](db),
 		ProjectWrite: bunrepo.NewWriteRepository[entities.Project](db),
 	}
 
@@ -144,11 +143,8 @@ func TestCheckTimeoutsJob_FailsTimedOutRuns(t *testing.T) {
 
 	// Wire service.
 	svc.S.Timeout = &services.TimeoutService{
-		RunRead:     bunrepo.NewReadRepository[entities.Run](db),
-		RunWrite:    bunrepo.NewWriteRepository[entities.Run](db),
-		TaskRead:    bunrepo.NewReadRepository[entities.Task](db),
-		TaskWrite:   bunrepo.NewWriteRepository[entities.Task](db),
-		ProjectRead: bunrepo.NewReadRepository[entities.Project](db),
+		RunWrite:  bunrepo.NewWriteRepository[entities.Run](db),
+		TaskWrite: bunrepo.NewWriteRepository[entities.Task](db),
 	}
 
 	job := &CheckTimeoutsJob{}
@@ -170,15 +166,16 @@ func TestPlanPRDJob_SetupAndTeardown(t *testing.T) {
 	original := svc.S.Planner
 	t.Cleanup(func() { svc.S.Planner = original })
 
-	// With a nil planner, Handle must panic or return an error.
-	svc.S.Planner = nil
+	// With an empty planner and no DB on ctx, read.FindOne inside Execute
+	// returns an error instead of nil-deref panicking. Verify the error is
+	// surfaced to the job runner.
+	svc.S.Planner = &services.PlannerService{}
 	job := &PlanPRDJob{PRDID: "test-prd-id"}
 	payload, err := json.Marshal(map[string]string{"prd_id": "test-prd-id"})
 	require.NoError(t, err)
 
-	assert.Panics(t, func() {
-		_ = job.Handle(context.Background(), payload)
-	}, "nil Planner should panic")
+	err = job.Handle(context.Background(), payload)
+	require.Error(t, err, "Planner without DB on ctx should return an error")
 }
 
 // TestExecuteWorkflowJob_SetupAndTeardown verifies ExecuteWorkflowJob setup.
@@ -186,12 +183,11 @@ func TestExecuteWorkflowJob_SetupAndTeardown(t *testing.T) {
 	original := svc.S.Orchestrator
 	t.Cleanup(func() { svc.S.Orchestrator = original })
 
-	svc.S.Orchestrator = nil
+	svc.S.Orchestrator = &services.OrchestratorService{}
 	job := &ExecuteWorkflowJob{TaskID: "test-task-id"}
 	payload, err := json.Marshal(map[string]string{"task_id": "test-task-id"})
 	require.NoError(t, err)
 
-	assert.Panics(t, func() {
-		_ = job.Handle(context.Background(), payload)
-	}, "nil Orchestrator should panic")
+	err = job.Handle(context.Background(), payload)
+	require.Error(t, err, "Orchestrator without DB on ctx should return an error")
 }

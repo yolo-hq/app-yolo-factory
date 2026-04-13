@@ -26,10 +26,7 @@ type OrchestratorService struct {
 	Dependency  *DependencyService
 	Linter      *LinterService
 	Wiki        *WikiService
-	TaskRead    entity.ReadRepository[entities.Task]
 	TaskWrite   entity.WriteRepository[entities.Task]
-	PRDRead     entity.ReadRepository[entities.PRD]
-	ProjectRead entity.ReadRepository[entities.Project]
 	RunWrite    entity.WriteRepository[entities.Run]
 	StepWrite   entity.WriteRepository[entities.Step]
 	ReviewWrite entity.WriteRepository[entities.Review]

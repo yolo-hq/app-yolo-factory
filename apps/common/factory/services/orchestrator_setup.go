@@ -14,7 +14,7 @@ import (
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/events"
-	"github.com/yolo-hq/yolo/core/entity"
+	"github.com/yolo-hq/yolo/core/read"
 )
 
 // setup performs steps 0-5: load entities, budget check, git branch, setup commands,
@@ -25,27 +25,27 @@ import (
 // Returns (nil, nil, err) on hard errors.
 func (s *OrchestratorService) setup(ctx context.Context, in OrchestratorInput) (*orchEnv, *OrchestratorOutput, error) {
 	// 0a. Load task, PRD, project.
-	task, err := s.TaskRead.FindOne(ctx, entity.FindOneOptions{ID: in.TaskID})
+	task, err := read.FindOne[entities.Task](ctx, in.TaskID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("load task: %w", err)
 	}
-	if task == nil {
+	if task.ID == "" {
 		return nil, nil, fmt.Errorf("task %s not found", in.TaskID)
 	}
 
-	prd, err := s.PRDRead.FindOne(ctx, entity.FindOneOptions{ID: task.PrdID})
+	prd, err := read.FindOne[entities.PRD](ctx, task.PrdID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("load prd: %w", err)
 	}
-	if prd == nil {
+	if prd.ID == "" {
 		return nil, nil, fmt.Errorf("prd %s not found", task.PrdID)
 	}
 
-	project, err := s.ProjectRead.FindOne(ctx, entity.FindOneOptions{ID: task.ProjectID})
+	project, err := read.FindOne[entities.Project](ctx, task.ProjectID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("load project: %w", err)
 	}
-	if project == nil {
+	if project.ID == "" {
 		return nil, nil, fmt.Errorf("project %s not found", task.ProjectID)
 	}
 
@@ -61,9 +61,9 @@ func (s *OrchestratorService) setup(ctx context.Context, in OrchestratorInput) (
 		return nil, nil, fmt.Errorf("update task to running: %w", err)
 	}
 
-	inTask := *task
-	inPRD := *prd
-	inProject := *project
+	inTask := task
+	inPRD := prd
+	inProject := project
 
 	// 0c. Budget enforcement — check before any work.
 	if err := checkBudget(inProject); err != nil {

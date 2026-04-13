@@ -11,6 +11,7 @@ import (
 	yolostrings "github.com/yolo-hq/yolo/core/strings"
 	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/pkg/claude"
+	"github.com/yolo-hq/yolo/core/read"
 	"github.com/yolo-hq/yolo/core/service"
 
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
@@ -23,9 +24,6 @@ type AdvisorService struct {
 	service.Base
 	Claude          *claude.Client
 	Context         *ContextService
-	ProjectRead     entity.ReadRepository[entities.Project]
-	TaskRead        entity.ReadRepository[entities.Task]
-	RunRead         entity.ReadRepository[entities.Run]
 	SuggestionWrite entity.WriteRepository[entities.Suggestion]
 }
 
@@ -57,27 +55,26 @@ type advisorOutput struct {
 // Execute loads the project, runs the advisor agent, persists suggestions, and returns them.
 func (s *AdvisorService) Execute(ctx context.Context, in AdvisorInput) (AdvisorOutput, error) {
 	// Load project.
-	project, err := s.ProjectRead.FindOne(ctx, entity.FindOneOptions{ID: in.ProjectID})
+	project, err := read.FindOne[entities.Project](ctx, in.ProjectID)
 	if err != nil {
 		return AdvisorOutput{}, fmt.Errorf("load project: %w", err)
 	}
-	if project == nil {
+	if project.ID == "" {
 		return AdvisorOutput{}, fmt.Errorf("project %s not found", in.ProjectID)
 	}
 
 	// Load tasks for this project.
-	taskResult, err := s.TaskRead.FindMany(ctx, entity.FindOptions{
-		Filters: []entity.FilterCondition{
-			{Field: fields.Task.ProjectID.Name(), Operator: entity.OpEq, Value: in.ProjectID},
-		},
-	})
+	tasks, err := read.FindMany[entities.Task](ctx,
+		read.Eq(fields.Task.ProjectID.Name(), in.ProjectID),
+		read.Limit(1000),
+	)
 	if err != nil {
 		return AdvisorOutput{}, fmt.Errorf("load tasks: %w", err)
 	}
 
 	// Collect task IDs to scope runs to this project.
-	taskIDs := make([]any, len(taskResult.Data))
-	for i, t := range taskResult.Data {
+	taskIDs := make([]string, len(tasks))
+	for i, t := range tasks {
 		taskIDs[i] = t.ID
 	}
 	if len(taskIDs) == 0 {
@@ -86,13 +83,11 @@ func (s *AdvisorService) Execute(ctx context.Context, in AdvisorInput) (AdvisorO
 	}
 
 	// Load recent runs scoped to this project's tasks.
-	runResult, err := s.RunRead.FindMany(ctx, entity.FindOptions{
-		Filters: []entity.FilterCondition{
-			{Field: fields.Run.TaskID.Name(), Operator: entity.OpIn, Value: taskIDs},
-		},
-		Pagination: &entity.PaginationParams{Limit: 20},
-		Sort:       &entity.SortParams{Field: fields.Run.CreatedAt.Name(), Order: "desc"},
-	})
+	runs, err := read.FindMany[entities.Run](ctx,
+		read.In(fields.Run.TaskID.Name(), taskIDs),
+		read.OrderBy(fields.Run.CreatedAt.Name(), read.Desc),
+		read.Limit(20),
+	)
 	if err != nil {
 		return AdvisorOutput{}, fmt.Errorf("load runs: %w", err)
 	}
@@ -102,11 +97,11 @@ func (s *AdvisorService) Execute(ctx context.Context, in AdvisorInput) (AdvisorO
 
 	ctxOut, err := s.Context.Execute(ctx, ContextInput{
 		Phase:           "advisor",
-		Project:         *project,
+		Project:         project,
 		CLAUDEMDContent: claudeMD,
 		AnalysisType:    in.AnalysisType,
 		AnalysisContext: claudeMD,
-		RunHistory:      formatRunHistory(runResult.Data),
+		RunHistory:      formatRunHistory(runs),
 	})
 	if err != nil {
 		return AdvisorOutput{}, fmt.Errorf("build context: %w", err)
