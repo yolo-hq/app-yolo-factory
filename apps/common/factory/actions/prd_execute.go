@@ -2,17 +2,14 @@ package actions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/yolo-hq/yolo/core/action"
-	"github.com/yolo-hq/yolo/core/entity"
 	"github.com/yolo-hq/yolo/core/jobs"
 	"github.com/yolo-hq/yolo/core/projection"
-	"github.com/yolo-hq/yolo/core/write"
 
-	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
-	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
-	"github.com/yolo-hq/app-yolo-factory/.yolo/repos"
+	"github.com/yolo-hq/app-yolo-factory/.yolo/sm"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	factoryjobs "github.com/yolo-hq/app-yolo-factory/apps/common/factory/jobs"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
@@ -37,18 +34,11 @@ func (a *ExecutePRDAction) Description() string { return "Execute a PRD by start
 func (a *ExecutePRDAction) Execute(ctx context.Context, actx *action.Context) error {
 	prd := a.Data(actx)
 
-	// Transition to planning with conditional where for race-safety.
-	_, err := repos.PRD.UpdateWhere(ctx, actx, actx.EntityID,
-		[]entity.FilterCondition{
-			{Field: fields.PRD.Status.Name(), Operator: entity.OpIn, Value: []string{
-				string(enums.PRDStatusDraft),
-				string(enums.PRDStatusApproved),
-			}},
-		},
-		write.Set{
-			fields.PRD.Status.Value(string(enums.PRDStatusPlanning)),
-		},
-	)
+	// Transition to planning. SM enforces draft|approved → planning.
+	_, err := sm.PRD.Execute(ctx, actx, actx.EntityID, nil)
+	if errors.Is(err, action.ErrStaleState) {
+		return action.Fail("PRD is not in draft or approved state")
+	}
 	if err != nil {
 		return fmt.Errorf("execute-prd: %w", err)
 	}

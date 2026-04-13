@@ -2,14 +2,12 @@ package actions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/yolo-hq/yolo/core/action"
-	"github.com/yolo-hq/yolo/core/write"
 
-	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
-	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
-	"github.com/yolo-hq/app-yolo-factory/.yolo/repos"
+	"github.com/yolo-hq/app-yolo-factory/.yolo/sm"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
 
@@ -22,9 +20,10 @@ type CancelTaskAction struct {
 func (a *CancelTaskAction) Description() string { return "Cancel a non-terminal task" }
 
 func (a *CancelTaskAction) Execute(ctx context.Context, actx *action.Context) error {
-	_, err := repos.Task.UpdateEntity(ctx, actx, write.Set{
-		fields.Task.Status.Value(string(enums.TaskStatusCancelled)),
-	})
+	_, err := sm.Task.Cancel(ctx, actx, actx.EntityID, nil)
+	if errors.Is(err, action.ErrStaleState) {
+		return action.Fail("task already in a terminal state")
+	}
 	if err != nil {
 		return fmt.Errorf("cancel-task: %w", err)
 	}

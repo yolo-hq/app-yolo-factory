@@ -2,14 +2,14 @@ package actions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/write"
 
-	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
-	"github.com/yolo-hq/app-yolo-factory/.yolo/repos"
+	"github.com/yolo-hq/app-yolo-factory/.yolo/sm"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
@@ -25,10 +25,12 @@ func (a *ApproveSuggestionAction) Description() string { return "Approve a pendi
 func (a *ApproveSuggestionAction) Execute(ctx context.Context, actx *action.Context) error {
 	input := a.Input(actx)
 
-	_, err := repos.Suggestion.UpdateEntity(ctx, actx, write.Set{
-		fields.Suggestion.Status.Value(string(enums.SuggestionStatusApproved)),
+	_, err := sm.Suggestion.Approve(ctx, actx, actx.EntityID, write.Set{
 		fields.Suggestion.ConvertedTaskID.When(input.PRDID != "").Value(input.PRDID),
 	})
+	if errors.Is(err, action.ErrStaleState) {
+		return action.Fail("suggestion is not pending")
+	}
 	if err != nil {
 		return fmt.Errorf("approve-suggestion: %w", err)
 	}

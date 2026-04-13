@@ -2,24 +2,25 @@ package actions
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
-	yolostrings "github.com/yolo-hq/yolo/core/strings"
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/jobs"
 	"github.com/yolo-hq/yolo/core/projection"
 	"github.com/yolo-hq/yolo/core/read"
+	yolostrings "github.com/yolo-hq/yolo/core/strings"
 	"github.com/yolo-hq/yolo/core/write"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/repos"
+	"github.com/yolo-hq/app-yolo-factory/.yolo/sm"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/svc"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/events"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
 	factoryjobs "github.com/yolo-hq/app-yolo-factory/apps/common/factory/jobs"
 )
 
@@ -70,11 +71,40 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) e
 	input := a.Input(actx)
 	now := time.Now()
 
-	// 1. Update the run with completion data.
-	if _, err := repos.Run.UpdateFromInput(ctx, actx, actx.EntityID, input,
+	// 1. Transition the run via SM, carrying input metadata as extras.
+	//    We split per outcome so the SM enforces running → {completed,failed}.
+	runExtras := write.Set{
 		fields.Run.CompletedAt.Value(&now),
-	); err != nil {
-		return err
+		fields.Run.CostUSD.When(input.CostUSD != 0).Value(input.CostUSD),
+		fields.Run.TokensIn.When(input.TokensIn != 0).Value(input.TokensIn),
+		fields.Run.TokensOut.When(input.TokensOut != 0).Value(input.TokensOut),
+		fields.Run.DurationMs.When(input.DurationMS != 0).Value(input.DurationMS),
+		fields.Run.NumTurns.When(input.NumTurns != 0).Value(input.NumTurns),
+		fields.Run.Error.When(input.Error != "").Value(input.Error),
+		fields.Run.CommitHash.When(input.CommitHash != "").Value(input.CommitHash),
+		fields.Run.FilesChanged.When(input.FilesChanged != "").Value(input.FilesChanged),
+		fields.Run.Result.When(input.Result != "").Value(input.Result),
+		fields.Run.SessionID.When(input.SessionID != "").Value(input.SessionID),
+	}
+
+	var runErr error
+	switch input.Status {
+	case string(enums.RunStatusCompleted):
+		_, runErr = sm.Run.Complete(ctx, actx, actx.EntityID, runExtras)
+	case string(enums.RunStatusFailed):
+		_, runErr = sm.Run.Fail(ctx, actx, actx.EntityID, runExtras)
+	default:
+		// Unknown / unsupported terminal status — fall back to direct update so
+		// callers passing legacy values still persist their data.
+		_, runErr = repos.Run.UpdateFromInput(ctx, actx, actx.EntityID, input,
+			fields.Run.CompletedAt.Value(&now),
+		)
+	}
+	if errors.Is(runErr, action.ErrStaleState) {
+		return action.Fail("run already in a terminal state")
+	}
+	if runErr != nil {
+		return runErr
 	}
 
 	// 2. Branch on run outcome.
@@ -95,14 +125,17 @@ func handleCompleted(
 	input inputs.CompleteRunInput,
 	now time.Time,
 ) {
-	// a. Mark task done, accumulate cost atomically.
-	if _, err := repos.Task.Update(ctx, actx, data.Task.ID, write.Set{
-		fields.Task.Status.Value(string(enums.TaskStatusDone)),
+	// a. Mark task done via SM, accumulate cost atomically.
+	if _, err := sm.Task.Complete(ctx, actx, data.Task.ID, write.Set{
 		fields.Task.CostUSD.Incr(input.CostUSD),
 		fields.Task.CommitHash.Value(input.CommitHash),
 		fields.Task.Summary.Value(yolostrings.Truncate(input.Result, 500)),
 		fields.Task.CompletedAt.Value(&now),
 	}); err != nil {
+		if errors.Is(err, action.ErrStaleState) {
+			slog.Warn("task already in terminal state on completion", "task_id", data.Task.ID)
+			return
+		}
 		slog.Error("failed to update task to done", "task_id", data.Task.ID, "error", err)
 		return
 	}
@@ -159,11 +192,9 @@ func unblockDependents(
 		}
 		toUnblock = append(toUnblock, blocked.ID)
 	}
-	if len(toUnblock) > 0 {
-		if _, err := repos.Task.UpdateMany(ctx, actx, toUnblock, write.Set{
-			fields.Task.Status.Value(string(enums.TaskStatusQueued)),
-		}); err != nil {
-			slog.Warn("failed to unblock tasks", "error", err)
+	for _, id := range toUnblock {
+		if _, err := sm.Task.Unblock(ctx, actx, id, nil); err != nil && !errors.Is(err, action.ErrStaleState) {
+			slog.Warn("failed to unblock task", "task_id", id, "error", err)
 		}
 	}
 	return toUnblock
@@ -184,21 +215,15 @@ func advancePRD(
 		return
 	}
 
-	status := string(enums.PRDStatusCompleted)
+	extras := write.Set{fields.PRD.CompletedAt.Value(&now)}
+	var err error
 	if data.Task.PRD.FailedCount > 0 {
-		status = string(enums.PRDStatusFailed)
-	}
-	if _, err := repos.PRD.Update(ctx, actx, data.Task.PRD.ID, write.Set{
-		fields.PRD.Status.Value(status),
-		fields.PRD.CompletedAt.Value(&now),
-	}); err != nil {
-		slog.Warn("failed to update PRD status", "prd_id", data.Task.PRD.ID, "error", err)
-		return
-	}
-	if data.Task.PRD.FailedCount > 0 {
-		events.PRDFailed.Emit(ctx, data.Task.PRD.ID)
+		_, err = sm.PRD.Fail(ctx, actx, data.Task.PRD.ID, extras)
 	} else {
-		events.PRDCompleted.Emit(ctx, data.Task.PRD.ID)
+		_, err = sm.PRD.Complete(ctx, actx, data.Task.PRD.ID, extras)
+	}
+	if err != nil && !errors.Is(err, action.ErrStaleState) {
+		slog.Warn("failed to update PRD status", "prd_id", data.Task.PRD.ID, "error", err)
 	}
 }
 
@@ -211,12 +236,15 @@ func handleFailed(
 	newRunCount := data.Task.RunCount + 1
 
 	if newRunCount < data.Task.MaxRetries {
-		// Retry: requeue task with atomic cost/run_count increment.
-		if _, err := repos.Task.Update(ctx, actx, data.Task.ID, write.Set{
-			fields.Task.Status.Value(string(enums.TaskStatusQueued)),
+		// Retry: requeue task via SM with atomic cost/run_count increment.
+		if _, err := sm.Task.Requeue(ctx, actx, data.Task.ID, write.Set{
 			fields.Task.CostUSD.Incr(input.CostUSD),
 			fields.Task.RunCount.Incr(1),
 		}); err != nil {
+			if errors.Is(err, action.ErrStaleState) {
+				slog.Warn("task not in running state on requeue", "task_id", data.Task.ID)
+				return
+			}
 			slog.Error("failed to requeue task", "task_id", data.Task.ID, "error", err)
 			return
 		}
@@ -224,12 +252,15 @@ func handleFailed(
 		return
 	}
 
-	// Exhausted retries: mark failed.
-	if _, err := repos.Task.Update(ctx, actx, data.Task.ID, write.Set{
-		fields.Task.Status.Value(string(enums.TaskStatusFailed)),
+	// Exhausted retries: mark failed via SM.
+	if _, err := sm.Task.Fail(ctx, actx, data.Task.ID, write.Set{
 		fields.Task.CostUSD.Incr(input.CostUSD),
 		fields.Task.RunCount.Incr(1),
 	}); err != nil {
+		if errors.Is(err, action.ErrStaleState) {
+			slog.Warn("task already terminal on fail", "task_id", data.Task.ID)
+			return
+		}
 		slog.Error("failed to mark task as failed", "task_id", data.Task.ID, "error", err)
 		return
 	}
