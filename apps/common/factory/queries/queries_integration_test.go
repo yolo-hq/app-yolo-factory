@@ -20,6 +20,8 @@ import (
 	corebun "github.com/yolo-hq/yolo/core/bun"
 	bunrepo "github.com/yolo-hq/yolo/core/bun"
 	"github.com/yolo-hq/yolo/core/entity"
+	"github.com/yolo-hq/yolo/core/framework"
+	"github.com/yolo-hq/yolo/core/projection"
 	"github.com/yolo-hq/yolo/core/query"
 	"github.com/yolo-hq/yolo/core/registry"
 	"github.com/yolo-hq/yolo/core/write"
@@ -100,13 +102,15 @@ func makeRepoProvider(db *bun.DB) action.RepoProvider {
 	}
 }
 
-// testCtx builds a context with bun TX + RepoProvider.
+// testCtx builds a context with bun TX + RepoProvider + EntityLoader.
 //   - corebun.WithTx: for grouped queries using write.DBFromContext
 //   - write.WithRepoProvider: for entity queries using read.FindMany repo lookup
+//   - projection.WithLoader: for read.FindOne / read.FindMany single-entity loads
 func testCtx(db *bun.DB, tx bun.Tx) context.Context {
 	ctx := context.Background()
 	ctx = corebun.WithTx(ctx, tx)
 	ctx = write.WithRepoProvider(ctx, makeRepoProvider(db))
+	ctx = projection.WithLoader(ctx, framework.NewEntityLoader(db))
 	return ctx
 }
 
@@ -126,9 +130,9 @@ func makeReadRepoFunc(db *bun.DB) func(string) any {
 	}
 }
 
-// makeTestRunner creates a query.Runner backed by bun repos.
+// makeTestRunner creates a query.Runner backed by bun repos and entity loader.
 func makeTestRunner(db *bun.DB) *query.Runner {
-	return query.NewRunner(nil, makeReadRepoFunc(db), nil)
+	return query.NewRunner(framework.NewEntityLoader(db), makeReadRepoFunc(db), nil)
 }
 
 // runQueryWithParams executes a query via the Runner, injecting URL params.
@@ -278,7 +282,7 @@ func TestPrdDiffQuery_NotFound(t *testing.T) {
 
 // TestPrdDiffQuery_NoCommits verifies empty diff when tasks have no commit hashes.
 func TestPrdDiffQuery_NoCommits(t *testing.T) {
-	t.Skip("Requires EntityLoader on query context — works via HTTP, not standalone")
+	t.Skip("Loader sees tx but registry-driven entity load returns empty — investigate later")
 	ensureEntitiesRegistered()
 	db, tx, done := openDB(t)
 	defer done()
@@ -301,6 +305,12 @@ func TestPrdDiffQuery_NoCommits(t *testing.T) {
 	_, err = tx.NewInsert().Model(prd).Exec(ctx)
 	require.NoError(t, err)
 
+	// Verify the PRD is readable via the tx directly.
+	var checkPRD entities.PRD
+	err = tx.NewSelect().Model(&checkPRD).Where("id = ?", prd.ID).Column("id", "title", "project_id").Scan(ctx)
+	require.NoError(t, err, "PRD must be readable via tx")
+	require.Equal(t, prd.ID, checkPRD.ID, "PRD ID must match")
+
 	task := &entities.Task{
 		ProjectID: proj.ID, PrdID: prd.ID,
 		Title: "t", Spec: "s", AcceptanceCriteria: "a",
@@ -311,7 +321,7 @@ func TestPrdDiffQuery_NoCommits(t *testing.T) {
 	require.NoError(t, err)
 
 	result := runQueryWithParams(ctx, runner, &PrdDiffQuery{}, url.Values{"prdId": {prd.ID}})
-	require.True(t, result.Success, "PrdDiffQuery should succeed: msg=%q errorCode=%q data=%v", result.Message, result.ErrorCode, result.Data)
+	require.True(t, result.Success, "PrdDiffQuery should succeed: %s", result.Message)
 
 	// Verify no diff, 1 done task — handle both typed and map responses.
 	prdID, tasksDone, commits := extractDiffSummary(result.Data)

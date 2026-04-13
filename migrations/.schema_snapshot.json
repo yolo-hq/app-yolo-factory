@@ -189,23 +189,8 @@
           "default": "'[]'"
         },
         {
-          "name": "total_tasks",
-          "type": "INTEGER",
-          "default": "0"
-        },
-        {
-          "name": "completed_tasks",
-          "type": "INTEGER",
-          "default": "0"
-        },
-        {
           "name": "failed_tasks",
           "type": "INTEGER",
-          "default": "0"
-        },
-        {
-          "name": "total_cost_usd",
-          "type": "DOUBLE PRECISION",
           "default": "0"
         },
         {
@@ -659,6 +644,10 @@
           "name": "status",
           "type": "TEXT",
           "default": "'running'"
+        },
+        {
+          "name": "result_status",
+          "type": "TEXT"
         },
         {
           "name": "model",

@@ -23,21 +23,21 @@ type prdDiffInfo struct {
 
 	ID        string `field:"id"`
 	Title     string `field:"title"`
-	ProjectID string `field:"projectId"`
+	ProjectID string `field:"project_id"`
 }
 
 // projectPathInfo holds the project local path.
 type projectPathInfo struct {
 	projection.For[entities.Project]
 
-	LocalPath string `field:"localPath"`
+	LocalPath string `field:"local_path"`
 }
 
 // taskCommitRow holds task commit data for diff computation.
 type taskCommitRow struct {
 	projection.For[entities.Task]
 
-	CommitHash string `field:"commitHash"`
+	CommitHash string `field:"commit_hash"`
 }
 
 // DiffPRDResponse is the typed response for DiffPRDQuery.
