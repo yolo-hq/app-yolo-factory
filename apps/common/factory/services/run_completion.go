@@ -31,7 +31,7 @@ func (s *RunCompletionService) CascadeFailure(ctx context.Context, failedTaskID,
 	// Load all tasks in the same PRD and walk dependents.
 	result, err := s.TaskRead.FindMany(ctx, entity.FindOptions{
 		Filters: []entity.FilterCondition{
-			{Field: "prd_id", Operator: entity.OpEq, Value: prdID},
+			{Field: fields.Task.PrdID.Name(), Operator: entity.OpEq, Value: prdID},
 		},
 	})
 	if err != nil {

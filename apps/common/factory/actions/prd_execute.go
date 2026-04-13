@@ -40,7 +40,7 @@ func (a *ExecutePRDAction) Execute(ctx context.Context, actx *action.Context) er
 	// Transition to planning with conditional where for race-safety.
 	_, err := repos.PRD.UpdateWhere(ctx, actx, actx.EntityID,
 		[]entity.FilterCondition{
-			{Field: "status", Operator: entity.OpIn, Value: []string{
+			{Field: fields.PRD.Status.Name(), Operator: entity.OpIn, Value: []string{
 				string(enums.PRDStatusDraft),
 				string(enums.PRDStatusApproved),
 			}},

@@ -10,6 +10,7 @@ import (
 	"github.com/oklog/ulid/v2"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
+	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/events"
@@ -52,9 +53,9 @@ func (s *OrchestratorService) setup(ctx context.Context, in OrchestratorInput) (
 	now := time.Now()
 	_, err = s.TaskWrite.Update(ctx).
 		WhereID(task.ID).
-		Set("status", string(enums.TaskStatusRunning)).
-		Set("started_at", now).
-		Set("run_count", task.RunCount+1).
+		Set(fields.Task.Status.Name(), string(enums.TaskStatusRunning)).
+		Set(fields.Task.StartedAt.Name(), now).
+		Set(fields.Task.RunCount.Name(), task.RunCount+1).
 		Exec(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("update task to running: %w", err)
@@ -196,7 +197,7 @@ func (e *orchEnv) cleanupOnError(s *OrchestratorService, ctx context.Context, re
 	if *retErr != nil {
 		if _, uerr := s.TaskWrite.Update(ctx).
 			WhereID(e.task.ID).
-			Set("status", string(enums.TaskStatusFailed)).
+			Set(fields.Task.Status.Name(), string(enums.TaskStatusFailed)).
 			Exec(ctx); uerr != nil {
 			slog.Error("failed to mark task as failed after hard error", "task_id", e.task.ID, "error", uerr)
 		}

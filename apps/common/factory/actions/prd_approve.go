@@ -54,7 +54,7 @@ func (a *ApprovePRDAction) Execute(ctx context.Context, actx *action.Context) er
 	now := time.Now()
 	_, err := repos.PRD.UpdateWhere(ctx, actx, actx.EntityID,
 		[]entity.FilterCondition{
-			{Field: "status", Operator: entity.OpEq, Value: string(enums.PRDStatusDraft)},
+			{Field: fields.PRD.Status.Name(), Operator: entity.OpEq, Value: string(enums.PRDStatusDraft)},
 		},
 		write.Set{
 			fields.PRD.Status.Value(string(enums.PRDStatusApproved)),

@@ -15,6 +15,7 @@ import (
 	"github.com/yolo-hq/yolo/core/service"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
+	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
@@ -166,8 +167,7 @@ func (s *PlannerService) Execute(ctx context.Context, in PlannerInput) (PlannerO
 	// 9. Update PRD: set total_tasks and transition to approved.
 	_, err = s.PRDWrite.Update(ctx).
 		WhereID(prd.ID).
-		Set("total_tasks", len(tasks)).
-		Set("status", string(enums.PRDStatusApproved)).
+		Set(fields.PRD.Status.Name(), string(enums.PRDStatusApproved)).
 		Exec(ctx)
 	if err != nil {
 		return PlannerOutput{}, fmt.Errorf("update prd: %w", err)
@@ -183,7 +183,7 @@ func (s *PlannerService) Execute(ctx context.Context, in PlannerInput) (PlannerO
 func (s *PlannerService) markPRDFailed(ctx context.Context, prdID string) {
 	if _, err := s.PRDWrite.Update(ctx).
 		WhereID(prdID).
-		Set("status", string(enums.PRDStatusFailed)).
+		Set(fields.PRD.Status.Name(), string(enums.PRDStatusFailed)).
 		Exec(ctx); err != nil {
 		slog.Error("failed to mark PRD as failed", "prd_id", prdID, "error", err)
 	}

@@ -17,6 +17,7 @@ import (
 	"github.com/yolo-hq/yolo/core/service"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
+	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/events"
 )
@@ -321,7 +322,7 @@ func (s *SentinelService) checkOrphanedRuns(ctx context.Context, project entitie
 	cutoff := time.Now().Add(-OrphanedRunThreshold)
 	result, err := s.RunRead.FindMany(ctx, entity.FindOptions{
 		Filters: []entity.FilterCondition{
-			{Field: "status", Operator: entity.OpEq, Value: string(enums.RunStatusRunning)},
+			{Field: fields.Run.Status.Name(), Operator: entity.OpEq, Value: string(enums.RunStatusRunning)},
 		},
 	})
 	if err != nil {

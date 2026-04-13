@@ -13,6 +13,7 @@ import (
 	"github.com/yolo-hq/yolo/core/pkg/claude"
 	"github.com/yolo-hq/yolo/core/service"
 
+	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
@@ -67,7 +68,7 @@ func (s *AdvisorService) Execute(ctx context.Context, in AdvisorInput) (AdvisorO
 	// Load tasks for this project.
 	taskResult, err := s.TaskRead.FindMany(ctx, entity.FindOptions{
 		Filters: []entity.FilterCondition{
-			{Field: "project_id", Operator: entity.OpEq, Value: in.ProjectID},
+			{Field: fields.Task.ProjectID.Name(), Operator: entity.OpEq, Value: in.ProjectID},
 		},
 	})
 	if err != nil {
@@ -87,10 +88,10 @@ func (s *AdvisorService) Execute(ctx context.Context, in AdvisorInput) (AdvisorO
 	// Load recent runs scoped to this project's tasks.
 	runResult, err := s.RunRead.FindMany(ctx, entity.FindOptions{
 		Filters: []entity.FilterCondition{
-			{Field: "task_id", Operator: entity.OpIn, Value: taskIDs},
+			{Field: fields.Run.TaskID.Name(), Operator: entity.OpIn, Value: taskIDs},
 		},
 		Pagination: &entity.PaginationParams{Limit: 20},
-		Sort:       &entity.SortParams{Field: "created_at", Order: "desc"},
+		Sort:       &entity.SortParams{Field: fields.Run.CreatedAt.Name(), Order: "desc"},
 	})
 	if err != nil {
 		return AdvisorOutput{}, fmt.Errorf("load runs: %w", err)

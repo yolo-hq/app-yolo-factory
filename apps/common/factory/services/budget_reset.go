@@ -9,6 +9,7 @@ import (
 	"github.com/yolo-hq/yolo/core/service"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
+	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
@@ -33,7 +34,7 @@ func (s *BudgetResetService) Execute(ctx context.Context, _ BudgetResetInput) (B
 
 	result, err := s.ProjectRead.FindMany(ctx, entity.FindOptions{
 		Filters: []entity.FilterCondition{
-			{Field: "status", Operator: entity.OpEq, Value: string(enums.ProjectStatusActive)},
+			{Field: fields.Project.Status.Name(), Operator: entity.OpEq, Value: string(enums.ProjectStatusActive)},
 		},
 	})
 	if err != nil {
@@ -43,7 +44,7 @@ func (s *BudgetResetService) Execute(ctx context.Context, _ BudgetResetInput) (B
 	for _, p := range result.Data {
 		if _, err := s.ProjectWrite.Update(ctx).
 			WhereID(p.ID).
-			Set("spent_this_month_usd", 0).
+			Set(fields.Project.SpentThisMonthUSD.Name(), 0).
 			Exec(ctx); err != nil {
 			slog.Error("failed to reset budget for project", "project_id", p.ID, "error", err)
 			continue

@@ -13,6 +13,7 @@ import (
 	"github.com/yolo-hq/yolo/core/service"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
+	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
@@ -97,7 +98,7 @@ func (s *ProcessAdvisorService) Execute(ctx context.Context, in ProcessAdvisorIn
 	// 1. Load all data for the project.
 	taskResult, err := s.TaskRead.FindMany(ctx, entity.FindOptions{
 		Filters: []entity.FilterCondition{
-			{Field: "project_id", Operator: entity.OpEq, Value: in.ProjectID},
+			{Field: fields.Task.ProjectID.Name(), Operator: entity.OpEq, Value: in.ProjectID},
 		},
 	})
 	if err != nil {
@@ -107,7 +108,7 @@ func (s *ProcessAdvisorService) Execute(ctx context.Context, in ProcessAdvisorIn
 
 	runResult, err := s.RunRead.FindMany(ctx, entity.FindOptions{
 		Pagination: &entity.PaginationParams{Limit: 500},
-		Sort:       &entity.SortParams{Field: "created_at", Order: "desc"},
+		Sort:       &entity.SortParams{Field: fields.Run.CreatedAt.Name(), Order: "desc"},
 	})
 	if err != nil {
 		return ProcessAdvisorOutput{}, fmt.Errorf("load runs: %w", err)

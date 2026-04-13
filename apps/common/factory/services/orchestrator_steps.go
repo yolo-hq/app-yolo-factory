@@ -11,7 +11,7 @@ import (
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/constants"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/lint"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers/lint"
 	"github.com/yolo-hq/yolo/core/pkg/claude"
 	yolostrings "github.com/yolo-hq/yolo/core/strings"
 )

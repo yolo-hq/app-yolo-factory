@@ -6,7 +6,7 @@ import (
 
 	"github.com/yolo-hq/yolo/core/command"
 
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/lint"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers/lint"
 )
 
 // Lint runs static analysis checks on a project directory.

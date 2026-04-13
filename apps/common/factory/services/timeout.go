@@ -10,6 +10,7 @@ import (
 	"github.com/yolo-hq/yolo/core/service"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
+	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
@@ -38,7 +39,7 @@ func (s *TimeoutService) Execute(ctx context.Context, _ TimeoutInput) (TimeoutOu
 	// Find all running runs.
 	result, err := s.RunRead.FindMany(ctx, entity.FindOptions{
 		Filters: []entity.FilterCondition{
-			{Field: "status", Operator: entity.OpEq, Value: string(enums.RunStatusRunning)},
+			{Field: fields.Run.Status.Name(), Operator: entity.OpEq, Value: string(enums.RunStatusRunning)},
 		},
 	})
 	if err != nil {
@@ -71,9 +72,9 @@ func (s *TimeoutService) Execute(ctx context.Context, _ TimeoutInput) (TimeoutOu
 		now := time.Now()
 		if _, err := s.RunWrite.Update(ctx).
 			WhereID(run.ID).
-			Set("status", string(enums.RunStatusFailed)).
-			Set("error", "timeout").
-			Set("completed_at", now).
+			Set(fields.Run.Status.Name(), string(enums.RunStatusFailed)).
+			Set(fields.Run.Error.Name(), "timeout").
+			Set(fields.Run.CompletedAt.Name(), now).
 			Exec(ctx); err != nil {
 			slog.Error("failed to timeout run", "run_id", run.ID, "error", err)
 			continue
@@ -86,16 +87,16 @@ func (s *TimeoutService) Execute(ctx context.Context, _ TimeoutInput) (TimeoutOu
 		if newRunCount < task.MaxRetries {
 			if _, err := s.TaskWrite.Update(ctx).
 				WhereID(task.ID).
-				Set("status", string(enums.TaskStatusQueued)).
-				Set("run_count", newRunCount).
+				Set(fields.Task.Status.Name(), string(enums.TaskStatusQueued)).
+				Set(fields.Task.RunCount.Name(), newRunCount).
 				Exec(ctx); err != nil {
 				slog.Error("failed to requeue task", "task_id", task.ID, "error", err)
 			}
 		} else {
 			if _, err := s.TaskWrite.Update(ctx).
 				WhereID(task.ID).
-				Set("status", string(enums.TaskStatusFailed)).
-				Set("run_count", newRunCount).
+				Set(fields.Task.Status.Name(), string(enums.TaskStatusFailed)).
+				Set(fields.Task.RunCount.Name(), newRunCount).
 				Exec(ctx); err != nil {
 				slog.Error("failed to fail task", "task_id", task.ID, "error", err)
 			}

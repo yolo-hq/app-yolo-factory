@@ -9,6 +9,7 @@ import (
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/jobs"
 	"github.com/yolo-hq/yolo/core/projection"
+	"github.com/yolo-hq/yolo/core/read"
 	"github.com/yolo-hq/yolo/core/write"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
@@ -22,16 +23,14 @@ import (
 	factoryjobs "github.com/yolo-hq/app-yolo-factory/apps/common/factory/jobs"
 )
 
-// TaskRef is a minimal reference to a task used inside CompleteRunData slices.
+// TaskRef is a minimal task projection for dependency traversal.
 type TaskRef struct {
+	projection.For[entities.Task]
 	ID        string `field:"id"`
 	DependsOn string `field:"depends_on"`
 }
 
-// CompleteRunData declares the Run entity fields and relation data this action
-// reads. The framework resolves the belongs_to chain Run → Task → PRD and
-// pre-computes the aggregations + filtered has_many slices, replacing all the
-// manual loading helpers this action used to carry.
+// CompleteRunData declares the Run entity fields and relation data this action reads.
 type CompleteRunData struct {
 	projection.For[entities.Run]
 
@@ -51,10 +50,6 @@ type CompleteRunData struct {
 			CompletedCount int `field:"tasks" aggregate:"count" filter:"status:done"`
 			FailedCount    int `field:"tasks" aggregate:"count" filter:"status:failed"`
 			TotalCount     int `field:"tasks" aggregate:"count"`
-
-			// Has-many slices (replace unblockDependents + findNextQueued helpers).
-			BlockedTasks []TaskRef `field:"tasks" filter:"status:blocked"`
-			QueuedTasks  []TaskRef `field:"tasks" filter:"status:queued" limit:"1"`
 		} `field:"prd"`
 	} `field:"task"`
 }
@@ -116,12 +111,19 @@ func handleCompleted(
 	toUnblock := unblockDependents(ctx, actx, data)
 	advancePRD(ctx, actx, data, now)
 
-	// c. Dispatch next task — prefer newly unblocked, else pre-loaded queued.
+	// c. Dispatch next task — prefer newly unblocked, else find next queued.
 	nextID := ""
 	if len(toUnblock) > 0 {
 		nextID = toUnblock[0]
-	} else if len(data.Task.PRD.QueuedTasks) > 0 {
-		nextID = data.Task.PRD.QueuedTasks[0].ID
+	} else {
+		queued, err := read.FindMany[TaskRef](ctx,
+			read.Eq(fields.Task.PrdID.Name(), data.Task.PrdID),
+			read.Eq(fields.Task.Status.Name(), string(enums.TaskStatusQueued)),
+			read.Limit(1),
+		)
+		if err == nil && len(queued) > 0 {
+			nextID = queued[0].ID
+		}
 	}
 	if nextID != "" {
 		jobs.Defer(ctx, &factoryjobs.ExecuteWorkflowJob{TaskID: nextID})
@@ -135,8 +137,17 @@ func unblockDependents(
 	actx *action.Context,
 	data CompleteRunData,
 ) []string {
+	blockedTasks, err := read.FindMany[TaskRef](ctx,
+		read.Eq(fields.Task.PrdID.Name(), data.Task.PrdID),
+		read.Eq(fields.Task.Status.Name(), string(enums.TaskStatusBlocked)),
+	)
+	if err != nil {
+		slog.Warn("failed to load blocked tasks", "prd_id", data.Task.PrdID, "error", err)
+		return nil
+	}
+
 	var toUnblock []string
-	for _, blocked := range data.Task.PRD.BlockedTasks {
+	for _, blocked := range blockedTasks {
 		if !helpers.ContainsDep(blocked.DependsOn, data.Task.ID) {
 			continue
 		}
