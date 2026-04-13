@@ -1,0 +1,56 @@
+- why the following files? what is the reason ? how can avoid it from further creating ?
+  /Users/jomonjohnson/projects/yolo-hq/apps/factory/apps/common/factory/actions/actions_e2e_test.go
+  /Users/jomonjohnson/projects/yolo-hq/apps/factory/apps/common/factory/actions/actions_test.go
+  /Users/jomonjohnson/projects/yolo-hq/apps/factory/apps/common/factory/actions/testmain_test.go
+
+- does we have yolo lint or format? i thik we had discussion about it, like order of methods, ...etc in entites, service ...etc
+- how seedProject, seedX works, does we have doc?
+- what about 
+
+	_, err := sm.Insight.Acknowledge(ctx, actx, actx.EntityID, nil)
+	if errors.Is(err, action.ErrStaleState) {
+		return action.Fail("insight is not pending")
+	}
+	if err != nil {
+		return fmt.Errorf("acknowledge-insight: %w", err)
+	}
+
+    to 
+
+    _, err := sm.Insight.Acknowledge(ctx, actx, actx.EntityID, nil)
+	if err != nil {
+		return err;
+	}
+
+- i need to document the boudary and defintion of action, service, query, helper ..etc what is the purpose, when to user, also does and donts
+- what about generating files usign mcp or commands or both, with minmal input . for alsmost all type of files, 
+- i think we need a single rule of thumb convention for json structu data, json maping, eg: all josn shoulbe smalllter words seperated by uderscore
+- in /Users/jomonjohnson/projects/yolo-hq/apps/factory/apps/common/factory/actions/prd_approve.go 
+    why action.NoInput, i think we removed it in earlier disucssions? am correct or not?
+    this file has TODOs still?
+    project, err := read.FindOne[projectAutoStart](ctx, prd.ProjectID)
+	if err != nil {
+		return fmt.Errorf("approve-prd: load project: %w", err)
+	} why need second query, it can queries along with 
+
+- do we really need state machine or actions is sufficinet?
+- in /Users/jomonjohnson/projects/yolo-hq/apps/factory/apps/common/factory/actions/prd_submit.go
+    	source := input.Source
+	if source == "" {
+		source = string(enums.PRDSourceManual)
+	} => can use default value in inputs?
+
+- in /Users/jomonjohnson/projects/yolo-hq/apps/factory/apps/common/factory/actions/question_answer.go
+    _, err := sm.Question.Answer(ctx, actx, actx.EntityID, write.Set{
+		fields.Question.Answer.Value(input.Answer),
+		fields.Question.AnsweredBy.Value(constants.ActorHuman),
+		fields.Question.AnsweredAt.Value(&now),
+	}) => does support fromInput or input
+
+- in /Users/jomonjohnson/projects/yolo-hq/apps/factory/apps/common/factory/actions/run_complete.go
+    still has lot of vilations like other methods rather than Execute, lot of LOC, not using Projection Well, multiple sql queries, multiple db query updates,...etc
+
+- in /Users/jomonjohnson/projects/yolo-hq/apps/factory/apps/common/factory/actions/suggestion_approve.go
+    _, err := sm.Suggestion.Approve(ctx, actx, actx.EntityID, write.Set{
+		fields.Suggestion.ConvertedTaskID.When(input.PRDID != "").Value(input.PRDID),
+	}) => do we need to use When Exeplitity here? what u think? i can be automatically input or no need to speicify it?
