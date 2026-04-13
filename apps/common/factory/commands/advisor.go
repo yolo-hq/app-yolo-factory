@@ -2,12 +2,9 @@ package commands
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/yolo-hq/yolo/core/command"
-	"github.com/yolo-hq/yolo/core/entity"
 
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/services"
 )
@@ -34,13 +31,7 @@ func (c *AdvisorRun) Execute(ctx context.Context, cctx command.Context) error {
 		analysis = "code_quality"
 	}
 
-	repo, err := cctx.RepoProvider.Repo("Project")
-	if err != nil {
-		return fmt.Errorf("get project repo: %w", err)
-	}
-	r := repo.(entity.ReadRepository[entities.Project])
-
-	project, err := helpers.FindProjectByIDOrName(ctx, r, input.Project)
+	project, err := helpers.FindProjectByIDOrName(ctx, input.Project)
 	if err != nil {
 		return err
 	}

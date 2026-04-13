@@ -30,45 +30,45 @@ func TestMain(m *testing.M) {
 		entities.Task{},
 	)
 
-	registry.RegisterRepoFactory("Insight", func(db any) (any, any) {
+	registry.RegisterRepoFactory("Insight", func(db any) any {
 		d := db.(*bun.DB)
-		return bunrepo.NewReadRepository[entities.Insight](d), bunrepo.NewWriteRepository[entities.Insight](d)
+		return bunrepo.NewWriteRepository[entities.Insight](d)
 	})
-	registry.RegisterRepoFactory("LintResult", func(db any) (any, any) {
+	registry.RegisterRepoFactory("LintResult", func(db any) any {
 		d := db.(*bun.DB)
-		return bunrepo.NewReadRepository[entities.LintResult](d), bunrepo.NewWriteRepository[entities.LintResult](d)
+		return bunrepo.NewWriteRepository[entities.LintResult](d)
 	})
-	registry.RegisterRepoFactory("PRD", func(db any) (any, any) {
+	registry.RegisterRepoFactory("PRD", func(db any) any {
 		d := db.(*bun.DB)
-		return bunrepo.NewReadRepository[entities.PRD](d), bunrepo.NewWriteRepository[entities.PRD](d)
+		return bunrepo.NewWriteRepository[entities.PRD](d)
 	})
-	registry.RegisterRepoFactory("Project", func(db any) (any, any) {
+	registry.RegisterRepoFactory("Project", func(db any) any {
 		d := db.(*bun.DB)
-		return bunrepo.NewReadRepository[entities.Project](d), bunrepo.NewWriteRepository[entities.Project](d)
+		return bunrepo.NewWriteRepository[entities.Project](d)
 	})
-	registry.RegisterRepoFactory("Question", func(db any) (any, any) {
+	registry.RegisterRepoFactory("Question", func(db any) any {
 		d := db.(*bun.DB)
-		return bunrepo.NewReadRepository[entities.Question](d), bunrepo.NewWriteRepository[entities.Question](d)
+		return bunrepo.NewWriteRepository[entities.Question](d)
 	})
-	registry.RegisterRepoFactory("Review", func(db any) (any, any) {
+	registry.RegisterRepoFactory("Review", func(db any) any {
 		d := db.(*bun.DB)
-		return bunrepo.NewReadRepository[entities.Review](d), bunrepo.NewWriteRepository[entities.Review](d)
+		return bunrepo.NewWriteRepository[entities.Review](d)
 	})
-	registry.RegisterRepoFactory("Run", func(db any) (any, any) {
+	registry.RegisterRepoFactory("Run", func(db any) any {
 		d := db.(*bun.DB)
-		return bunrepo.NewReadRepository[entities.Run](d), bunrepo.NewWriteRepository[entities.Run](d)
+		return bunrepo.NewWriteRepository[entities.Run](d)
 	})
-	registry.RegisterRepoFactory("Step", func(db any) (any, any) {
+	registry.RegisterRepoFactory("Step", func(db any) any {
 		d := db.(*bun.DB)
-		return bunrepo.NewReadRepository[entities.Step](d), bunrepo.NewWriteRepository[entities.Step](d)
+		return bunrepo.NewWriteRepository[entities.Step](d)
 	})
-	registry.RegisterRepoFactory("Suggestion", func(db any) (any, any) {
+	registry.RegisterRepoFactory("Suggestion", func(db any) any {
 		d := db.(*bun.DB)
-		return bunrepo.NewReadRepository[entities.Suggestion](d), bunrepo.NewWriteRepository[entities.Suggestion](d)
+		return bunrepo.NewWriteRepository[entities.Suggestion](d)
 	})
-	registry.RegisterRepoFactory("Task", func(db any) (any, any) {
+	registry.RegisterRepoFactory("Task", func(db any) any {
 		d := db.(*bun.DB)
-		return bunrepo.NewReadRepository[entities.Task](d), bunrepo.NewWriteRepository[entities.Task](d)
+		return bunrepo.NewWriteRepository[entities.Task](d)
 	})
 
 	os.Exit(m.Run())

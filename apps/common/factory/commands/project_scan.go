@@ -10,6 +10,7 @@ import (
 
 	"github.com/yolo-hq/yolo/core/command"
 	"github.com/yolo-hq/yolo/core/entity"
+	"github.com/yolo-hq/yolo/core/read"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
@@ -102,20 +103,14 @@ func (c *ProjectScan) Execute(ctx context.Context, cctx command.Context) error {
 	}
 
 	// Check existing projects.
-	repo, err := cctx.RepoProvider.Repo("Project")
-	if err != nil {
-		return fmt.Errorf("get repo: %w", err)
-	}
-	r := repo.(entity.ReadRepository[entities.Project])
-
-	existing, err := r.FindMany(ctx, entity.FindOptions{})
+	existing, err := read.FindMany[entities.Project](ctx)
 	if err != nil {
 		return fmt.Errorf("list projects: %w", err)
 	}
 
 	existingNames := make(map[string]bool)
 	existingPaths := make(map[string]bool)
-	for _, p := range existing.Data {
+	for _, p := range existing {
 		existingNames[p.Name] = true
 		existingPaths[p.LocalPath] = true
 	}
@@ -145,6 +140,10 @@ func (c *ProjectScan) Execute(ctx context.Context, cctx command.Context) error {
 	}
 
 	// Create new projects.
+	repo, err := cctx.RepoProvider.Repo("Project")
+	if err != nil {
+		return fmt.Errorf("get project repo: %w", err)
+	}
 	w := repo.(entity.WriteRepository[entities.Project])
 	var created, skipped int
 	for _, sr := range repos {

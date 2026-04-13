@@ -5,7 +5,8 @@ import (
 	"fmt"
 
 	"github.com/yolo-hq/yolo/core/command"
-	"github.com/yolo-hq/yolo/core/entity"
+	"github.com/yolo-hq/yolo/core/filter"
+	"github.com/yolo-hq/yolo/core/read"
 
 	enums "github.com/yolo-hq/app-yolo-factory/.yolo/enums"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
@@ -38,26 +39,16 @@ func (c *SentinelRun) Execute(ctx context.Context, cctx command.Context) error {
 		return fmt.Errorf("specify --project or --all")
 	}
 
-	repo, err := cctx.RepoProvider.Repo("Project")
-	if err != nil {
-		return fmt.Errorf("get project repo: %w", err)
-	}
-	r := repo.(entity.ReadRepository[entities.Project])
-
 	var projects []entities.Project
 
 	if input.All {
-		result, err := r.FindMany(ctx, entity.FindOptions{
-			Filters: []entity.FilterCondition{
-				{Field: fields.Project.Status.Name(), Operator: entity.OpEq, Value: string(enums.ProjectStatusActive)},
-			},
-		})
+		result, err := read.FindMany[entities.Project](ctx, filter.Eq(fields.Project.Status.Name(), string(enums.ProjectStatusActive)))
 		if err != nil {
 			return fmt.Errorf("list projects: %w", err)
 		}
-		projects = result.Data
+		projects = result
 	} else {
-		p, err := helpers.FindProjectByIDOrName(ctx, r, input.Project)
+		p, err := helpers.FindProjectByIDOrName(ctx, input.Project)
 		if err != nil {
 			return err
 		}
