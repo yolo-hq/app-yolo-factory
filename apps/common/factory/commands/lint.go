@@ -27,7 +27,7 @@ func (c *Lint) Execute(ctx context.Context, cctx command.Context) error {
 
 	result, err := lint.RunAll(lint.Options{Path: input.Path})
 	if err != nil {
-		return fmt.Errorf("lint: %w", err)
+		return err
 	}
 
 	cctx.Print("Lint: %d checks, %d passed, %d failed", result.ChecksRun, result.ChecksPassed, result.ChecksFailed)

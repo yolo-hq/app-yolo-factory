@@ -2,7 +2,6 @@ package commands
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/yolo-hq/yolo/core/command"
 
@@ -39,7 +38,7 @@ func (c *Backup) Execute(ctx context.Context, cctx command.Context) error {
 		EntityData: map[string]string{"trigger": "cli"},
 	})
 	if err != nil {
-		return fmt.Errorf("backup: %w", err)
+		return err
 	}
 
 	cctx.Print("Backup complete: %s (commit %s)", out.FilePath, out.CommitHash)

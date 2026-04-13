@@ -2,7 +2,6 @@ package commands
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/yolo-hq/yolo/core/command"
 
@@ -29,7 +28,7 @@ func (c *Recover) Execute(ctx context.Context, cctx command.Context) error {
 	cctx.Print("Recovering from %s...", input.From)
 	results, err := svc.Recover(ctx)
 	if err != nil {
-		return fmt.Errorf("recover: %w", err)
+		return err
 	}
 
 	cctx.Print("Found %d entities in backup.", len(results))
