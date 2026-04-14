@@ -189,8 +189,8 @@ func TestCostQuery_BreakdownByModel(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// Run CostQuery with projectId filter.
-	result := runQueryWithParams(ctx, runner, &CostQuery{}, url.Values{"projectId": {proj.ID}})
+	// Run CostQuery with project_id filter.
+	result := runQueryWithParams(ctx, runner, &CostQuery{}, url.Values{"project_id": {proj.ID}})
 	require.True(t, result.Success, "CostQuery should succeed: %s", result.Message)
 
 	// The runner stores the typed CostResponse in Data. It may be the struct
@@ -254,7 +254,7 @@ func TestStatusQuery_TaskCounts(t *testing.T) {
 	assertStatusCounts(t, result.Data, "queued", 2)
 }
 
-// assertStatusCounts checks that tasksByStatus[status] >= minCount.
+// assertStatusCounts checks that tasks_by_status[status] >= minCount.
 func assertStatusCounts(t *testing.T, data any, status string, minCount int) {
 	t.Helper()
 	if resp, ok := data.(StatusResponse); ok {
@@ -262,9 +262,9 @@ func assertStatusCounts(t *testing.T, data any, status string, minCount int) {
 		return
 	}
 	if m, ok := data.(map[string]any); ok {
-		if byStatus, ok2 := m["tasksByStatus"].(map[string]any); ok2 {
+		if byStatus, ok2 := m["tasks_by_status"].(map[string]any); ok2 {
 			count, _ := byStatus[status].(float64)
-			assert.GreaterOrEqualf(t, int(count), minCount, "tasksByStatus[%s]", status)
+			assert.GreaterOrEqualf(t, int(count), minCount, "tasks_by_status[%s]", status)
 		}
 	}
 }
@@ -277,7 +277,7 @@ func TestPrdDiffQuery_NotFound(t *testing.T) {
 	ctx := testCtx(db, tx)
 	runner := makeTestRunner(db)
 
-	result := runQueryWithParams(ctx, runner, &PrdDiffQuery{}, url.Values{"prdId": {newTestID()}})
+	result := runQueryWithParams(ctx, runner, &PrdDiffQuery{}, url.Values{"prd_id": {newTestID()}})
 	// Should fail — NOT_FOUND or error.
 	assert.False(t, result.Success, "should fail for non-existent PRD")
 }
@@ -322,7 +322,7 @@ func TestPrdDiffQuery_NoCommits(t *testing.T) {
 	_, err = tx.NewInsert().Model(task).Exec(ctx)
 	require.NoError(t, err)
 
-	result := runQueryWithParams(ctx, runner, &PrdDiffQuery{}, url.Values{"prdId": {prd.ID}})
+	result := runQueryWithParams(ctx, runner, &PrdDiffQuery{}, url.Values{"prd_id": {prd.ID}})
 	require.True(t, result.Success, "PrdDiffQuery should succeed: %s", result.Message)
 
 	// Verify no diff, 1 done task — handle both typed and map responses.
@@ -339,8 +339,8 @@ func extractCostSummary(t testing.TB, data any) (totalCost float64, totalRuns, b
 		return resp.TotalCost, resp.TotalRuns, len(resp.Breakdown)
 	}
 	if m, ok := data.(map[string]any); ok {
-		totalCost = toFloat64(m["totalCost"])
-		totalRuns = toInt(m["totalRuns"])
+		totalCost = toFloat64(m["total_cost"])
+		totalRuns = toInt(m["total_runs"])
 		if bd, ok2 := m["breakdown"].([]any); ok2 {
 			breakdownLen = len(bd)
 		} else if bd, ok2 := m["breakdown"].([]CostByModel); ok2 {
@@ -356,8 +356,8 @@ func extractDiffSummary(data any) (prdID string, tasksDone, commits int) {
 		return resp.PRDID, resp.TasksDone, resp.Commits
 	}
 	if m, ok := data.(map[string]any); ok {
-		prdID, _ = m["prdId"].(string)
-		tasksDone = toInt(m["tasksDone"])
+		prdID, _ = m["prd_id"].(string)
+		tasksDone = toInt(m["tasks_done"])
 		commits = toInt(m["commits"])
 	}
 	return
