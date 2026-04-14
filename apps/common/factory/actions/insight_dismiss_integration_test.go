@@ -1,6 +1,6 @@
 //go:build integration
 
-package actions
+package actions_test
 
 import (
 	"testing"
@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/yolo-hq/yolo/yolotest"
+
+	actionsgen "github.com/yolo-hq/app-yolo-factory/.yolo/gen/adapters/apps/common/factory/actions"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
@@ -17,7 +19,7 @@ func TestDismissInsight_HappyPathPending(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	ins := seedInsight(t, tx, proj.ID, nil) // status=pending
 
-	result := runAction(t, tx, &InsightDismissAction{},
+	result := runAction(t, tx, &actionsgen.InsightDismissAction{},
 		yolotest.WithEntityName("Insight"),
 		yolotest.WithEntityID(ins.ID),
 	)
@@ -30,7 +32,7 @@ func TestDismissInsight_HappyPathAcknowledged(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	ins := seedInsight(t, tx, proj.ID, &entities.Insight{Status: "acknowledged"})
 
-	result := runAction(t, tx, &InsightDismissAction{},
+	result := runAction(t, tx, &actionsgen.InsightDismissAction{},
 		yolotest.WithEntityName("Insight"),
 		yolotest.WithEntityID(ins.ID),
 	)
@@ -43,7 +45,7 @@ func TestDismissInsight_DenyAlreadyApplied(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	ins := seedInsight(t, tx, proj.ID, &entities.Insight{Status: "applied"})
 
-	result := runAction(t, tx, &InsightDismissAction{},
+	result := runAction(t, tx, &actionsgen.InsightDismissAction{},
 		yolotest.WithEntityName("Insight"),
 		yolotest.WithEntityID(ins.ID),
 	)
