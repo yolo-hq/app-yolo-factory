@@ -8,7 +8,6 @@ YOLO app. Domain-driven, action-pipeline architecture.
 - registry.RegisterFilter() for standard list/get. RegisterQueries() for custom reads
 - Integration tests only — no mocks, real DB
 - Framework first — if YOLO lacks a pattern, build in yolo/ before app code
-- action.OK(Extras{}) for non-entity data — action.Success is deprecated
 
 ## Structure
 server/{domain}/entities/, actions/, inputs/, queries/
