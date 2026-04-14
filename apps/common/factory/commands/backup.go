@@ -8,22 +8,16 @@ import (
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/services"
 )
 
-type Backup struct {
-	command.Base
-}
-
+// BackupInput is the CLI input for the backup command.
 type BackupInput struct {
 	StatePath string `flag:"state-path" usage:"Path to backup state directory (default: .factory-state)"`
 }
 
-func (c *Backup) Name() string        { return "backup" }
-func (c *Backup) Description() string { return "Trigger a manual backup snapshot" }
-func (c *Backup) Input() any          { return &BackupInput{} }
-
-func (c *Backup) Execute(ctx context.Context, cctx command.Context) error {
-	input, _ := cctx.TypedInput.(*BackupInput)
-
-	statePath := input.StatePath
+// Backup triggers a manual backup snapshot.
+//
+// @name backup
+func Backup(ctx context.Context, cctx *command.Context, in BackupInput) error {
+	statePath := in.StatePath
 	if statePath == "" {
 		statePath = ".factory-state"
 	}
