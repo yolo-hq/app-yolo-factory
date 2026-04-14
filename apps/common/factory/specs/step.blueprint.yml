@@ -22,5 +22,5 @@ entity:
 
 filters:
   - run_id eq
-  - phase eq
-  - status eq
+  - phase eq,in
+  - status eq,in

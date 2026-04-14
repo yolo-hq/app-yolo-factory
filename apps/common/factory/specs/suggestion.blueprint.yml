@@ -21,7 +21,7 @@ state:
 
 filters:
   - project_id eq
-  - source eq
-  - category eq
-  - status eq
+  - source eq,in
+  - category eq,in
+  - status eq,in
   - priority in

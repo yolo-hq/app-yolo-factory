@@ -15,3 +15,4 @@ filters:
   - run_id eq
   - task_id eq
   - passed eq
+  - checks_failed gt,lt
