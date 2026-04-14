@@ -1,0 +1,45 @@
+schema: v1
+
+entity:
+  task:
+    id: ulid!
+    prd_id: ulid! fk:prd
+    project_id: ulid! fk:project
+    title: string:1-200!
+    status: enum[queued,blocked,running,reviewing,done,failed,cancelled] = queued
+    spec: text!
+    acceptance_criteria: text!
+    branch: string!
+    model: string = ""
+    sequence: int!
+    depends_on: jsonb = "[]"
+    run_count: int = 0
+    max_retries: int = 3
+    cost_usd: float = 0
+    summary: text
+    commit_hash: string
+    started_at: datetime?
+    completed_at: datetime?
+
+state:
+  field: status
+  transitions:
+    start:    queued -> running
+    block:    running -> blocked
+    unblock:  blocked -> queued
+    review:   running -> reviewing
+    complete: reviewing -> done
+    fail:     running,reviewing -> failed
+    cancel:   queued,running,blocked -> cancelled
+
+filters:
+  - status eq
+  - prd_id eq
+  - project_id eq
+  - branch eq
+
+events:
+  - "TaskStarted {task_id, run_id}"
+  - "TaskCompleted {task_id, actor_id}"
+  - "TaskFailed {task_id, reason: text}"
+  - "TaskCancelled {task_id, actor_id}"

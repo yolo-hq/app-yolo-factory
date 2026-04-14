@@ -1,0 +1,35 @@
+schema: v1
+
+entity:
+  prd:
+    id: ulid!
+    project_id: ulid! fk:project
+    title: string:1-200!
+    status: enum[draft,approved,planning,in_progress,completed,failed] = draft
+    source: enum[manual,grill_me,factory_generated,imported] = manual
+    created_by: enum[human,agent] = human
+    body: text!
+    acceptance_criteria: text!
+    design_decisions: jsonb = "[]"
+    failed_tasks: int = 0
+    approved_at: datetime?
+    completed_at: datetime?
+
+state:
+  field: status
+  transitions:
+    approve:  draft -> approved
+    plan:     approved -> planning
+    start:    planning -> in_progress
+    complete: in_progress -> completed
+    fail:     in_progress -> failed
+
+filters:
+  - status eq
+  - project_id eq
+  - source eq
+
+events:
+  - "PRDApproved {prd_id, actor_id}"
+  - "PRDCompleted {prd_id, actor_id}"
+  - "PRDFailed {prd_id, actor_id}"

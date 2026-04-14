@@ -1,0 +1,27 @@
+schema: v1
+
+entity:
+  suggestion:
+    id: ulid!
+    project_id: ulid! fk:project
+    source: enum[review,sentinel,advisor,manual]!
+    category: enum[optimization,refactoring,tech_debt,security,new_feature,pattern_extraction,bug_fix]!
+    title: string:1-200!
+    body: text!
+    priority: enum[low,medium,high,critical] = medium
+    status: enum[pending,approved,rejected,converted] = pending
+    converted_task_id: ulid?
+
+state:
+  field: status
+  transitions:
+    approve: pending -> approved
+    reject:  pending -> rejected
+    convert: approved -> converted
+
+filters:
+  - project_id eq
+  - source eq
+  - category eq
+  - status eq
+  - priority in

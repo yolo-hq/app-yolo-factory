@@ -1,0 +1,30 @@
+schema: v1
+
+entity:
+  insight:
+    id: ulid!
+    project_id: ulid! fk:project
+    category: enum[retry_rate,cost_optimization,model_selection,spec_quality,gate_effectiveness,workflow_optimization]!
+    title: string:1-200!
+    body: text!
+    metric_data: jsonb = "{}"
+    recommendation: text = ""
+    priority: enum[low,medium,high,critical] = medium
+    status: enum[pending,acknowledged,applied,dismissed] = pending
+
+state:
+  field: status
+  transitions:
+    acknowledge: pending -> acknowledged
+    apply:       acknowledged -> applied
+    dismiss:     pending,acknowledged -> dismissed
+
+filters:
+  - project_id eq
+  - category eq
+  - status eq
+  - priority in
+
+events:
+  - "InsightAcknowledged {insight_id, actor_id}"
+  - "InsightApplied {insight_id, actor_id}"

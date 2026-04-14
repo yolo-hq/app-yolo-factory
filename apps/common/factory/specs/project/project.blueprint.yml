@@ -1,0 +1,35 @@
+schema: v1
+
+entity:
+  project:
+    id: ulid!
+    name: string:1-200!@
+    status: enum[active,paused,archived] = active
+    repo_url: url!
+    local_path: text = ""
+    use_worktrees: bool = false
+    default_branch: string:1-100 = "main"
+    maintenance_branches: jsonb = "[]"
+    default_model: string = "sonnet"
+    escalation_model: string = "opus"
+    escalation_after_retries: int = 2
+    budget_per_task_usd: float = 2.0
+    budget_per_prd_usd: float = 20.0
+    budget_monthly_usd: float = 200.0
+    budget_warning_at: float = 0.8
+    spent_this_month_usd: float = 0
+    max_retries: int = 3
+    timeout_secs: int = 600
+    auto_merge: bool = true
+    auto_start: bool = false
+    push_failed_branches: bool = false
+    setup_commands: jsonb = "[]"
+    test_commands: jsonb = "[]"
+
+filters:
+  - status eq
+  - name eq
+
+events:
+  - "ProjectCreated {project_id, actor_id}"
+  - "ProjectArchived {project_id, actor_id}"
