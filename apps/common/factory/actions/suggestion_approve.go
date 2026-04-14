@@ -2,7 +2,6 @@ package actions
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/yolo-hq/yolo/core/action"
@@ -28,9 +27,6 @@ func (a *ApproveSuggestionAction) Execute(ctx context.Context, actx *action.Cont
 	_, err := sm.Suggestion.Approve(ctx, actx, actx.EntityID, write.Set{
 		fields.Suggestion.ConvertedTaskID.When(input.PRDID != "").Value(input.PRDID),
 	})
-	if errors.Is(err, action.ErrStaleState) {
-		return action.Fail("suggestion is not pending")
-	}
 	if err != nil {
 		return fmt.Errorf("approve-suggestion: %w", err)
 	}

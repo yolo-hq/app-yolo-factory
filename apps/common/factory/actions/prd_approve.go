@@ -2,7 +2,6 @@ package actions
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -54,9 +53,6 @@ func (a *ApprovePRDAction) Execute(ctx context.Context, actx *action.Context) er
 	_, err := sm.PRD.Approve(ctx, actx, actx.EntityID, write.Set{
 		fields.PRD.ApprovedAt.Value(&now),
 	})
-	if errors.Is(err, action.ErrStaleState) {
-		return action.Fail("PRD is not in draft state")
-	}
 	if err != nil {
 		return fmt.Errorf("approve-prd: %w", err)
 	}

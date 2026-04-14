@@ -2,7 +2,6 @@ package actions
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/yolo-hq/yolo/core/action"
@@ -28,9 +27,6 @@ func (a *RetryTaskAction) Execute(ctx context.Context, actx *action.Context) err
 	_, err := sm.Task.Retry(ctx, actx, actx.EntityID, write.Set{
 		fields.Task.Model.When(input.Model != "").Value(input.Model),
 	})
-	if errors.Is(err, action.ErrStaleState) {
-		return action.Fail("task is not in failed state")
-	}
 	if err != nil {
 		return fmt.Errorf("retry-task: %w", err)
 	}

@@ -2,7 +2,6 @@ package actions
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/yolo-hq/yolo/core/action"
@@ -21,9 +20,6 @@ func (a *ArchiveProjectAction) Description() string { return "Archive a project"
 
 func (a *ArchiveProjectAction) Execute(ctx context.Context, actx *action.Context) error {
 	_, err := sm.Project.Archive(ctx, actx, actx.EntityID, nil)
-	if errors.Is(err, action.ErrStaleState) {
-		return action.Fail("project already archived")
-	}
 	if err != nil {
 		return fmt.Errorf("archive-project: %w", err)
 	}
