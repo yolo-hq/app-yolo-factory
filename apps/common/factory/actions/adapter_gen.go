@@ -5,8 +5,8 @@ package actions
 import (
 	"context"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 	"github.com/yolo-hq/yolo/core/action"
-	"github.com/yolo-hq/yolo/core/policy"
 	"github.com/yolo-hq/yolo/core/registry"
 )
 
@@ -16,11 +16,9 @@ func (InsightAcknowledgeAction) Name() string        { return "insight:acknowled
 func (InsightAcknowledgeAction) Description() string { return "Acknowledges a pending insight." }
 func (InsightAcknowledgeAction) Kind() string        { return "action" }
 func (InsightAcknowledgeAction) Policies() []action.AnyPolicy {
-	var out []action.AnyPolicy
-	if p, ok := policy.Get("policies.CanAcknowledgeInsightPolicy"); ok {
-		out = append(out, p)
+	return []action.AnyPolicy{
+		&policies.CanAcknowledgeInsightPolicy{},
 	}
-	return out
 }
 
 func (InsightAcknowledgeAction) Execute(ctx context.Context, actx *action.Context) error {
@@ -37,11 +35,9 @@ func (InsightApplyAction) Name() string        { return "insight:apply" }
 func (InsightApplyAction) Description() string { return "Applies an acknowledged insight." }
 func (InsightApplyAction) Kind() string        { return "action" }
 func (InsightApplyAction) Policies() []action.AnyPolicy {
-	var out []action.AnyPolicy
-	if p, ok := policy.Get("policies.CanApplyInsightPolicy"); ok {
-		out = append(out, p)
+	return []action.AnyPolicy{
+		&policies.CanApplyInsightPolicy{},
 	}
-	return out
 }
 
 func (InsightApplyAction) Execute(ctx context.Context, actx *action.Context) error {
@@ -58,11 +54,9 @@ func (InsightDismissAction) Name() string        { return "insight:dismiss" }
 func (InsightDismissAction) Description() string { return "Dismisses an insight." }
 func (InsightDismissAction) Kind() string        { return "action" }
 func (InsightDismissAction) Policies() []action.AnyPolicy {
-	var out []action.AnyPolicy
-	if p, ok := policy.Get("policies.CanDismissInsightPolicy"); ok {
-		out = append(out, p)
+	return []action.AnyPolicy{
+		&policies.CanDismissInsightPolicy{},
 	}
-	return out
 }
 
 func (InsightDismissAction) Execute(ctx context.Context, actx *action.Context) error {
@@ -81,11 +75,9 @@ func (PRDApproveAction) Description() string {
 }
 func (PRDApproveAction) Kind() string { return "action" }
 func (PRDApproveAction) Policies() []action.AnyPolicy {
-	var out []action.AnyPolicy
-	if p, ok := policy.Get("policies.CanApprovePRDPolicy"); ok {
-		out = append(out, p)
+	return []action.AnyPolicy{
+		&policies.CanApprovePRDPolicy{},
 	}
-	return out
 }
 
 func (PRDApproveAction) Execute(ctx context.Context, actx *action.Context) error {
@@ -104,11 +96,9 @@ func (PRDExecuteAction) Description() string {
 }
 func (PRDExecuteAction) Kind() string { return "action" }
 func (PRDExecuteAction) Policies() []action.AnyPolicy {
-	var out []action.AnyPolicy
-	if p, ok := policy.Get("policies.CanExecutePRDPolicy"); ok {
-		out = append(out, p)
+	return []action.AnyPolicy{
+		&policies.CanExecutePRDPolicy{},
 	}
-	return out
 }
 
 func (PRDExecuteAction) Execute(ctx context.Context, actx *action.Context) error {
@@ -128,11 +118,9 @@ func (PRDSubmitAction) Description() string {
 func (PRDSubmitAction) Kind() string   { return "action" }
 func (PRDSubmitAction) InputType() any { return *new(inputs.SubmitPRDInput) }
 func (PRDSubmitAction) Policies() []action.AnyPolicy {
-	var out []action.AnyPolicy
-	if p, ok := policy.Get("policies.CanSubmitPRDPolicy"); ok {
-		out = append(out, p)
+	return []action.AnyPolicy{
+		&policies.CanSubmitPRDPolicy{},
 	}
-	return out
 }
 
 func (PRDSubmitAction) Execute(ctx context.Context, actx *action.Context) error {
@@ -153,11 +141,9 @@ func (ProjectArchiveAction) Name() string        { return "project:archive" }
 func (ProjectArchiveAction) Description() string { return "Archives an active project." }
 func (ProjectArchiveAction) Kind() string        { return "action" }
 func (ProjectArchiveAction) Policies() []action.AnyPolicy {
-	var out []action.AnyPolicy
-	if p, ok := policy.Get("policies.CanArchiveProjectPolicy"); ok {
-		out = append(out, p)
+	return []action.AnyPolicy{
+		&policies.CanArchiveProjectPolicy{},
 	}
-	return out
 }
 
 func (ProjectArchiveAction) Execute(ctx context.Context, actx *action.Context) error {
@@ -193,11 +179,9 @@ func (ProjectPauseAction) Name() string        { return "project:pause" }
 func (ProjectPauseAction) Description() string { return "Pauses an active project." }
 func (ProjectPauseAction) Kind() string        { return "action" }
 func (ProjectPauseAction) Policies() []action.AnyPolicy {
-	var out []action.AnyPolicy
-	if p, ok := policy.Get("policies.CanPauseProjectPolicy"); ok {
-		out = append(out, p)
+	return []action.AnyPolicy{
+		&policies.CanPauseProjectPolicy{},
 	}
-	return out
 }
 
 func (ProjectPauseAction) Execute(ctx context.Context, actx *action.Context) error {
@@ -214,11 +198,9 @@ func (ProjectResumeAction) Name() string        { return "project:resume" }
 func (ProjectResumeAction) Description() string { return "Resumes a paused project." }
 func (ProjectResumeAction) Kind() string        { return "action" }
 func (ProjectResumeAction) Policies() []action.AnyPolicy {
-	var out []action.AnyPolicy
-	if p, ok := policy.Get("policies.CanResumeProjectPolicy"); ok {
-		out = append(out, p)
+	return []action.AnyPolicy{
+		&policies.CanResumeProjectPolicy{},
 	}
-	return out
 }
 
 func (ProjectResumeAction) Execute(ctx context.Context, actx *action.Context) error {
@@ -255,11 +237,9 @@ func (QuestionAnswerAction) Description() string { return "Answers an open quest
 func (QuestionAnswerAction) Kind() string        { return "action" }
 func (QuestionAnswerAction) InputType() any      { return *new(inputs.AnswerQuestionInput) }
 func (QuestionAnswerAction) Policies() []action.AnyPolicy {
-	var out []action.AnyPolicy
-	if p, ok := policy.Get("policies.CanAnswerQuestionPolicy"); ok {
-		out = append(out, p)
+	return []action.AnyPolicy{
+		&policies.CanAnswerQuestionPolicy{},
 	}
-	return out
 }
 
 func (QuestionAnswerAction) Execute(ctx context.Context, actx *action.Context) error {
@@ -302,11 +282,9 @@ func (SuggestionApproveAction) Description() string { return "Approves a pending
 func (SuggestionApproveAction) Kind() string        { return "action" }
 func (SuggestionApproveAction) InputType() any      { return *new(inputs.ApproveSuggestionInput) }
 func (SuggestionApproveAction) Policies() []action.AnyPolicy {
-	var out []action.AnyPolicy
-	if p, ok := policy.Get("policies.CanApproveSuggestionPolicy"); ok {
-		out = append(out, p)
+	return []action.AnyPolicy{
+		&policies.CanApproveSuggestionPolicy{},
 	}
-	return out
 }
 
 func (SuggestionApproveAction) Execute(ctx context.Context, actx *action.Context) error {
@@ -330,11 +308,9 @@ func (SuggestionRejectAction) Description() string {
 func (SuggestionRejectAction) Kind() string   { return "action" }
 func (SuggestionRejectAction) InputType() any { return *new(inputs.RejectSuggestionInput) }
 func (SuggestionRejectAction) Policies() []action.AnyPolicy {
-	var out []action.AnyPolicy
-	if p, ok := policy.Get("policies.CanRejectSuggestionPolicy"); ok {
-		out = append(out, p)
+	return []action.AnyPolicy{
+		&policies.CanRejectSuggestionPolicy{},
 	}
-	return out
 }
 
 func (SuggestionRejectAction) Execute(ctx context.Context, actx *action.Context) error {
@@ -355,11 +331,9 @@ func (TaskCancelAction) Name() string        { return "task:cancel" }
 func (TaskCancelAction) Description() string { return "Cancels a non-terminal task." }
 func (TaskCancelAction) Kind() string        { return "action" }
 func (TaskCancelAction) Policies() []action.AnyPolicy {
-	var out []action.AnyPolicy
-	if p, ok := policy.Get("policies.CanCancelTaskPolicy"); ok {
-		out = append(out, p)
+	return []action.AnyPolicy{
+		&policies.CanCancelTaskPolicy{},
 	}
-	return out
 }
 
 func (TaskCancelAction) Execute(ctx context.Context, actx *action.Context) error {
@@ -377,11 +351,9 @@ func (TaskRetryAction) Description() string { return "Retries a failed task, res
 func (TaskRetryAction) Kind() string        { return "action" }
 func (TaskRetryAction) InputType() any      { return *new(inputs.RetryTaskInput) }
 func (TaskRetryAction) Policies() []action.AnyPolicy {
-	var out []action.AnyPolicy
-	if p, ok := policy.Get("policies.CanRetryTaskPolicy"); ok {
-		out = append(out, p)
+	return []action.AnyPolicy{
+		&policies.CanRetryTaskPolicy{},
 	}
-	return out
 }
 
 func (TaskRetryAction) Execute(ctx context.Context, actx *action.Context) error {
