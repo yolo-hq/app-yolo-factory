@@ -16,13 +16,24 @@ import (
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
-// ProjectScanInput is the CLI input for project:scan.
+// --- ProjectScan ---
+
+type ProjectScan struct {
+	command.Base
+}
+
 type ProjectScanInput struct {
 	Dir    string `flag:"dir" validate:"required" usage:"Directory to scan for git repos"`
 	DryRun bool   `flag:"dry-run" usage:"Show repos without registering"`
 	Branch string `flag:"branch" usage:"Default branch (default: main)"`
 	Model  string `flag:"model" usage:"Default model (default: sonnet)"`
 }
+
+func (c *ProjectScan) Name() string { return "project:scan" }
+func (c *ProjectScan) Description() string {
+	return "Auto-discover and register git repos in a directory"
+}
+func (c *ProjectScan) Input() any { return &ProjectScanInput{} }
 
 type scannedRepo struct {
 	Name      string
@@ -31,22 +42,22 @@ type scannedRepo struct {
 	Status    string // "new" or "existing"
 }
 
-// ProjectScan auto-discovers and registers git repos in a directory.
-//
-// @name project:scan
-func ProjectScan(ctx context.Context, cctx *command.Context, in ProjectScanInput) error {
-	branch := in.Branch
+func (c *ProjectScan) Execute(ctx context.Context, cctx command.Context) error {
+	input, _ := cctx.TypedInput.(*ProjectScanInput)
+
+	branch := input.Branch
 	if branch == "" {
 		branch = "main"
 	}
-	model := in.Model
+	model := input.Model
 	if model == "" {
 		model = "sonnet"
 	}
 
-	entries, err := os.ReadDir(in.Dir)
+	// Walk Dir, find directories with both .git/ AND go.mod.
+	entries, err := os.ReadDir(input.Dir)
 	if err != nil {
-		return fmt.Errorf("read directory %s: %w", in.Dir, err)
+		return fmt.Errorf("read directory %s: %w", input.Dir, err)
 	}
 
 	var repos []scannedRepo
@@ -54,8 +65,9 @@ func ProjectScan(ctx context.Context, cctx *command.Context, in ProjectScanInput
 		if !e.IsDir() {
 			continue
 		}
-		dirPath := filepath.Join(in.Dir, e.Name())
+		dirPath := filepath.Join(input.Dir, e.Name())
 
+		// Check for .git/ and go.mod.
 		gitDir := filepath.Join(dirPath, ".git")
 		goMod := filepath.Join(dirPath, "go.mod")
 
@@ -71,6 +83,7 @@ func ProjectScan(ctx context.Context, cctx *command.Context, in ProjectScanInput
 			absPath = dirPath
 		}
 
+		// Get remote URL (best-effort).
 		remoteURL := ""
 		out, err := exec.CommandContext(ctx, "git", "-C", absPath, "remote", "get-url", "origin").Output()
 		if err == nil {
@@ -85,10 +98,11 @@ func ProjectScan(ctx context.Context, cctx *command.Context, in ProjectScanInput
 	}
 
 	if len(repos) == 0 {
-		cctx.Print("No git+go.mod repos found in %s", in.Dir)
+		cctx.Print("No git+go.mod repos found in %s", input.Dir)
 		return nil
 	}
 
+	// Check existing projects.
 	existing, err := read.FindMany[entities.Project](ctx)
 	if err != nil {
 		return fmt.Errorf("list projects: %w", err)
@@ -109,6 +123,7 @@ func ProjectScan(ctx context.Context, cctx *command.Context, in ProjectScanInput
 		}
 	}
 
+	// Print table.
 	tw := cctx.Table()
 	fmt.Fprintf(tw, "NAME\tPATH\tREMOTE\tSTATUS\n")
 	for _, r := range repos {
@@ -120,10 +135,11 @@ func ProjectScan(ctx context.Context, cctx *command.Context, in ProjectScanInput
 	}
 	tw.Flush()
 
-	if in.DryRun {
+	if input.DryRun {
 		return nil
 	}
 
+	// Create new projects.
 	repo, err := cctx.RepoProvider.Repo("Project")
 	if err != nil {
 		return fmt.Errorf("get project repo: %w", err)

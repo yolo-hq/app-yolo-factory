@@ -1,6 +1,6 @@
 //go:build integration
 
-package actions_test
+package actions
 
 import (
 	"context"
@@ -10,8 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/yolo-hq/yolo/yolotest"
 
-	actionsgen "github.com/yolo-hq/app-yolo-factory/.yolo/gen/adapters/apps/common/factory/actions"
-
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
 )
 
@@ -20,7 +18,7 @@ func TestUpdateProject_HappyPath(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	newName := "Updated Name " + newID()
 
-	result := runAction(t, tx, &actionsgen.ProjectUpdateAction{},
+	result := runAction(t, tx, &UpdateProjectAction{},
 		yolotest.WithEntityName("Project"),
 		yolotest.WithEntityID(proj.ID),
 		yolotest.WithInput(inputs.UpdateProjectInput{
@@ -42,7 +40,7 @@ func TestUpdateProject_UpdateModel(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	model := "opus"
 
-	result := runAction(t, tx, &actionsgen.ProjectUpdateAction{},
+	result := runAction(t, tx, &UpdateProjectAction{},
 		yolotest.WithEntityName("Project"),
 		yolotest.WithEntityID(proj.ID),
 		yolotest.WithInput(inputs.UpdateProjectInput{

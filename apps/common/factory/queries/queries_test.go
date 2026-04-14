@@ -1,20 +1,17 @@
-package queries_test
+package queries
 
 import (
 	"context"
 	"testing"
 
 	"github.com/yolo-hq/yolo/core/query"
-
-	queriesgen "github.com/yolo-hq/app-yolo-factory/.yolo/gen/adapters/apps/common/factory/queries"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/queries"
 )
 
 // compile-time interface checks.
 var (
-	_ query.Query = (*queriesgen.CostQuery)(nil)
-	_ query.Query = (*queriesgen.StatusQuery)(nil)
-	_ query.Query = (*queriesgen.PRDDiffQuery)(nil)
+	_ query.Query = (*CostQuery)(nil)
+	_ query.Query = (*StatusQuery)(nil)
+	_ query.Query = (*PrdDiffQuery)(nil)
 )
 
 func TestQueries_Description(t *testing.T) {
@@ -22,9 +19,9 @@ func TestQueries_Description(t *testing.T) {
 		name string
 		q    interface{ Description() string }
 	}{
-		{"CostQuery", queriesgen.CostQuery{}},
-		{"StatusQuery", queriesgen.StatusQuery{}},
-		{"PRDDiffQuery", queriesgen.PRDDiffQuery{}},
+		{"CostQuery", &CostQuery{}},
+		{"StatusQuery", &StatusQuery{}},
+		{"PrdDiffQuery", &PrdDiffQuery{}},
 	}
 
 	for _, tc := range cases {
@@ -37,14 +34,16 @@ func TestQueries_Description(t *testing.T) {
 }
 
 func TestRunPRDGitDiff_InvalidRepo(t *testing.T) {
-	_, _, err := queries.RunPRDGitDiffForTest(context.Background(), "/nonexistent/path", "abc123", "def456")
+	// Passing a non-existent path should return an error.
+	_, _, err := runPRDGitDiff(context.Background(), "/nonexistent/path", "abc123", "def456")
 	if err == nil {
 		t.Error("expected error for invalid repo path, got nil")
 	}
 }
 
 func TestRunPRDGitDiff_SameCommit(t *testing.T) {
-	_, _, err := queries.RunPRDGitDiffForTest(context.Background(), "/tmp", "deadbeef", "deadbeef")
+	// Using /tmp as a non-git dir should also fail gracefully.
+	_, _, err := runPRDGitDiff(context.Background(), "/tmp", "deadbeef", "deadbeef")
 	if err == nil {
 		t.Error("expected error for non-git directory, got nil")
 	}

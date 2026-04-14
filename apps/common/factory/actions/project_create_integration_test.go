@@ -1,6 +1,6 @@
 //go:build integration
 
-package actions_test
+package actions
 
 import (
 	"testing"
@@ -9,15 +9,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/yolo-hq/yolo/yolotest"
 
-	actionsgen "github.com/yolo-hq/app-yolo-factory/.yolo/gen/adapters/apps/common/factory/actions"
-
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
 )
 
 func TestCreateProject_HappyPath(t *testing.T) {
 	tx := dbTx(t)
 
-	result := runAction(t, tx, &actionsgen.ProjectCreateAction{},
+	result := runAction(t, tx, &CreateProjectAction{},
 		yolotest.WithInput(inputs.CreateProjectInput{
 			Name:      "My Project " + newID(),
 			RepoURL:   "https://github.com/test/repo",
@@ -30,7 +28,7 @@ func TestCreateProject_HappyPath(t *testing.T) {
 func TestCreateProject_DenyMissingName(t *testing.T) {
 	tx := dbTx(t)
 
-	result := runAction(t, tx, &actionsgen.ProjectCreateAction{},
+	result := runAction(t, tx, &CreateProjectAction{},
 		yolotest.WithInput(inputs.CreateProjectInput{
 			RepoURL:   "https://github.com/test/repo",
 			LocalPath: "/tmp/myproject",
@@ -44,7 +42,7 @@ func TestCreateProject_DenyMissingName(t *testing.T) {
 func TestCreateProject_DenyMissingRepoURL(t *testing.T) {
 	tx := dbTx(t)
 
-	result := runAction(t, tx, &actionsgen.ProjectCreateAction{},
+	result := runAction(t, tx, &CreateProjectAction{},
 		yolotest.WithInput(inputs.CreateProjectInput{
 			Name:      "My Project " + newID(),
 			LocalPath: "/tmp/myproject",

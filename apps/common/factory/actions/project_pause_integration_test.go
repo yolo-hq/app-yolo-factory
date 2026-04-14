@@ -1,6 +1,6 @@
 //go:build integration
 
-package actions_test
+package actions
 
 import (
 	"testing"
@@ -9,8 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/yolo-hq/yolo/yolotest"
 
-	actionsgen "github.com/yolo-hq/app-yolo-factory/.yolo/gen/adapters/apps/common/factory/actions"
-
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
 
@@ -18,7 +16,7 @@ func TestPauseProject_HappyPath(t *testing.T) {
 	tx := dbTx(t)
 	proj := seedProject(t, tx, nil) // status=active
 
-	result := runAction(t, tx, &actionsgen.ProjectPauseAction{},
+	result := runAction(t, tx, &PauseProjectAction{},
 		yolotest.WithEntityName("Project"),
 		yolotest.WithEntityID(proj.ID),
 	)
@@ -30,7 +28,7 @@ func TestPauseProject_DenyNotActive(t *testing.T) {
 	tx := dbTx(t)
 	proj := seedProject(t, tx, &entities.Project{Status: "paused"})
 
-	result := runAction(t, tx, &actionsgen.ProjectPauseAction{},
+	result := runAction(t, tx, &PauseProjectAction{},
 		yolotest.WithEntityName("Project"),
 		yolotest.WithEntityID(proj.ID),
 	)
@@ -42,7 +40,7 @@ func TestPauseProject_DenyArchived(t *testing.T) {
 	tx := dbTx(t)
 	proj := seedProject(t, tx, &entities.Project{Status: "archived"})
 
-	result := runAction(t, tx, &actionsgen.ProjectPauseAction{},
+	result := runAction(t, tx, &PauseProjectAction{},
 		yolotest.WithEntityName("Project"),
 		yolotest.WithEntityID(proj.ID),
 	)

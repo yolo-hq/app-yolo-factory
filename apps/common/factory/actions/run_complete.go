@@ -47,6 +47,7 @@ type CompleteRunData struct {
 		PRD        struct {
 			ID string `field:"id"`
 
+			// Aggregations for terminal-check logic.
 			CompletedCount int `field:"tasks" aggregate:"count" filter:"status:done"`
 			FailedCount    int `field:"tasks" aggregate:"count" filter:"status:failed"`
 			TotalCount     int `field:"tasks" aggregate:"count"`
@@ -54,36 +55,48 @@ type CompleteRunData struct {
 	} `field:"task"`
 }
 
-// RunComplete records run completion and drives the task/PRD state machine.
-func RunComplete(ctx context.Context, actx *action.Context, in inputs.CompleteRunInput) error {
-	data, err := projection.Load[CompleteRunData](ctx, actx.EntityID)
-	if err != nil {
-		return err
-	}
+// CompleteRunAction records run completion and drives the task/PRD state machine.
+type CompleteRunAction struct {
+	action.SkipAllPolicies
+	action.TypedInput[inputs.CompleteRunInput]
+	action.Projection[CompleteRunData]
+}
+
+func (a *CompleteRunAction) Description() string {
+	return "Record run completion and advance state machine"
+}
+
+func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) error {
+	data := a.Data(actx)
+	input := a.Input(actx)
 	now := time.Now()
 
+	// 1. Transition the run via SM, carrying input metadata as extras.
+	//    We split per outcome so the SM enforces running → {completed,failed}.
 	runExtras := write.Set{
 		fields.Run.CompletedAt.Value(&now),
-		fields.Run.CostUSD.When(in.CostUSD != 0).Value(in.CostUSD),
-		fields.Run.TokensIn.When(in.TokensIn != 0).Value(in.TokensIn),
-		fields.Run.TokensOut.When(in.TokensOut != 0).Value(in.TokensOut),
-		fields.Run.DurationMs.When(in.DurationMS != 0).Value(in.DurationMS),
-		fields.Run.NumTurns.When(in.NumTurns != 0).Value(in.NumTurns),
-		fields.Run.Error.When(in.Error != "").Value(in.Error),
-		fields.Run.CommitHash.When(in.CommitHash != "").Value(in.CommitHash),
-		fields.Run.FilesChanged.When(in.FilesChanged != "").Value(in.FilesChanged),
-		fields.Run.Result.When(in.Result != "").Value(in.Result),
-		fields.Run.SessionID.When(in.SessionID != "").Value(in.SessionID),
+		fields.Run.CostUSD.When(input.CostUSD != 0).Value(input.CostUSD),
+		fields.Run.TokensIn.When(input.TokensIn != 0).Value(input.TokensIn),
+		fields.Run.TokensOut.When(input.TokensOut != 0).Value(input.TokensOut),
+		fields.Run.DurationMs.When(input.DurationMS != 0).Value(input.DurationMS),
+		fields.Run.NumTurns.When(input.NumTurns != 0).Value(input.NumTurns),
+		fields.Run.Error.When(input.Error != "").Value(input.Error),
+		fields.Run.CommitHash.When(input.CommitHash != "").Value(input.CommitHash),
+		fields.Run.FilesChanged.When(input.FilesChanged != "").Value(input.FilesChanged),
+		fields.Run.Result.When(input.Result != "").Value(input.Result),
+		fields.Run.SessionID.When(input.SessionID != "").Value(input.SessionID),
 	}
 
 	var runErr error
-	switch in.Status {
+	switch input.Status {
 	case string(enums.RunStatusCompleted):
 		_, runErr = sm.Run.Complete(ctx, actx, actx.EntityID, runExtras)
 	case string(enums.RunStatusFailed):
 		_, runErr = sm.Run.Fail(ctx, actx, actx.EntityID, runExtras)
 	default:
-		_, runErr = repos.Run.UpdateFromInput(ctx, actx, actx.EntityID, in,
+		// Unknown / unsupported terminal status — fall back to direct update so
+		// callers passing legacy values still persist their data.
+		_, runErr = repos.Run.UpdateFromInput(ctx, actx, actx.EntityID, input,
 			fields.Run.CompletedAt.Value(&now),
 		)
 	}
@@ -94,11 +107,12 @@ func RunComplete(ctx context.Context, actx *action.Context, in inputs.CompleteRu
 		return runErr
 	}
 
-	switch in.Status {
+	// 2. Branch on run outcome.
+	switch input.Status {
 	case string(enums.RunStatusCompleted):
-		handleCompleted(ctx, actx, data, in, now)
+		handleCompleted(ctx, actx, data, input, now)
 	case string(enums.RunStatusFailed):
-		handleFailed(ctx, actx, data, in)
+		handleFailed(ctx, actx, data, input)
 	}
 
 	return nil
@@ -111,6 +125,7 @@ func handleCompleted(
 	input inputs.CompleteRunInput,
 	now time.Time,
 ) {
+	// a. Mark task done via SM, accumulate cost atomically.
 	if _, err := sm.Task.Complete(ctx, actx, data.Task.ID, write.Set{
 		fields.Task.CostUSD.Incr(input.CostUSD),
 		fields.Task.CommitHash.Value(input.CommitHash),
@@ -125,9 +140,11 @@ func handleCompleted(
 		return
 	}
 
+	// b. Unblock dependents and advance PRD state.
 	toUnblock := unblockDependents(ctx, actx, data)
 	advancePRD(ctx, actx, data, now)
 
+	// c. Dispatch next task — prefer newly unblocked, else find next queued.
 	nextID := ""
 	if len(toUnblock) > 0 {
 		nextID = toUnblock[0]
@@ -146,6 +163,8 @@ func handleCompleted(
 	}
 }
 
+// unblockDependents transitions blocked tasks whose dependencies are all met to
+// "queued" and returns the IDs of tasks that were unblocked.
 func unblockDependents(
 	ctx context.Context,
 	actx *action.Context,
@@ -181,6 +200,10 @@ func unblockDependents(
 	return toUnblock
 }
 
+// advancePRD checks whether all tasks are terminal and transitions the PRD
+// to completed or failed, emitting the appropriate event.
+// CompletedTasks and TotalCostUSD are now virtual computed fields — no manual
+// counter updates needed.
 func advancePRD(
 	ctx context.Context,
 	actx *action.Context,
@@ -213,6 +236,7 @@ func handleFailed(
 	newRunCount := data.Task.RunCount + 1
 
 	if newRunCount < data.Task.MaxRetries {
+		// Retry: requeue task via SM with atomic cost/run_count increment.
 		if _, err := sm.Task.Requeue(ctx, actx, data.Task.ID, write.Set{
 			fields.Task.CostUSD.Incr(input.CostUSD),
 			fields.Task.RunCount.Incr(1),
@@ -228,6 +252,7 @@ func handleFailed(
 		return
 	}
 
+	// Exhausted retries: mark failed via SM.
 	if _, err := sm.Task.Fail(ctx, actx, data.Task.ID, write.Set{
 		fields.Task.CostUSD.Incr(input.CostUSD),
 		fields.Task.RunCount.Incr(1),
@@ -240,12 +265,14 @@ func handleFailed(
 		return
 	}
 
+	// Cascade failure via the completion service (recursive graph walk).
 	if svc.S.RunCompletion != nil {
 		if err := svc.S.RunCompletion.CascadeFailure(ctx, data.Task.ID, data.Task.PRD.ID); err != nil {
 			slog.Warn("cascade failure failed", "task_id", data.Task.ID, "error", err)
 		}
 	}
 
+	// Update PRD failed counter. TotalCostUSD is now a virtual computed field.
 	newFailed := data.Task.PRD.FailedCount + 1
 	if _, err := repos.PRD.Update(ctx, actx, data.Task.PRD.ID, write.Set{
 		fields.PRD.FailedTasks.Value(newFailed),

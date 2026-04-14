@@ -9,13 +9,21 @@ import (
 
 	"github.com/yolo-hq/app-yolo-factory/.yolo/sm"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
 
-// SuggestionReject rejects a pending suggestion with a reason.
-//
-// @policy CanRejectSuggestionPolicy
-func SuggestionReject(ctx context.Context, actx *action.Context, in inputs.RejectSuggestionInput) error {
-	_ = in
+// RejectSuggestionAction rejects a suggestion with a reason.
+type RejectSuggestionAction struct {
+	action.RequirePolicy[policies.CanRejectSuggestionPolicy]
+	action.TypedInput[inputs.RejectSuggestionInput]
+}
+
+func (a *RejectSuggestionAction) Description() string { return "Reject a pending suggestion" }
+
+func (a *RejectSuggestionAction) Execute(ctx context.Context, actx *action.Context) error {
+	// input consumed for validation; reason not stored on entity.
+	_ = a.Input(actx)
+
 	_, err := sm.Suggestion.Reject(ctx, actx, actx.EntityID, nil)
 	if errors.Is(err, action.ErrStaleState) {
 		return action.Fail("suggestion is not pending")

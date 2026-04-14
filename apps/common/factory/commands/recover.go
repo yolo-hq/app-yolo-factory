@@ -8,18 +8,24 @@ import (
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/services"
 )
 
-// RecoverInput is the CLI input for the recover command.
+type Recover struct {
+	command.Base
+}
+
 type RecoverInput struct {
 	From string `flag:"from" validate:"required" usage:"Path to backup state directory"`
 }
 
-// Recover restores factory state from a backup.
-//
-// @name recover
-func Recover(ctx context.Context, cctx *command.Context, in RecoverInput) error {
-	svc := &services.BackupService{StatePath: in.From}
+func (c *Recover) Name() string        { return "recover" }
+func (c *Recover) Description() string { return "Recover factory state from backup" }
+func (c *Recover) Input() any          { return &RecoverInput{} }
 
-	cctx.Print("Recovering from %s...", in.From)
+func (c *Recover) Execute(ctx context.Context, cctx command.Context) error {
+	input, _ := cctx.TypedInput.(*RecoverInput)
+
+	svc := &services.BackupService{StatePath: input.From}
+
+	cctx.Print("Recovering from %s...", input.From)
 	results, err := svc.Recover(ctx)
 	if err != nil {
 		return err

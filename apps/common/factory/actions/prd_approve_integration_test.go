@@ -1,6 +1,6 @@
 //go:build integration
 
-package actions_test
+package actions
 
 import (
 	"testing"
@@ -8,8 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/yolo-hq/yolo/yolotest"
-
-	actionsgen "github.com/yolo-hq/app-yolo-factory/.yolo/gen/adapters/apps/common/factory/actions"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
@@ -19,7 +17,7 @@ func TestApprovePRD_HappyPath(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	prd := seedPRD(t, tx, proj.ID, nil) // status=draft
 
-	result := runAction(t, tx, &actionsgen.PRDApproveAction{},
+	result := runAction(t, tx, &ApprovePRDAction{},
 		yolotest.WithEntityName("PRD"),
 		yolotest.WithEntityID(prd.ID),
 	)
@@ -32,7 +30,7 @@ func TestApprovePRD_DenyNotDraft(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	prd := seedPRD(t, tx, proj.ID, &entities.PRD{Status: "approved"})
 
-	result := runAction(t, tx, &actionsgen.PRDApproveAction{},
+	result := runAction(t, tx, &ApprovePRDAction{},
 		yolotest.WithEntityName("PRD"),
 		yolotest.WithEntityID(prd.ID),
 	)
@@ -45,7 +43,7 @@ func TestApprovePRD_DenyInProgress(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	prd := seedPRD(t, tx, proj.ID, &entities.PRD{Status: "in_progress"})
 
-	result := runAction(t, tx, &actionsgen.PRDApproveAction{},
+	result := runAction(t, tx, &ApprovePRDAction{},
 		yolotest.WithEntityName("PRD"),
 		yolotest.WithEntityID(prd.ID),
 	)

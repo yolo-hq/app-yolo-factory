@@ -16,9 +16,15 @@ import (
 	"github.com/yolo-hq/app-yolo-factory/.yolo/sm"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	factoryjobs "github.com/yolo-hq/app-yolo-factory/apps/common/factory/jobs"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
 
 // ApprovePRDData reads only the PRD fields needed for this action.
+// NOTE: The Project relation is NOT loaded here because LoadEntityWithIncludes
+// cannot resolve yolo-tag belongs_to relations (bun:"-" fields). The project
+// is loaded manually in Execute via read.FindOne.
+// TODO(framework): LoadEntityWithIncludes should support yolo to-one relations
+// the same way LoadEntityWithSpec does (see entity_loader.go yoloToOneIncludes).
 type ApprovePRDData struct {
 	projection.For[entities.PRD]
 
@@ -32,17 +38,20 @@ type projectAutoStart struct {
 	AutoStart bool `field:"auto_start"`
 }
 
-// PRDApprove approves a draft PRD and optionally triggers planning.
-//
-// @policy CanApprovePRDPolicy
-func PRDApprove(ctx context.Context, actx *action.Context) error {
-	prd, err := projection.Load[ApprovePRDData](ctx, actx.EntityID)
-	if err != nil {
-		return fmt.Errorf("approve-prd: load prd: %w", err)
-	}
+// ApprovePRDAction approves a draft PRD and optionally triggers planning.
+type ApprovePRDAction struct {
+	action.RequirePolicy[policies.CanApprovePRDPolicy]
+	action.NoInput
+	action.Projection[ApprovePRDData]
+}
+
+func (a *ApprovePRDAction) Description() string { return "Approve a draft PRD" }
+
+func (a *ApprovePRDAction) Execute(ctx context.Context, actx *action.Context) error {
+	prd := a.Data(actx)
 
 	now := time.Now()
-	_, err = sm.PRD.Approve(ctx, actx, actx.EntityID, write.Set{
+	_, err := sm.PRD.Approve(ctx, actx, actx.EntityID, write.Set{
 		fields.PRD.ApprovedAt.Value(&now),
 	})
 	if errors.Is(err, action.ErrStaleState) {
@@ -52,11 +61,15 @@ func PRDApprove(ctx context.Context, actx *action.Context) error {
 		return fmt.Errorf("approve-prd: %w", err)
 	}
 
+	// Load project to check auto_start. Manual load is required because the
+	// framework's LoadEntityWithIncludes path cannot resolve yolo belongs_to
+	// relations (bun:"-" fields) — only LoadEntityWithSpec can.
 	project, err := read.FindOne[projectAutoStart](ctx, prd.ProjectID)
 	if err != nil {
 		return fmt.Errorf("approve-prd: load project: %w", err)
 	}
 
+	// auto_start: if project has AutoStart, defer PlanPRDJob until after commit.
 	if project.AutoStart {
 		jobs.Defer(ctx, &factoryjobs.PlanPRDJob{PRDID: prd.ID})
 	}

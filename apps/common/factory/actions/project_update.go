@@ -1,19 +1,16 @@
 package actions
 
 import (
-	"context"
-
 	"github.com/yolo-hq/yolo/core/action"
 
-	"github.com/yolo-hq/app-yolo-factory/.yolo/repos"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
 )
 
-// ProjectUpdate updates an existing project.
-func ProjectUpdate(ctx context.Context, actx *action.Context, in inputs.UpdateProjectInput) error {
-	if _, err := repos.Project.UpdateFromInput(ctx, actx, actx.EntityID, in); err != nil {
-		return err
-	}
-	actx.Resolve("Project", actx.EntityID)
-	return nil
+// UpdateProjectAction updates an existing project.
+type UpdateProjectAction struct {
+	action.SkipAllPolicies
+	action.BaseUpdate[entities.Project, inputs.UpdateProjectInput]
 }
+
+func (a *UpdateProjectAction) Description() string { return "Update an existing project" }

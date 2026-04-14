@@ -15,39 +15,47 @@ import (
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/services"
 )
 
-// SentinelRunInput is the CLI input for sentinel:run.
+// SentinelRun triggers a sentinel health-check run directly from the CLI.
+type SentinelRun struct {
+	command.Base
+}
+
 type SentinelRunInput struct {
 	Project string `flag:"project" usage:"Project ID"`
 	All     bool   `flag:"all" usage:"Run against all active projects"`
 }
 
+func (c *SentinelRun) Name() string        { return "sentinel:run" }
+func (c *SentinelRun) Description() string { return "Run sentinel health checks" }
+func (c *SentinelRun) Input() any          { return &SentinelRunInput{} }
+
 // defaultWatches is the set of watches to run when no specific watch is requested.
 var defaultWatches = []string{"build_health", "test_health", "security", "convention_drift"}
 
-// SentinelRun runs sentinel health checks.
-//
-// @name sentinel:run
-func SentinelRun(ctx context.Context, cctx *command.Context, in SentinelRunInput) error {
-	if !in.All && in.Project == "" {
+func (c *SentinelRun) Execute(ctx context.Context, cctx command.Context) error {
+	input, _ := cctx.TypedInput.(*SentinelRunInput)
+
+	if !input.All && input.Project == "" {
 		return fmt.Errorf("specify --project or --all")
 	}
 
 	var projects []entities.Project
 
-	if in.All {
+	if input.All {
 		result, err := read.FindMany[entities.Project](ctx, filter.Eq(fields.Project.Status.Name(), string(enums.ProjectStatusActive)))
 		if err != nil {
 			return fmt.Errorf("list projects: %w", err)
 		}
 		projects = result
 	} else {
-		p, err := helpers.FindProjectByIDOrName(ctx, in.Project)
+		p, err := helpers.FindProjectByIDOrName(ctx, input.Project)
 		if err != nil {
 			return err
 		}
 		projects = append(projects, *p)
 	}
 
+	// Run sentinel directly (no Claude client needed for build/test/security watches).
 	svc := &services.SentinelService{}
 
 	for _, p := range projects {

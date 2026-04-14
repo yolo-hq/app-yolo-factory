@@ -1,6 +1,6 @@
 //go:build integration
 
-package actions_test
+package actions
 
 import (
 	"testing"
@@ -8,8 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/yolo-hq/yolo/yolotest"
-
-	actionsgen "github.com/yolo-hq/app-yolo-factory/.yolo/gen/adapters/apps/common/factory/actions"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
@@ -20,7 +18,7 @@ func TestCancelTask_HappyPathQueued(t *testing.T) {
 	prd := seedPRD(t, tx, proj.ID, nil)
 	task := seedTask(t, tx, proj.ID, prd.ID, nil) // status=queued
 
-	result := runAction(t, tx, &actionsgen.TaskCancelAction{},
+	result := runAction(t, tx, &CancelTaskAction{},
 		yolotest.WithEntityName("Task"),
 		yolotest.WithEntityID(task.ID),
 	)
@@ -34,7 +32,7 @@ func TestCancelTask_HappyPathRunning(t *testing.T) {
 	prd := seedPRD(t, tx, proj.ID, nil)
 	task := seedTask(t, tx, proj.ID, prd.ID, &entities.Task{Status: "running"})
 
-	result := runAction(t, tx, &actionsgen.TaskCancelAction{},
+	result := runAction(t, tx, &CancelTaskAction{},
 		yolotest.WithEntityName("Task"),
 		yolotest.WithEntityID(task.ID),
 	)
@@ -48,7 +46,7 @@ func TestCancelTask_DenyDone(t *testing.T) {
 	prd := seedPRD(t, tx, proj.ID, nil)
 	task := seedTask(t, tx, proj.ID, prd.ID, &entities.Task{Status: "done"})
 
-	result := runAction(t, tx, &actionsgen.TaskCancelAction{},
+	result := runAction(t, tx, &CancelTaskAction{},
 		yolotest.WithEntityName("Task"),
 		yolotest.WithEntityID(task.ID),
 	)
@@ -62,7 +60,7 @@ func TestCancelTask_DenyAlreadyCancelled(t *testing.T) {
 	prd := seedPRD(t, tx, proj.ID, nil)
 	task := seedTask(t, tx, proj.ID, prd.ID, &entities.Task{Status: "cancelled"})
 
-	result := runAction(t, tx, &actionsgen.TaskCancelAction{},
+	result := runAction(t, tx, &CancelTaskAction{},
 		yolotest.WithEntityName("Task"),
 		yolotest.WithEntityID(task.ID),
 	)
