@@ -11,7 +11,7 @@ import (
 var (
 	_ query.Query = (*CostQuery)(nil)
 	_ query.Query = (*StatusQuery)(nil)
-	_ query.Query = (*PrdDiffQuery)(nil)
+	_ query.Query = (*PRDDiffQuery)(nil)
 )
 
 func TestQueries_Description(t *testing.T) {
@@ -21,7 +21,7 @@ func TestQueries_Description(t *testing.T) {
 	}{
 		{"CostQuery", &CostQuery{}},
 		{"StatusQuery", &StatusQuery{}},
-		{"PrdDiffQuery", &PrdDiffQuery{}},
+		{"PRDDiffQuery", &PRDDiffQuery{}},
 	}
 
 	for _, tc := range cases {

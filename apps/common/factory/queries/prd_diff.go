@@ -40,7 +40,7 @@ type taskCommitRow struct {
 	CommitHash string `field:"commit_hash"`
 }
 
-// DiffPRDResponse is the typed response for DiffPRDQuery.
+// DiffPRDResponse is the typed response for PRDDiff.
 type DiffPRDResponse struct {
 	PRDID        string `json:"prdId"`
 	PRDTitle     string `json:"prdTitle"`
@@ -50,32 +50,22 @@ type DiffPRDResponse struct {
 	Commits      int    `json:"commits"`
 }
 
-// PrdDiffQuery computes the combined git diff for a completed PRD.
-type PrdDiffQuery struct {
-	query.Base
-	query.TypedInput[inputs.DiffPRDInput]
-	query.Returns[DiffPRDResponse]
-}
-
-func (q *PrdDiffQuery) Description() string { return "Combined git diff for a completed PRD" }
-
-func (q *PrdDiffQuery) Execute(ctx context.Context, qctx *query.Context) error {
-	input := q.Input(qctx)
-
-	prd, err := read.FindOne[prdDiffInfo](ctx, input.PRDID)
+// PRDDiff computes the combined git diff for a completed PRD.
+func PRDDiff(ctx context.Context, qctx *query.Context, in inputs.DiffPRDInput) (DiffPRDResponse, error) {
+	prd, err := read.FindOne[prdDiffInfo](ctx, in.PRDID)
 	if err != nil {
-		return fmt.Errorf("diff-prd: load prd: %w", err)
+		return DiffPRDResponse{}, fmt.Errorf("diff-prd: load prd: %w", err)
 	}
 	if prd.ID == "" {
-		return action.FailWithCode("NOT_FOUND", fmt.Sprintf("PRD %s not found", input.PRDID))
+		return DiffPRDResponse{}, action.FailWithCode("NOT_FOUND", fmt.Sprintf("PRD %s not found", in.PRDID))
 	}
 
 	project, err := read.FindOne[projectPathInfo](ctx, prd.ProjectID)
 	if err != nil {
-		return fmt.Errorf("diff-prd: load project: %w", err)
+		return DiffPRDResponse{}, fmt.Errorf("diff-prd: load project: %w", err)
 	}
 	if project.LocalPath == "" {
-		return action.Fail(fmt.Sprintf("project for PRD %s has no local path", input.PRDID))
+		return DiffPRDResponse{}, action.Fail(fmt.Sprintf("project for PRD %s has no local path", in.PRDID))
 	}
 
 	doneTasks, err := read.FindMany[taskCommitRow](ctx,
@@ -84,7 +74,7 @@ func (q *PrdDiffQuery) Execute(ctx context.Context, qctx *query.Context) error {
 		read.OrderBy("sequence", read.Asc),
 	)
 	if err != nil {
-		return fmt.Errorf("diff-prd: list tasks: %w", err)
+		return DiffPRDResponse{}, fmt.Errorf("diff-prd: list tasks: %w", err)
 	}
 
 	var commits []string
@@ -95,28 +85,27 @@ func (q *PrdDiffQuery) Execute(ctx context.Context, qctx *query.Context) error {
 	}
 
 	if len(commits) == 0 {
-		return q.Respond(qctx, DiffPRDResponse{
+		return DiffPRDResponse{
 			PRDID:     prd.ID,
 			PRDTitle:  prd.Title,
 			TasksDone: len(doneTasks),
-		})
+		}, nil
 	}
 
-	// TODO: use GitService via DI when available.
 	first, last := commits[0], commits[len(commits)-1]
 	diff, filesChanged, err := runPRDGitDiff(ctx, project.LocalPath, first, last)
 	if err != nil {
-		return action.FailWithCode("GIT_ERROR", fmt.Sprintf("diff-prd: %v", err))
+		return DiffPRDResponse{}, action.FailWithCode("GIT_ERROR", fmt.Sprintf("diff-prd: %v", err))
 	}
 
-	return q.Respond(qctx, DiffPRDResponse{
+	return DiffPRDResponse{
 		PRDID:        prd.ID,
 		PRDTitle:     prd.Title,
 		Diff:         diff,
 		FilesChanged: filesChanged,
 		TasksDone:    len(doneTasks),
 		Commits:      len(commits),
-	})
+	}, nil
 }
 
 func runPRDGitDiff(ctx context.Context, repoPath, first, last string) (string, int, error) {
@@ -128,7 +117,6 @@ func runPRDGitDiff(ctx context.Context, repoPath, first, last string) (string, i
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		// Fallback: try without ^ (first commit might be root).
 		if first == last {
 			diffRange = fmt.Sprintf("%s^..%s", first, first)
 		} else {

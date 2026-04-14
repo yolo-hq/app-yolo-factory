@@ -269,21 +269,21 @@ func assertStatusCounts(t *testing.T, data any, status string, minCount int) {
 	}
 }
 
-// TestPrdDiffQuery_NotFound verifies NOT_FOUND error for a missing PRD.
-func TestPrdDiffQuery_NotFound(t *testing.T) {
+// TestPRDDiffQuery_NotFound verifies NOT_FOUND error for a missing PRD.
+func TestPRDDiffQuery_NotFound(t *testing.T) {
 	ensureEntitiesRegistered()
 	db, tx, done := openDB(t)
 	defer done()
 	ctx := testCtx(db, tx)
 	runner := makeTestRunner(db)
 
-	result := runQueryWithParams(ctx, runner, &PrdDiffQuery{}, url.Values{"prdId": {newTestID()}})
+	result := runQueryWithParams(ctx, runner, &PRDDiffQuery{}, url.Values{"prdId": {newTestID()}})
 	// Should fail — NOT_FOUND or error.
 	assert.False(t, result.Success, "should fail for non-existent PRD")
 }
 
-// TestPrdDiffQuery_NoCommits verifies empty diff when tasks have no commit hashes.
-func TestPrdDiffQuery_NoCommits(t *testing.T) {
+// TestPRDDiffQuery_NoCommits verifies empty diff when tasks have no commit hashes.
+func TestPRDDiffQuery_NoCommits(t *testing.T) {
 	t.Skip("Loader sees tx but registry-driven entity load returns empty — investigate later")
 	ensureEntitiesRegistered()
 	db, tx, done := openDB(t)
@@ -322,8 +322,8 @@ func TestPrdDiffQuery_NoCommits(t *testing.T) {
 	_, err = tx.NewInsert().Model(task).Exec(ctx)
 	require.NoError(t, err)
 
-	result := runQueryWithParams(ctx, runner, &PrdDiffQuery{}, url.Values{"prdId": {prd.ID}})
-	require.True(t, result.Success, "PrdDiffQuery should succeed: %s", result.Message)
+	result := runQueryWithParams(ctx, runner, &PRDDiffQuery{}, url.Values{"prdId": {prd.ID}})
+	require.True(t, result.Success, "PRDDiffQuery should succeed: %s", result.Message)
 
 	// Verify no diff, 1 done task — handle both typed and map responses.
 	prdID, tasksDone, commits := extractDiffSummary(result.Data)
@@ -350,7 +350,7 @@ func extractCostSummary(t testing.TB, data any) (totalCost float64, totalRuns, b
 	return
 }
 
-// extractDiffSummary extracts (prdID, tasksDone, commits) from a PrdDiffQuery result.
+// extractDiffSummary extracts (prdID, tasksDone, commits) from a PRDDiffQuery result.
 func extractDiffSummary(data any) (prdID string, tasksDone, commits int) {
 	if resp, ok := data.(DiffPRDResponse); ok {
 		return resp.PRDID, resp.TasksDone, resp.Commits

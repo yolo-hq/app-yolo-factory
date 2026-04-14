@@ -20,33 +20,23 @@ type CostByModel struct {
 	Runs  int     `aggregate:"count"`
 }
 
-// CostResponse is the typed response for CostQuery.
+// CostResponse is the typed response for Cost.
 type CostResponse struct {
 	Breakdown []CostByModel `json:"breakdown"`
 	TotalCost float64       `json:"totalCost"`
 	TotalRuns int           `json:"totalRuns"`
 }
 
-// CostQuery shows a cost breakdown grouped by model.
-type CostQuery struct {
-	query.Base
-	query.TypedInput[inputs.CostInput]
-	query.Returns[CostResponse]
-}
-
-func (q *CostQuery) Description() string { return "Cost breakdown by model and period" }
-
-func (q *CostQuery) Execute(ctx context.Context, qctx *query.Context) error {
-	input := q.Input(qctx)
-
+// Cost shows a cost breakdown grouped by model.
+func Cost(ctx context.Context, qctx *query.Context, in inputs.CostInput) (CostResponse, error) {
 	opts := []read.Option{}
-	if input.ProjectID != "" {
-		opts = append(opts, read.Eq("project_id", input.ProjectID))
+	if in.ProjectID != "" {
+		opts = append(opts, read.Eq("project_id", in.ProjectID))
 	}
 
 	breakdown, err := read.FindMany[CostByModel](ctx, opts...)
 	if err != nil {
-		return fmt.Errorf("cost: %w", err)
+		return CostResponse{}, fmt.Errorf("cost: %w", err)
 	}
 
 	var total float64
@@ -56,9 +46,9 @@ func (q *CostQuery) Execute(ctx context.Context, qctx *query.Context) error {
 		totalRuns += b.Runs
 	}
 
-	return q.Respond(qctx, CostResponse{
+	return CostResponse{
 		Breakdown: breakdown,
 		TotalCost: total,
 		TotalRuns: totalRuns,
-	})
+	}, nil
 }
