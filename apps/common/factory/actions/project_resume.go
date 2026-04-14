@@ -2,7 +2,6 @@ package actions
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/yolo-hq/yolo/core/action"
@@ -21,9 +20,6 @@ func (a *ResumeProjectAction) Description() string { return "Resume a paused pro
 
 func (a *ResumeProjectAction) Execute(ctx context.Context, actx *action.Context) error {
 	_, err := sm.Project.Resume(ctx, actx, actx.EntityID, nil)
-	if errors.Is(err, action.ErrStaleState) {
-		return action.Fail("project is not paused")
-	}
 	if err != nil {
 		return fmt.Errorf("resume-project: %w", err)
 	}

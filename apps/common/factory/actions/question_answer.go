@@ -2,7 +2,6 @@ package actions
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -33,9 +32,6 @@ func (a *AnswerQuestionAction) Execute(ctx context.Context, actx *action.Context
 		fields.Question.AnsweredBy.Value(constants.ActorHuman),
 		fields.Question.AnsweredAt.Value(&now),
 	})
-	if errors.Is(err, action.ErrStaleState) {
-		return action.Fail("question is not open")
-	}
 	if err != nil {
 		return fmt.Errorf("answer-question: %w", err)
 	}

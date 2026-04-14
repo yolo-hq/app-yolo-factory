@@ -2,7 +2,6 @@ package actions
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/yolo-hq/yolo/core/action"
@@ -36,9 +35,6 @@ func (a *ExecutePRDAction) Execute(ctx context.Context, actx *action.Context) er
 
 	// Transition to planning. SM enforces draft|approved → planning.
 	_, err := sm.PRD.Execute(ctx, actx, actx.EntityID, nil)
-	if errors.Is(err, action.ErrStaleState) {
-		return action.Fail("PRD is not in draft or approved state")
-	}
 	if err != nil {
 		return fmt.Errorf("execute-prd: %w", err)
 	}

@@ -100,9 +100,6 @@ func (a *CompleteRunAction) Execute(ctx context.Context, actx *action.Context) e
 			fields.Run.CompletedAt.Value(&now),
 		)
 	}
-	if errors.Is(runErr, action.ErrStaleState) {
-		return action.Fail("run already in a terminal state")
-	}
 	if runErr != nil {
 		return runErr
 	}
@@ -132,8 +129,9 @@ func handleCompleted(
 		fields.Task.Summary.Value(yolostrings.Truncate(input.Result, 500)),
 		fields.Task.CompletedAt.Value(&now),
 	}); err != nil {
-		if errors.Is(err, action.ErrStaleState) {
-			slog.Warn("task already in terminal state on completion", "task_id", data.Task.ID)
+		var stale *action.StaleStateError
+		if errors.As(err, &stale) {
+			slog.Warn("task already in terminal state on completion", "task_id", data.Task.ID, "from", stale.From, "allowed", stale.AllowedFrom)
 			return
 		}
 		slog.Error("failed to update task to done", "task_id", data.Task.ID, "error", err)
@@ -241,8 +239,9 @@ func handleFailed(
 			fields.Task.CostUSD.Incr(input.CostUSD),
 			fields.Task.RunCount.Incr(1),
 		}); err != nil {
-			if errors.Is(err, action.ErrStaleState) {
-				slog.Warn("task not in running state on requeue", "task_id", data.Task.ID)
+			var stale *action.StaleStateError
+			if errors.As(err, &stale) {
+				slog.Warn("task not in running state on requeue", "task_id", data.Task.ID, "from", stale.From, "allowed", stale.AllowedFrom)
 				return
 			}
 			slog.Error("failed to requeue task", "task_id", data.Task.ID, "error", err)
@@ -257,8 +256,9 @@ func handleFailed(
 		fields.Task.CostUSD.Incr(input.CostUSD),
 		fields.Task.RunCount.Incr(1),
 	}); err != nil {
-		if errors.Is(err, action.ErrStaleState) {
-			slog.Warn("task already terminal on fail", "task_id", data.Task.ID)
+		var stale *action.StaleStateError
+		if errors.As(err, &stale) {
+			slog.Warn("task already terminal on fail", "task_id", data.Task.ID, "from", stale.From, "allowed", stale.AllowedFrom)
 			return
 		}
 		slog.Error("failed to mark task as failed", "task_id", data.Task.ID, "error", err)

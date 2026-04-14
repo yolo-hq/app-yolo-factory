@@ -2,7 +2,6 @@ package actions
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/yolo-hq/yolo/core/action"
@@ -21,9 +20,6 @@ func (a *PauseProjectAction) Description() string { return "Pause an active proj
 
 func (a *PauseProjectAction) Execute(ctx context.Context, actx *action.Context) error {
 	_, err := sm.Project.Pause(ctx, actx, actx.EntityID, nil)
-	if errors.Is(err, action.ErrStaleState) {
-		return action.Fail("project is not active")
-	}
 	if err != nil {
 		return fmt.Errorf("pause-project: %w", err)
 	}
