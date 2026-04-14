@@ -4,7 +4,7 @@ entity:
   run:
     id: ulid!
     task_id: ulid! fk:task
-    agent_type: enum[claude_cli,claude_code,custom]!
+    agent_type: enum[claude-cli,claude-code,custom]!
     status: enum[running,completed,failed,cancelled,blocked] = running
     model: string!
     session_id: string
@@ -33,9 +33,11 @@ state:
     cancel:   running,blocked -> cancelled
 
 filters:
-  - status eq
+  - status eq,in
   - task_id eq
   - model eq
+  - cost_usd gt,lt
+  - started_at gt,lt,between
 
 events:
   - "RunStarted {run_id, task_id}"

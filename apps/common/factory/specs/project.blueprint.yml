@@ -3,7 +3,7 @@ schema: v1
 entity:
   project:
     id: ulid!
-    name: string:1-200!@
+    name: string:1-200! @
     status: enum[active,paused,archived] = active
     repo_url: url!
     local_path: text = ""
@@ -28,7 +28,7 @@ entity:
 
 filters:
   - status eq
-  - name eq
+  - name eq,contains,starts_with
 
 events:
   - "ProjectCreated {project_id, actor_id}"

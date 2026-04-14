@@ -21,8 +21,8 @@ state:
 
 filters:
   - project_id eq
-  - category eq
-  - status eq
+  - category eq,in
+  - status eq,in
   - priority in
 
 events:

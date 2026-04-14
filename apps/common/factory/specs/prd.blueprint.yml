@@ -25,9 +25,10 @@ state:
     fail:     in_progress -> failed
 
 filters:
-  - status eq
+  - status eq,in
   - project_id eq
   - source eq
+  - created_at gt,lt,between
 
 events:
   - "PRDApproved {prd_id, actor_id}"

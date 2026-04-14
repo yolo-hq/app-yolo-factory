@@ -33,10 +33,11 @@ state:
     cancel:   queued,running,blocked -> cancelled
 
 filters:
-  - status eq
+  - status eq,in
   - prd_id eq
   - project_id eq
   - branch eq
+  - cost_usd gt,lt
 
 events:
   - "TaskStarted {task_id, run_id}"
