@@ -18,7 +18,7 @@ func TestUpdateProject_HappyPath(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	newName := "Updated Name " + newID()
 
-	result := runAction(t, tx, &UpdateProjectAction{},
+	result := runAction(t, tx, &ProjectUpdateAction{},
 		yolotest.WithEntityName("Project"),
 		yolotest.WithEntityID(proj.ID),
 		yolotest.WithInput(inputs.UpdateProjectInput{
@@ -40,7 +40,7 @@ func TestUpdateProject_UpdateModel(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	model := "opus"
 
-	result := runAction(t, tx, &UpdateProjectAction{},
+	result := runAction(t, tx, &ProjectUpdateAction{},
 		yolotest.WithEntityName("Project"),
 		yolotest.WithEntityID(proj.ID),
 		yolotest.WithInput(inputs.UpdateProjectInput{

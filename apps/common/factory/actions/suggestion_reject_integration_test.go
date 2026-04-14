@@ -18,7 +18,7 @@ func TestRejectSuggestion_HappyPath(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	sug := seedSuggestion(t, tx, proj.ID, nil) // status=pending
 
-	result := runAction(t, tx, &RejectSuggestionAction{},
+	result := runAction(t, tx, &SuggestionRejectAction{},
 		yolotest.WithEntityName("Suggestion"),
 		yolotest.WithEntityID(sug.ID),
 		yolotest.WithInput(inputs.RejectSuggestionInput{Reason: "Not aligned with roadmap"}),
@@ -32,7 +32,7 @@ func TestRejectSuggestion_DenyNotPending(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	sug := seedSuggestion(t, tx, proj.ID, &entities.Suggestion{Status: "rejected"})
 
-	result := runAction(t, tx, &RejectSuggestionAction{},
+	result := runAction(t, tx, &SuggestionRejectAction{},
 		yolotest.WithEntityName("Suggestion"),
 		yolotest.WithEntityID(sug.ID),
 		yolotest.WithInput(inputs.RejectSuggestionInput{Reason: "Already rejected"}),
@@ -46,7 +46,7 @@ func TestRejectSuggestion_DenyMissingReason(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	sug := seedSuggestion(t, tx, proj.ID, nil)
 
-	result := runAction(t, tx, &RejectSuggestionAction{},
+	result := runAction(t, tx, &SuggestionRejectAction{},
 		yolotest.WithEntityName("Suggestion"),
 		yolotest.WithEntityID(sug.ID),
 		yolotest.WithInput(inputs.RejectSuggestionInput{

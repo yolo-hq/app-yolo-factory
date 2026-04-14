@@ -19,7 +19,7 @@ func TestRetryTask_HappyPath(t *testing.T) {
 	prd := seedPRD(t, tx, proj.ID, nil)
 	task := seedTask(t, tx, proj.ID, prd.ID, &entities.Task{Status: "failed"})
 
-	result := runAction(t, tx, &RetryTaskAction{},
+	result := runAction(t, tx, &TaskRetryAction{},
 		yolotest.WithEntityName("Task"),
 		yolotest.WithEntityID(task.ID),
 		yolotest.WithInput(inputs.RetryTaskInput{}),
@@ -34,7 +34,7 @@ func TestRetryTask_HappyPathWithModelOverride(t *testing.T) {
 	prd := seedPRD(t, tx, proj.ID, nil)
 	task := seedTask(t, tx, proj.ID, prd.ID, &entities.Task{Status: "failed"})
 
-	result := runAction(t, tx, &RetryTaskAction{},
+	result := runAction(t, tx, &TaskRetryAction{},
 		yolotest.WithEntityName("Task"),
 		yolotest.WithEntityID(task.ID),
 		yolotest.WithInput(inputs.RetryTaskInput{Model: "opus"}),
@@ -49,7 +49,7 @@ func TestRetryTask_DenyNotFailed(t *testing.T) {
 	prd := seedPRD(t, tx, proj.ID, nil)
 	task := seedTask(t, tx, proj.ID, prd.ID, nil) // status=queued
 
-	result := runAction(t, tx, &RetryTaskAction{},
+	result := runAction(t, tx, &TaskRetryAction{},
 		yolotest.WithEntityName("Task"),
 		yolotest.WithEntityID(task.ID),
 		yolotest.WithInput(inputs.RetryTaskInput{}),

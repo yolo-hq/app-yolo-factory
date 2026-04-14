@@ -8,22 +8,22 @@ import (
 
 // interface compliance checks — compile-time only.
 var (
-	_ action.Action = (*CreateProjectAction)(nil)
-	_ action.Action = (*UpdateProjectAction)(nil)
+	_ action.Action = (*ProjectCreateAction)(nil)
+	_ action.Action = (*ProjectUpdateAction)(nil)
 	_ action.Action = (*ProjectArchiveAction)(nil)
 	_ action.Action = (*ProjectPauseAction)(nil)
 	_ action.Action = (*ProjectResumeAction)(nil)
-	_ action.Action = (*SubmitPRDAction)(nil)
+	_ action.Action = (*PRDSubmitAction)(nil)
 	_ action.Action = (*PRDApproveAction)(nil)
-	_ action.Action = (*ExecutePRDAction)(nil)
+	_ action.Action = (*PRDExecuteAction)(nil)
 	_ action.Action = (*InsightAcknowledgeAction)(nil)
 	_ action.Action = (*InsightApplyAction)(nil)
 	_ action.Action = (*InsightDismissAction)(nil)
-	_ action.Action = (*AnswerQuestionAction)(nil)
-	_ action.Action = (*ApproveSuggestionAction)(nil)
-	_ action.Action = (*RejectSuggestionAction)(nil)
+	_ action.Action = (*QuestionAnswerAction)(nil)
+	_ action.Action = (*SuggestionApproveAction)(nil)
+	_ action.Action = (*SuggestionRejectAction)(nil)
 	_ action.Action = (*TaskCancelAction)(nil)
-	_ action.Action = (*RetryTaskAction)(nil)
+	_ action.Action = (*TaskRetryAction)(nil)
 )
 
 
@@ -32,22 +32,22 @@ func TestActions_Description(t *testing.T) {
 		name   string
 		action action.Action
 	}{
-		{"CreateProject", &CreateProjectAction{}},
-		{"UpdateProject", &UpdateProjectAction{}},
+		{"CreateProject", &ProjectCreateAction{}},
+		{"UpdateProject", &ProjectUpdateAction{}},
 		{"ArchiveProject", &ProjectArchiveAction{}},
 		{"PauseProject", &ProjectPauseAction{}},
 		{"ResumeProject", &ProjectResumeAction{}},
-		{"SubmitPRD", &SubmitPRDAction{}},
+		{"SubmitPRD", &PRDSubmitAction{}},
 		{"ApprovePRD", &PRDApproveAction{}},
-		{"ExecutePRD", &ExecutePRDAction{}},
+		{"ExecutePRD", &PRDExecuteAction{}},
 		{"AcknowledgeInsight", &InsightAcknowledgeAction{}},
 		{"ApplyInsight", &InsightApplyAction{}},
 		{"DismissInsight", &InsightDismissAction{}},
-		{"AnswerQuestion", &AnswerQuestionAction{}},
-		{"ApproveSuggestion", &ApproveSuggestionAction{}},
-		{"RejectSuggestion", &RejectSuggestionAction{}},
+		{"AnswerQuestion", &QuestionAnswerAction{}},
+		{"ApproveSuggestion", &SuggestionApproveAction{}},
+		{"RejectSuggestion", &SuggestionRejectAction{}},
 		{"CancelTask", &TaskCancelAction{}},
-		{"RetryTask", &RetryTaskAction{}},
+		{"RetryTask", &TaskRetryAction{}},
 	}
 
 	for _, tc := range cases {

@@ -15,7 +15,7 @@ import (
 func TestCreateProject_HappyPath(t *testing.T) {
 	tx := dbTx(t)
 
-	result := runAction(t, tx, &CreateProjectAction{},
+	result := runAction(t, tx, &ProjectCreateAction{},
 		yolotest.WithInput(inputs.CreateProjectInput{
 			Name:      "My Project " + newID(),
 			RepoURL:   "https://github.com/test/repo",
@@ -28,7 +28,7 @@ func TestCreateProject_HappyPath(t *testing.T) {
 func TestCreateProject_DenyMissingName(t *testing.T) {
 	tx := dbTx(t)
 
-	result := runAction(t, tx, &CreateProjectAction{},
+	result := runAction(t, tx, &ProjectCreateAction{},
 		yolotest.WithInput(inputs.CreateProjectInput{
 			RepoURL:   "https://github.com/test/repo",
 			LocalPath: "/tmp/myproject",
@@ -42,7 +42,7 @@ func TestCreateProject_DenyMissingName(t *testing.T) {
 func TestCreateProject_DenyMissingRepoURL(t *testing.T) {
 	tx := dbTx(t)
 
-	result := runAction(t, tx, &CreateProjectAction{},
+	result := runAction(t, tx, &ProjectCreateAction{},
 		yolotest.WithInput(inputs.CreateProjectInput{
 			Name:      "My Project " + newID(),
 			LocalPath: "/tmp/myproject",

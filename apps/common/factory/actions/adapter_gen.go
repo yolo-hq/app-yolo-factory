@@ -4,6 +4,7 @@ package actions
 
 import (
 	"context"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/policy"
 	"github.com/yolo-hq/yolo/core/registry"
@@ -95,6 +96,57 @@ func init() {
 	registry.RegisterActions("PRD", PRDApproveAction{})
 }
 
+type PRDExecuteAction struct{}
+
+func (PRDExecuteAction) Name() string { return "prd:execute" }
+func (PRDExecuteAction) Description() string {
+	return "Kicks off PRD planning by enqueuing a PlanPRDJob."
+}
+func (PRDExecuteAction) Kind() string { return "action" }
+func (PRDExecuteAction) Policies() []action.AnyPolicy {
+	var out []action.AnyPolicy
+	if p, ok := policy.Get("policies.CanExecutePRDPolicy"); ok {
+		out = append(out, p)
+	}
+	return out
+}
+
+func (PRDExecuteAction) Execute(ctx context.Context, actx *action.Context) error {
+	return PRDExecute(ctx, actx)
+}
+
+func init() {
+	registry.RegisterActions("PRD", PRDExecuteAction{})
+}
+
+type PRDSubmitAction struct{}
+
+func (PRDSubmitAction) Name() string { return "prd:submit" }
+func (PRDSubmitAction) Description() string {
+	return "Creates a new PRD for a project. The input's resolves:\"Project\" tag promotes ProjectID as the primary entity so CanSubmitPRDPolicy can load and check the project status."
+}
+func (PRDSubmitAction) Kind() string   { return "action" }
+func (PRDSubmitAction) InputType() any { return *new(inputs.SubmitPRDInput) }
+func (PRDSubmitAction) Policies() []action.AnyPolicy {
+	var out []action.AnyPolicy
+	if p, ok := policy.Get("policies.CanSubmitPRDPolicy"); ok {
+		out = append(out, p)
+	}
+	return out
+}
+
+func (PRDSubmitAction) Execute(ctx context.Context, actx *action.Context) error {
+	var in inputs.SubmitPRDInput
+	if typed, ok := actx.TypedInput.(*inputs.SubmitPRDInput); ok && typed != nil {
+		in = *typed
+	}
+	return PRDSubmit(ctx, actx, in)
+}
+
+func init() {
+	registry.RegisterActions("PRD", PRDSubmitAction{})
+}
+
 type ProjectArchiveAction struct{}
 
 func (ProjectArchiveAction) Name() string        { return "project:archive" }
@@ -114,6 +166,25 @@ func (ProjectArchiveAction) Execute(ctx context.Context, actx *action.Context) e
 
 func init() {
 	registry.RegisterActions("Project", ProjectArchiveAction{})
+}
+
+type ProjectCreateAction struct{}
+
+func (ProjectCreateAction) Name() string        { return "project:create" }
+func (ProjectCreateAction) Description() string { return "Creates a new project." }
+func (ProjectCreateAction) Kind() string        { return "action" }
+func (ProjectCreateAction) InputType() any      { return *new(inputs.CreateProjectInput) }
+
+func (ProjectCreateAction) Execute(ctx context.Context, actx *action.Context) error {
+	var in inputs.CreateProjectInput
+	if typed, ok := actx.TypedInput.(*inputs.CreateProjectInput); ok && typed != nil {
+		in = *typed
+	}
+	return ProjectCreate(ctx, actx, in)
+}
+
+func init() {
+	registry.RegisterActions("Project", ProjectCreateAction{})
 }
 
 type ProjectPauseAction struct{}
@@ -158,6 +229,105 @@ func init() {
 	registry.RegisterActions("Project", ProjectResumeAction{})
 }
 
+type ProjectUpdateAction struct{}
+
+func (ProjectUpdateAction) Name() string        { return "project:update" }
+func (ProjectUpdateAction) Description() string { return "Updates an existing project." }
+func (ProjectUpdateAction) Kind() string        { return "action" }
+func (ProjectUpdateAction) InputType() any      { return *new(inputs.UpdateProjectInput) }
+
+func (ProjectUpdateAction) Execute(ctx context.Context, actx *action.Context) error {
+	var in inputs.UpdateProjectInput
+	if typed, ok := actx.TypedInput.(*inputs.UpdateProjectInput); ok && typed != nil {
+		in = *typed
+	}
+	return ProjectUpdate(ctx, actx, in)
+}
+
+func init() {
+	registry.RegisterActions("Project", ProjectUpdateAction{})
+}
+
+type QuestionAnswerAction struct{}
+
+func (QuestionAnswerAction) Name() string        { return "question:answer" }
+func (QuestionAnswerAction) Description() string { return "Answers an open question." }
+func (QuestionAnswerAction) Kind() string        { return "action" }
+func (QuestionAnswerAction) InputType() any      { return *new(inputs.AnswerQuestionInput) }
+func (QuestionAnswerAction) Policies() []action.AnyPolicy {
+	var out []action.AnyPolicy
+	if p, ok := policy.Get("policies.CanAnswerQuestionPolicy"); ok {
+		out = append(out, p)
+	}
+	return out
+}
+
+func (QuestionAnswerAction) Execute(ctx context.Context, actx *action.Context) error {
+	var in inputs.AnswerQuestionInput
+	if typed, ok := actx.TypedInput.(*inputs.AnswerQuestionInput); ok && typed != nil {
+		in = *typed
+	}
+	return QuestionAnswer(ctx, actx, in)
+}
+
+func init() {
+	registry.RegisterActions("Question", QuestionAnswerAction{})
+}
+
+type SuggestionApproveAction struct{}
+
+func (SuggestionApproveAction) Name() string        { return "suggestion:approve" }
+func (SuggestionApproveAction) Description() string { return "Approves a pending suggestion." }
+func (SuggestionApproveAction) Kind() string        { return "action" }
+func (SuggestionApproveAction) InputType() any      { return *new(inputs.ApproveSuggestionInput) }
+func (SuggestionApproveAction) Policies() []action.AnyPolicy {
+	var out []action.AnyPolicy
+	if p, ok := policy.Get("policies.CanApproveSuggestionPolicy"); ok {
+		out = append(out, p)
+	}
+	return out
+}
+
+func (SuggestionApproveAction) Execute(ctx context.Context, actx *action.Context) error {
+	var in inputs.ApproveSuggestionInput
+	if typed, ok := actx.TypedInput.(*inputs.ApproveSuggestionInput); ok && typed != nil {
+		in = *typed
+	}
+	return SuggestionApprove(ctx, actx, in)
+}
+
+func init() {
+	registry.RegisterActions("Suggestion", SuggestionApproveAction{})
+}
+
+type SuggestionRejectAction struct{}
+
+func (SuggestionRejectAction) Name() string { return "suggestion:reject" }
+func (SuggestionRejectAction) Description() string {
+	return "Rejects a pending suggestion with a reason."
+}
+func (SuggestionRejectAction) Kind() string   { return "action" }
+func (SuggestionRejectAction) InputType() any { return *new(inputs.RejectSuggestionInput) }
+func (SuggestionRejectAction) Policies() []action.AnyPolicy {
+	var out []action.AnyPolicy
+	if p, ok := policy.Get("policies.CanRejectSuggestionPolicy"); ok {
+		out = append(out, p)
+	}
+	return out
+}
+
+func (SuggestionRejectAction) Execute(ctx context.Context, actx *action.Context) error {
+	var in inputs.RejectSuggestionInput
+	if typed, ok := actx.TypedInput.(*inputs.RejectSuggestionInput); ok && typed != nil {
+		in = *typed
+	}
+	return SuggestionReject(ctx, actx, in)
+}
+
+func init() {
+	registry.RegisterActions("Suggestion", SuggestionRejectAction{})
+}
+
 type TaskCancelAction struct{}
 
 func (TaskCancelAction) Name() string        { return "task:cancel" }
@@ -177,4 +347,30 @@ func (TaskCancelAction) Execute(ctx context.Context, actx *action.Context) error
 
 func init() {
 	registry.RegisterActions("Task", TaskCancelAction{})
+}
+
+type TaskRetryAction struct{}
+
+func (TaskRetryAction) Name() string        { return "task:retry" }
+func (TaskRetryAction) Description() string { return "Retries a failed task, resetting it to queued." }
+func (TaskRetryAction) Kind() string        { return "action" }
+func (TaskRetryAction) InputType() any      { return *new(inputs.RetryTaskInput) }
+func (TaskRetryAction) Policies() []action.AnyPolicy {
+	var out []action.AnyPolicy
+	if p, ok := policy.Get("policies.CanRetryTaskPolicy"); ok {
+		out = append(out, p)
+	}
+	return out
+}
+
+func (TaskRetryAction) Execute(ctx context.Context, actx *action.Context) error {
+	var in inputs.RetryTaskInput
+	if typed, ok := actx.TypedInput.(*inputs.RetryTaskInput); ok && typed != nil {
+		in = *typed
+	}
+	return TaskRetry(ctx, actx, in)
+}
+
+func init() {
+	registry.RegisterActions("Task", TaskRetryAction{})
 }
