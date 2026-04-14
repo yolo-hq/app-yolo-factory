@@ -59,7 +59,7 @@ func TestE2E_ProjectToPRDApproval(t *testing.T) {
 	assert.Equal(t, "draft", prd.Status, "PRD should be draft after submit")
 
 	// Step 3: Approve PRD.
-	approveResult := runAction(t, tx, &ApprovePRDAction{},
+	approveResult := runAction(t, tx, &PRDApproveAction{},
 		yolotest.WithEntityID(prd.ID),
 		yolotest.WithEntityName("PRD"),
 	)
@@ -94,7 +94,7 @@ func TestE2E_CreateAndArchiveProject(t *testing.T) {
 	err := tx.NewSelect().Model(&proj).Where("name = ?", projectName).Scan(ctx)
 	require.NoError(t, err)
 
-	archiveResult := runAction(t, tx, &ArchiveProjectAction{},
+	archiveResult := runAction(t, tx, &ProjectArchiveAction{},
 		yolotest.WithEntityID(proj.ID),
 		yolotest.WithEntityName("Project"),
 	)
@@ -125,14 +125,14 @@ func TestE2E_PauseAndResumeProject(t *testing.T) {
 
 	proj := seedProject(t, tx, nil) // active
 
-	pauseResult := runAction(t, tx, &PauseProjectAction{},
+	pauseResult := runAction(t, tx, &ProjectPauseAction{},
 		yolotest.WithEntityID(proj.ID),
 		yolotest.WithEntityName("Project"),
 	)
 	require.True(t, pauseResult.Success, "PauseProject should succeed: %s", pauseResult.Message)
 	assertProjectStatus(t, tx, proj.ID, "paused")
 
-	resumeResult := runAction(t, tx, &ResumeProjectAction{},
+	resumeResult := runAction(t, tx, &ProjectResumeAction{},
 		yolotest.WithEntityID(proj.ID),
 		yolotest.WithEntityName("Project"),
 	)

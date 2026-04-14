@@ -8,17 +8,12 @@ import (
 	"github.com/yolo-hq/yolo/core/action"
 
 	"github.com/yolo-hq/app-yolo-factory/.yolo/sm"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
 
-// DismissInsightAction dismisses an insight.
-type DismissInsightAction struct {
-	action.RequirePolicy[policies.CanDismissInsightPolicy]
-}
-
-func (a *DismissInsightAction) Description() string { return "Dismiss an insight" }
-
-func (a *DismissInsightAction) Execute(ctx context.Context, actx *action.Context) error {
+// InsightDismiss dismisses an insight.
+//
+// @policy CanDismissInsightPolicy
+func InsightDismiss(ctx context.Context, actx *action.Context) error {
 	_, err := sm.Insight.Dismiss(ctx, actx, actx.EntityID, nil)
 	if errors.Is(err, action.ErrStaleState) {
 		return action.Fail("insight is already applied or dismissed")

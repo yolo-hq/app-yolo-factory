@@ -17,7 +17,7 @@ func TestDismissInsight_HappyPathPending(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	ins := seedInsight(t, tx, proj.ID, nil) // status=pending
 
-	result := runAction(t, tx, &DismissInsightAction{},
+	result := runAction(t, tx, &InsightDismissAction{},
 		yolotest.WithEntityName("Insight"),
 		yolotest.WithEntityID(ins.ID),
 	)
@@ -30,7 +30,7 @@ func TestDismissInsight_HappyPathAcknowledged(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	ins := seedInsight(t, tx, proj.ID, &entities.Insight{Status: "acknowledged"})
 
-	result := runAction(t, tx, &DismissInsightAction{},
+	result := runAction(t, tx, &InsightDismissAction{},
 		yolotest.WithEntityName("Insight"),
 		yolotest.WithEntityID(ins.ID),
 	)
@@ -43,7 +43,7 @@ func TestDismissInsight_DenyAlreadyApplied(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	ins := seedInsight(t, tx, proj.ID, &entities.Insight{Status: "applied"})
 
-	result := runAction(t, tx, &DismissInsightAction{},
+	result := runAction(t, tx, &InsightDismissAction{},
 		yolotest.WithEntityName("Insight"),
 		yolotest.WithEntityID(ins.ID),
 	)

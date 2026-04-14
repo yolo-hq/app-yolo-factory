@@ -18,7 +18,7 @@ func TestCancelTask_HappyPathQueued(t *testing.T) {
 	prd := seedPRD(t, tx, proj.ID, nil)
 	task := seedTask(t, tx, proj.ID, prd.ID, nil) // status=queued
 
-	result := runAction(t, tx, &CancelTaskAction{},
+	result := runAction(t, tx, &TaskCancelAction{},
 		yolotest.WithEntityName("Task"),
 		yolotest.WithEntityID(task.ID),
 	)
@@ -32,7 +32,7 @@ func TestCancelTask_HappyPathRunning(t *testing.T) {
 	prd := seedPRD(t, tx, proj.ID, nil)
 	task := seedTask(t, tx, proj.ID, prd.ID, &entities.Task{Status: "running"})
 
-	result := runAction(t, tx, &CancelTaskAction{},
+	result := runAction(t, tx, &TaskCancelAction{},
 		yolotest.WithEntityName("Task"),
 		yolotest.WithEntityID(task.ID),
 	)
@@ -46,7 +46,7 @@ func TestCancelTask_DenyDone(t *testing.T) {
 	prd := seedPRD(t, tx, proj.ID, nil)
 	task := seedTask(t, tx, proj.ID, prd.ID, &entities.Task{Status: "done"})
 
-	result := runAction(t, tx, &CancelTaskAction{},
+	result := runAction(t, tx, &TaskCancelAction{},
 		yolotest.WithEntityName("Task"),
 		yolotest.WithEntityID(task.ID),
 	)
@@ -60,7 +60,7 @@ func TestCancelTask_DenyAlreadyCancelled(t *testing.T) {
 	prd := seedPRD(t, tx, proj.ID, nil)
 	task := seedTask(t, tx, proj.ID, prd.ID, &entities.Task{Status: "cancelled"})
 
-	result := runAction(t, tx, &CancelTaskAction{},
+	result := runAction(t, tx, &TaskCancelAction{},
 		yolotest.WithEntityName("Task"),
 		yolotest.WithEntityID(task.ID),
 	)

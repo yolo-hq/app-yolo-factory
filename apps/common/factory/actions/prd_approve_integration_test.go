@@ -17,7 +17,7 @@ func TestApprovePRD_HappyPath(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	prd := seedPRD(t, tx, proj.ID, nil) // status=draft
 
-	result := runAction(t, tx, &ApprovePRDAction{},
+	result := runAction(t, tx, &PRDApproveAction{},
 		yolotest.WithEntityName("PRD"),
 		yolotest.WithEntityID(prd.ID),
 	)
@@ -30,7 +30,7 @@ func TestApprovePRD_DenyNotDraft(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	prd := seedPRD(t, tx, proj.ID, &entities.PRD{Status: "approved"})
 
-	result := runAction(t, tx, &ApprovePRDAction{},
+	result := runAction(t, tx, &PRDApproveAction{},
 		yolotest.WithEntityName("PRD"),
 		yolotest.WithEntityID(prd.ID),
 	)
@@ -43,7 +43,7 @@ func TestApprovePRD_DenyInProgress(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	prd := seedPRD(t, tx, proj.ID, &entities.PRD{Status: "in_progress"})
 
-	result := runAction(t, tx, &ApprovePRDAction{},
+	result := runAction(t, tx, &PRDApproveAction{},
 		yolotest.WithEntityName("PRD"),
 		yolotest.WithEntityID(prd.ID),
 	)
