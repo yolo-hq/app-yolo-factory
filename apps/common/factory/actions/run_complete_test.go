@@ -79,7 +79,7 @@ func TestTruncate(t *testing.T) {
 	}
 }
 
-// Integration test outline for the full CompleteRunAction flow.
+// Integration test outline for the full RunCompleteAction flow.
 // Actual DB-backed tests tracked in #34. The state machine logic:
 //
 // completed flow:
