@@ -1,5 +1,5 @@
 package inputs
 
 type DiffPRDInput struct {
-	PRDID string `json:"prdId" validate:"required"`
+	PRDID string `json:"prd_id" validate:"required"`
 }

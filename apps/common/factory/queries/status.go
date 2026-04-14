@@ -41,9 +41,9 @@ type activePRDSummary struct {
 
 // StatusResponse is the typed response for StatusQuery.
 type StatusResponse struct {
-	TasksByStatus   map[string]int     `json:"tasksByStatus"`
-	ActivePRDs      []activePRDSummary `json:"activePrds"`
-	MonthlySpendUSD float64            `json:"monthlySpendUsd"`
+	TasksByStatus   map[string]int     `json:"tasks_by_status"`
+	ActivePRDs      []activePRDSummary `json:"active_prds"`
+	MonthlySpendUSD float64            `json:"monthly_spend_usd"`
 }
 
 // StatusQuery shows a factory dashboard summary.

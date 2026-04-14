@@ -1,5 +1,5 @@
 package inputs
 
 type CostInput struct {
-	ProjectID string `json:"projectId"`
+	ProjectID string `json:"project_id"`
 }

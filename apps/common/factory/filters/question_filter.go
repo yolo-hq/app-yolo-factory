@@ -7,7 +7,7 @@ import (
 // QuestionFilter filters questions by task, status, and confidence.
 type QuestionFilter struct {
 	filter.Base
-	TaskID     *filter.StringField `json:"taskId" filter:"task_id"`
+	TaskID     *filter.StringField `json:"task_id" filter:"task_id"`
 	Status     *filter.StringField `json:"status" filter:"status"`
 	Confidence *filter.StringField `json:"confidence" filter:"confidence"`
 }

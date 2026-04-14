@@ -23,8 +23,8 @@ type CostByModel struct {
 // CostResponse is the typed response for CostQuery.
 type CostResponse struct {
 	Breakdown []CostByModel `json:"breakdown"`
-	TotalCost float64       `json:"totalCost"`
-	TotalRuns int           `json:"totalRuns"`
+	TotalCost float64       `json:"total_cost"`
+	TotalRuns int           `json:"total_runs"`
 }
 
 // CostQuery shows a cost breakdown grouped by model.

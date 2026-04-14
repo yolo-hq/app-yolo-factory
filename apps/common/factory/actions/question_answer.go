@@ -2,7 +2,6 @@ package actions
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/yolo-hq/yolo/core/action"
@@ -32,8 +31,5 @@ func (a *AnswerQuestionAction) Execute(ctx context.Context, actx *action.Context
 		fields.Question.AnsweredBy.Value(constants.ActorHuman),
 		fields.Question.AnsweredAt.Value(&now),
 	})
-	if err != nil {
-		return fmt.Errorf("answer-question: %w", err)
-	}
-	return nil
+	return err
 }

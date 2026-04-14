@@ -7,7 +7,7 @@ import (
 // SuggestionFilter filters suggestions by project, source, category, status, and priority.
 type SuggestionFilter struct {
 	filter.Base
-	ProjectID *filter.StringField `json:"projectId" filter:"project_id"`
+	ProjectID *filter.StringField `json:"project_id" filter:"project_id"`
 	Source    *filter.StringField `json:"source" filter:"source"`
 	Category  *filter.StringField `json:"category" filter:"category"`
 	Status    *filter.StringField `json:"status" filter:"status"`

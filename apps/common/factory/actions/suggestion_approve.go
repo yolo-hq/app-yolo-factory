@@ -2,7 +2,6 @@ package actions
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/yolo-hq/yolo/core/action"
 	"github.com/yolo-hq/yolo/core/write"
@@ -25,10 +24,7 @@ func (a *ApproveSuggestionAction) Execute(ctx context.Context, actx *action.Cont
 	input := a.Input(actx)
 
 	_, err := sm.Suggestion.Approve(ctx, actx, actx.EntityID, write.Set{
-		fields.Suggestion.ConvertedTaskID.When(input.PRDID != "").Value(input.PRDID),
+		fields.Suggestion.ConvertedTaskID.When(input.PRDID != nil).Value(*input.PRDID),
 	})
-	if err != nil {
-		return fmt.Errorf("approve-suggestion: %w", err)
-	}
-	return nil
+	return err
 }

@@ -42,11 +42,11 @@ type taskCommitRow struct {
 
 // DiffPRDResponse is the typed response for DiffPRDQuery.
 type DiffPRDResponse struct {
-	PRDID        string `json:"prdId"`
-	PRDTitle     string `json:"prdTitle"`
+	PRDID        string `json:"prd_id"`
+	PRDTitle     string `json:"prd_title"`
 	Diff         string `json:"diff"`
-	FilesChanged int    `json:"filesChanged"`
-	TasksDone    int    `json:"tasksDone"`
+	FilesChanged int    `json:"files_changed"`
+	TasksDone    int    `json:"tasks_done"`
 	Commits      int    `json:"commits"`
 }
 

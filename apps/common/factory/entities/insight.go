@@ -8,11 +8,11 @@ import (
 type Insight struct {
 	bun.BaseModel `bun:"table:factory_insights"`
 	entity.BaseEntity
-	ProjectID      string `json:"projectId" bun:"project_id" fake:"rel:Project"`
+	ProjectID      string `json:"project_id" bun:"project_id" fake:"rel:Project"`
 	Category       string `json:"category" bun:"category,notnull" fake:"oneof:retry_rate,cost_optimization,model_selection,spec_quality,gate_effectiveness,workflow_optimization" enum:"retry_rate,cost_optimization,model_selection,spec_quality,gate_effectiveness,workflow_optimization"`
 	Title          string `json:"title" bun:"title,notnull" fake:"sentence:6"`
 	Body           string `json:"body" bun:"body,notnull" fake:"sentence:20"`
-	MetricData     string `json:"metricData" bun:"metric_data,notnull,default:'{}'" fake:"-"`
+	MetricData     string `json:"metric_data" bun:"metric_data,notnull,default:'{}'" fake:"-"`
 	Recommendation string `json:"recommendation" bun:"recommendation,notnull,default:''" fake:"sentence:10"`
 	Priority       string `json:"priority" bun:"priority,notnull,default:'medium'" fake:"oneof:low,medium,high,critical"`
 	Status         string `json:"status" bun:"status,notnull,default:'pending'" fake:"oneof:pending,acknowledged,applied,dismissed" enum:"pending,acknowledged,applied,dismissed"`

@@ -1,5 +1,5 @@
 package inputs
 
 type ApproveSuggestionInput struct {
-	PRDID string `json:"prdId"`
+	PRDID *string `json:"prd_id"`
 }

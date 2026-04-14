@@ -7,7 +7,7 @@ import (
 // StepFilter filters steps by run, phase, and status.
 type StepFilter struct {
 	filter.Base
-	RunID  *filter.StringField `json:"runId" filter:"run_id"`
+	RunID  *filter.StringField `json:"run_id" filter:"run_id"`
 	Phase  *filter.StringField `json:"phase" filter:"phase"`
 	Status *filter.StringField `json:"status" filter:"status"`
 }
