@@ -16,7 +16,7 @@ func TestPauseProject_HappyPath(t *testing.T) {
 	tx := dbTx(t)
 	proj := seedProject(t, tx, nil) // status=active
 
-	result := runAction(t, tx, &PauseProjectAction{},
+	result := runAction(t, tx, &ProjectPauseAction{},
 		yolotest.WithEntityName("Project"),
 		yolotest.WithEntityID(proj.ID),
 	)
@@ -28,7 +28,7 @@ func TestPauseProject_DenyNotActive(t *testing.T) {
 	tx := dbTx(t)
 	proj := seedProject(t, tx, &entities.Project{Status: "paused"})
 
-	result := runAction(t, tx, &PauseProjectAction{},
+	result := runAction(t, tx, &ProjectPauseAction{},
 		yolotest.WithEntityName("Project"),
 		yolotest.WithEntityID(proj.ID),
 	)
@@ -40,7 +40,7 @@ func TestPauseProject_DenyArchived(t *testing.T) {
 	tx := dbTx(t)
 	proj := seedProject(t, tx, &entities.Project{Status: "archived"})
 
-	result := runAction(t, tx, &PauseProjectAction{},
+	result := runAction(t, tx, &ProjectPauseAction{},
 		yolotest.WithEntityName("Project"),
 		yolotest.WithEntityID(proj.ID),
 	)
