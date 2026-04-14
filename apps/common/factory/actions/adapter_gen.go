@@ -274,6 +274,27 @@ func init() {
 	registry.RegisterActions("Question", QuestionAnswerAction{})
 }
 
+type RunCompleteAction struct{}
+
+func (RunCompleteAction) Name() string { return "run:complete" }
+func (RunCompleteAction) Description() string {
+	return "Records run completion and drives the task/PRD state machine."
+}
+func (RunCompleteAction) Kind() string   { return "action" }
+func (RunCompleteAction) InputType() any { return *new(inputs.CompleteRunInput) }
+
+func (RunCompleteAction) Execute(ctx context.Context, actx *action.Context) error {
+	var in inputs.CompleteRunInput
+	if typed, ok := actx.TypedInput.(*inputs.CompleteRunInput); ok && typed != nil {
+		in = *typed
+	}
+	return RunComplete(ctx, actx, in)
+}
+
+func init() {
+	registry.RegisterActions("Run", RunCompleteAction{})
+}
+
 type SuggestionApproveAction struct{}
 
 func (SuggestionApproveAction) Name() string        { return "suggestion:approve" }
