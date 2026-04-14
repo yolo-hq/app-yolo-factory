@@ -1,6 +1,6 @@
 //go:build e2e
 
-package actions_test
+package actions
 
 import (
 	"context"
@@ -10,8 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 	"github.com/yolo-hq/yolo/yolotest"
-
-	actionsgen "github.com/yolo-hq/app-yolo-factory/.yolo/gen/adapters/apps/common/factory/actions"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
@@ -25,7 +23,7 @@ func TestE2E_ProjectToPRDApproval(t *testing.T) {
 	// Step 1: Create project.
 	suffix := newID()
 	projectName := "e2e-proj-" + suffix
-	projectResult := runAction(t, tx, &actionsgen.ProjectCreateAction{},
+	projectResult := runAction(t, tx, &CreateProjectAction{},
 		yolotest.WithInput(inputs.CreateProjectInput{
 			Name:          projectName,
 			RepoURL:       "https://github.com/test/e2e-" + suffix,
@@ -43,7 +41,7 @@ func TestE2E_ProjectToPRDApproval(t *testing.T) {
 	assert.Equal(t, "active", proj.Status)
 
 	// Step 2: Submit PRD.
-	prdResult := runAction(t, tx, &actionsgen.PRDSubmitAction{},
+	prdResult := runAction(t, tx, &SubmitPRDAction{},
 		yolotest.WithInput(inputs.SubmitPRDInput{
 			ProjectID:          proj.ID,
 			Title:              "E2E Feature: User Auth",
@@ -61,7 +59,7 @@ func TestE2E_ProjectToPRDApproval(t *testing.T) {
 	assert.Equal(t, "draft", prd.Status, "PRD should be draft after submit")
 
 	// Step 3: Approve PRD.
-	approveResult := runAction(t, tx, &actionsgen.PRDApproveAction{},
+	approveResult := runAction(t, tx, &ApprovePRDAction{},
 		yolotest.WithEntityID(prd.ID),
 		yolotest.WithEntityName("PRD"),
 	)
@@ -83,7 +81,7 @@ func TestE2E_CreateAndArchiveProject(t *testing.T) {
 
 	suffix := newID()
 	projectName := "archive-proj-" + suffix
-	createResult := runAction(t, tx, &actionsgen.ProjectCreateAction{},
+	createResult := runAction(t, tx, &CreateProjectAction{},
 		yolotest.WithInput(inputs.CreateProjectInput{
 			Name:      projectName,
 			RepoURL:   "https://github.com/test/archive-" + suffix,
@@ -96,7 +94,7 @@ func TestE2E_CreateAndArchiveProject(t *testing.T) {
 	err := tx.NewSelect().Model(&proj).Where("name = ?", projectName).Scan(ctx)
 	require.NoError(t, err)
 
-	archiveResult := runAction(t, tx, &actionsgen.ProjectArchiveAction{},
+	archiveResult := runAction(t, tx, &ArchiveProjectAction{},
 		yolotest.WithEntityID(proj.ID),
 		yolotest.WithEntityName("Project"),
 	)
@@ -110,7 +108,7 @@ func TestE2E_SubmitPRD_PolicyDenied(t *testing.T) {
 
 	proj := seedProject(t, tx, &entities.Project{Status: "paused"})
 
-	result := runAction(t, tx, &actionsgen.PRDSubmitAction{},
+	result := runAction(t, tx, &SubmitPRDAction{},
 		yolotest.WithInput(inputs.SubmitPRDInput{
 			ProjectID:          proj.ID,
 			Title:              "T",
@@ -127,14 +125,14 @@ func TestE2E_PauseAndResumeProject(t *testing.T) {
 
 	proj := seedProject(t, tx, nil) // active
 
-	pauseResult := runAction(t, tx, &actionsgen.ProjectPauseAction{},
+	pauseResult := runAction(t, tx, &PauseProjectAction{},
 		yolotest.WithEntityID(proj.ID),
 		yolotest.WithEntityName("Project"),
 	)
 	require.True(t, pauseResult.Success, "PauseProject should succeed: %s", pauseResult.Message)
 	assertProjectStatus(t, tx, proj.ID, "paused")
 
-	resumeResult := runAction(t, tx, &actionsgen.ProjectResumeAction{},
+	resumeResult := runAction(t, tx, &ResumeProjectAction{},
 		yolotest.WithEntityID(proj.ID),
 		yolotest.WithEntityName("Project"),
 	)

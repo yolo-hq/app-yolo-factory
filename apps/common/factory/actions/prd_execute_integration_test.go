@@ -1,6 +1,6 @@
 //go:build integration
 
-package actions_test
+package actions
 
 import (
 	"testing"
@@ -8,8 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/yolo-hq/yolo/yolotest"
-
-	actionsgen "github.com/yolo-hq/app-yolo-factory/.yolo/gen/adapters/apps/common/factory/actions"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 )
@@ -19,7 +17,7 @@ func TestExecutePRD_HappyPathDraft(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	prd := seedPRD(t, tx, proj.ID, nil) // status=draft
 
-	result := runAction(t, tx, &actionsgen.PRDExecuteAction{},
+	result := runAction(t, tx, &ExecutePRDAction{},
 		yolotest.WithEntityName("PRD"),
 		yolotest.WithEntityID(prd.ID),
 	)
@@ -32,7 +30,7 @@ func TestExecutePRD_HappyPathApproved(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	prd := seedPRD(t, tx, proj.ID, &entities.PRD{Status: "approved"})
 
-	result := runAction(t, tx, &actionsgen.PRDExecuteAction{},
+	result := runAction(t, tx, &ExecutePRDAction{},
 		yolotest.WithEntityName("PRD"),
 		yolotest.WithEntityID(prd.ID),
 	)
@@ -45,7 +43,7 @@ func TestExecutePRD_DenyCompleted(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	prd := seedPRD(t, tx, proj.ID, &entities.PRD{Status: "completed"})
 
-	result := runAction(t, tx, &actionsgen.PRDExecuteAction{},
+	result := runAction(t, tx, &ExecutePRDAction{},
 		yolotest.WithEntityName("PRD"),
 		yolotest.WithEntityID(prd.ID),
 	)

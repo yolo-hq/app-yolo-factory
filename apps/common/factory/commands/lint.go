@@ -9,17 +9,23 @@ import (
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/helpers/lint"
 )
 
-// LintInput is the CLI input for the lint command.
+// Lint runs static analysis checks on a project directory.
+type Lint struct {
+	command.Base
+}
+
 type LintInput struct {
 	Path string `flag:"path" validate:"required" usage:"Project root path to lint"`
 }
 
-// Lint runs static analysis checks on project code.
-//
-// @name lint
-func Lint(ctx context.Context, cctx *command.Context, in LintInput) error {
-	_ = ctx
-	result, err := lint.RunAll(lint.Options{Path: in.Path})
+func (c *Lint) Name() string        { return "lint" }
+func (c *Lint) Description() string { return "Run static analysis checks on project code" }
+func (c *Lint) Input() any          { return &LintInput{} }
+
+func (c *Lint) Execute(ctx context.Context, cctx command.Context) error {
+	input, _ := cctx.TypedInput.(*LintInput)
+
+	result, err := lint.RunAll(lint.Options{Path: input.Path})
 	if err != nil {
 		return err
 	}

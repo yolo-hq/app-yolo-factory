@@ -39,9 +39,6 @@ type activePRDSummary struct {
 	Progress int    `json:"progress"`
 }
 
-// StatusInput is an empty input marker for the factory status query.
-type StatusInput struct{}
-
 // StatusResponse is the typed response for StatusQuery.
 type StatusResponse struct {
 	TasksByStatus   map[string]int     `json:"tasksByStatus"`
@@ -49,13 +46,18 @@ type StatusResponse struct {
 	MonthlySpendUSD float64            `json:"monthlySpendUsd"`
 }
 
-// Status shows a factory dashboard summary.
-func Status(ctx context.Context, qctx *query.Context, in StatusInput) (StatusResponse, error) {
-	_ = in
+// StatusQuery shows a factory dashboard summary.
+type StatusQuery struct {
+	query.Base
+	query.Returns[StatusResponse]
+}
 
+func (q *StatusQuery) Description() string { return "Factory dashboard summary" }
+
+func (q *StatusQuery) Execute(ctx context.Context, qctx *query.Context) error {
 	counts, err := read.FindMany[TaskStatusCounts](ctx)
 	if err != nil {
-		return StatusResponse{}, fmt.Errorf("status: task counts: %w", err)
+		return fmt.Errorf("status: task counts: %w", err)
 	}
 	byStatus := make(map[string]int, len(counts))
 	for _, c := range counts {
@@ -66,7 +68,7 @@ func Status(ctx context.Context, qctx *query.Context, in StatusInput) (StatusRes
 		read.Eq("status", string(enums.PRDStatusInProgress)),
 	)
 	if err != nil {
-		return StatusResponse{}, fmt.Errorf("status: list prds: %w", err)
+		return fmt.Errorf("status: list prds: %w", err)
 	}
 	activePRDs := make([]activePRDSummary, 0, len(activePRDRows))
 	for _, p := range activePRDRows {
@@ -75,16 +77,16 @@ func Status(ctx context.Context, qctx *query.Context, in StatusInput) (StatusRes
 
 	projects, err := read.FindMany[projectSpendRow](ctx)
 	if err != nil {
-		return StatusResponse{}, fmt.Errorf("status: list projects: %w", err)
+		return fmt.Errorf("status: list projects: %w", err)
 	}
 	var totalSpent float64
 	for _, p := range projects {
 		totalSpent += p.SpentThisMonthUSD
 	}
 
-	return StatusResponse{
+	return q.Respond(qctx, StatusResponse{
 		TasksByStatus:   byStatus,
 		ActivePRDs:      activePRDs,
 		MonthlySpendUSD: totalSpent,
-	}, nil
+	})
 }

@@ -11,14 +11,22 @@ import (
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/sm"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
+	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
 
-// TaskRetry retries a failed task, resetting it to queued.
-//
-// @policy CanRetryTaskPolicy
-func TaskRetry(ctx context.Context, actx *action.Context, in inputs.RetryTaskInput) error {
+// RetryTaskAction retries a failed task, resetting it to queued.
+type RetryTaskAction struct {
+	action.RequirePolicy[policies.CanRetryTaskPolicy]
+	action.TypedInput[inputs.RetryTaskInput]
+}
+
+func (a *RetryTaskAction) Description() string { return "Retry a failed task" }
+
+func (a *RetryTaskAction) Execute(ctx context.Context, actx *action.Context) error {
+	input := a.Input(actx)
+
 	_, err := sm.Task.Retry(ctx, actx, actx.EntityID, write.Set{
-		fields.Task.Model.When(in.Model != "").Value(in.Model),
+		fields.Task.Model.When(input.Model != "").Value(input.Model),
 	})
 	if errors.Is(err, action.ErrStaleState) {
 		return action.Fail("task is not in failed state")
