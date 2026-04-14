@@ -24,7 +24,7 @@ func (a *ApproveSuggestionAction) Execute(ctx context.Context, actx *action.Cont
 	input := a.Input(actx)
 
 	_, err := sm.Suggestion.Approve(ctx, actx, actx.EntityID, write.Set{
-		fields.Suggestion.ConvertedTaskID.When(input.PRDID != nil).Value(*input.PRDID),
+		fields.Suggestion.ConvertedTaskID.When(input.PRDID != "").Value(input.PRDID),
 	})
 	return err
 }
