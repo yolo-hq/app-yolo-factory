@@ -2,7 +2,6 @@ package actions
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/yolo-hq/yolo/core/action"
 
@@ -19,8 +18,5 @@ func (a *DismissInsightAction) Description() string { return "Dismiss an insight
 
 func (a *DismissInsightAction) Execute(ctx context.Context, actx *action.Context) error {
 	_, err := sm.Insight.Dismiss(ctx, actx, actx.EntityID, nil)
-	if err != nil {
-		return fmt.Errorf("dismiss-insight: %w", err)
-	}
-	return nil
+	return err
 }

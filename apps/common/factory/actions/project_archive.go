@@ -2,7 +2,6 @@ package actions
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/yolo-hq/yolo/core/action"
 
@@ -20,8 +19,5 @@ func (a *ArchiveProjectAction) Description() string { return "Archive a project"
 
 func (a *ArchiveProjectAction) Execute(ctx context.Context, actx *action.Context) error {
 	_, err := sm.Project.Archive(ctx, actx, actx.EntityID, nil)
-	if err != nil {
-		return fmt.Errorf("archive-project: %w", err)
-	}
-	return nil
+	return err
 }

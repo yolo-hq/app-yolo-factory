@@ -2,7 +2,6 @@ package actions
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/yolo-hq/yolo/core/action"
 
@@ -20,8 +19,5 @@ func (a *ApplyInsightAction) Description() string { return "Apply an acknowledge
 
 func (a *ApplyInsightAction) Execute(ctx context.Context, actx *action.Context) error {
 	_, err := sm.Insight.Apply(ctx, actx, actx.EntityID, nil)
-	if err != nil {
-		return fmt.Errorf("apply-insight: %w", err)
-	}
-	return nil
+	return err
 }

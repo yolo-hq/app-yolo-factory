@@ -2,7 +2,6 @@ package actions
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/yolo-hq/yolo/core/action"
 
@@ -24,8 +23,5 @@ func (a *RejectSuggestionAction) Execute(ctx context.Context, actx *action.Conte
 	_ = a.Input(actx)
 
 	_, err := sm.Suggestion.Reject(ctx, actx, actx.EntityID, nil)
-	if err != nil {
-		return fmt.Errorf("reject-suggestion: %w", err)
-	}
-	return nil
+	return err
 }
