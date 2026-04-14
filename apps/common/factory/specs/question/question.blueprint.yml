@@ -1,0 +1,30 @@
+schema: v1
+
+entity:
+  question:
+    id: ulid!
+    task_id: ulid! fk:task
+    run_id: ulid! fk:run
+    body: text!
+    context: text
+    confidence: enum[low,medium]!
+    status: enum[open,answered,auto_resolved] = open
+    answer: text
+    answered_by: string
+    answer_session_id: string
+    answered_at: datetime?
+
+state:
+  field: status
+  transitions:
+    answer:        open -> answered
+    auto_resolve:  open -> auto_resolved
+
+filters:
+  - task_id eq
+  - run_id eq
+  - status eq
+
+events:
+  - "QuestionAsked {question_id, task_id}"
+  - "QuestionAnswered {question_id, answered_by: string}"

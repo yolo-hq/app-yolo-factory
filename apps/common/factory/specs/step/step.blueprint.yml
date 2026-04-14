@@ -1,0 +1,26 @@
+schema: v1
+
+entity:
+  step:
+    id: ulid!
+    run_id: ulid! fk:run
+    phase: enum[plan,implement,test,lint,audit,review]!
+    skill: string!
+    status: enum[running,completed,failed,skipped] = running
+    result_status: enum[done,done_with_concerns,needs_context,blocked,failed]?
+    model: string!
+    session_id: string
+    cost_usd: float = 0
+    tokens_in: int = 0
+    tokens_out: int = 0
+    turns: int = 0
+    duration_ms: int = 0
+    input_summary: text
+    output_summary: text
+    started_at: datetime = now
+    completed_at: datetime?
+
+filters:
+  - run_id eq
+  - phase eq
+  - status eq

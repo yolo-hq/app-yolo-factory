@@ -1,0 +1,23 @@
+schema: v1
+
+entity:
+  review:
+    id: ulid!
+    run_id: ulid! fk:run
+    task_id: ulid! fk:task
+    session_id: string
+    model: string!
+    verdict: enum[pass,fail]!
+    reasons: jsonb = "[]"
+    anti_patterns: jsonb = "[]"
+    criteria_results: text!
+    suggestions: jsonb = "[]"
+    cost_usd: float = 0
+
+filters:
+  - run_id eq
+  - task_id eq
+  - verdict eq
+
+events:
+  - "ReviewCompleted {review_id, verdict: string}"

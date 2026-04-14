@@ -1,0 +1,17 @@
+schema: v1
+
+entity:
+  lint_result:
+    id: ulid!
+    run_id: ulid! fk:run
+    task_id: ulid! fk:task
+    passed: bool = false
+    checks_run: int = 0
+    checks_passed: int = 0
+    checks_failed: int = 0
+    findings: jsonb = "[]"
+
+filters:
+  - run_id eq
+  - task_id eq
+  - passed eq
