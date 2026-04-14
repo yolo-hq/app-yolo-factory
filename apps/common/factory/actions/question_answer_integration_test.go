@@ -22,7 +22,7 @@ func TestAnswerQuestion_HappyPath(t *testing.T) {
 	run := seedRun(t, tx, task.ID, nil)
 	q := seedQuestion(t, tx, task.ID, run.ID, nil) // status=open
 
-	result := runAction(t, tx, &AnswerQuestionAction{},
+	result := runAction(t, tx, &QuestionAnswerAction{},
 		yolotest.WithEntityName("Question"),
 		yolotest.WithEntityID(q.ID),
 		yolotest.WithInput(inputs.AnswerQuestionInput{Answer: "Use the existing pattern"}),
@@ -48,7 +48,7 @@ func TestAnswerQuestion_DenyNotOpen(t *testing.T) {
 	run := seedRun(t, tx, task.ID, nil)
 	q := seedQuestion(t, tx, task.ID, run.ID, &entities.Question{Status: "answered"})
 
-	result := runAction(t, tx, &AnswerQuestionAction{},
+	result := runAction(t, tx, &QuestionAnswerAction{},
 		yolotest.WithEntityName("Question"),
 		yolotest.WithEntityID(q.ID),
 		yolotest.WithInput(inputs.AnswerQuestionInput{Answer: "Answer attempt"}),
@@ -65,7 +65,7 @@ func TestAnswerQuestion_DenyMissingAnswer(t *testing.T) {
 	run := seedRun(t, tx, task.ID, nil)
 	q := seedQuestion(t, tx, task.ID, run.ID, nil)
 
-	result := runAction(t, tx, &AnswerQuestionAction{},
+	result := runAction(t, tx, &QuestionAnswerAction{},
 		yolotest.WithEntityName("Question"),
 		yolotest.WithEntityID(q.ID),
 		yolotest.WithInput(inputs.AnswerQuestionInput{

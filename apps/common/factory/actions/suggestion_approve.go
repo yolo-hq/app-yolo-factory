@@ -11,22 +11,14 @@ import (
 	"github.com/yolo-hq/app-yolo-factory/.yolo/fields"
 	"github.com/yolo-hq/app-yolo-factory/.yolo/sm"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
-	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/policies"
 )
 
-// ApproveSuggestionAction approves a suggestion.
-type ApproveSuggestionAction struct {
-	action.RequirePolicy[policies.CanApproveSuggestionPolicy]
-	action.TypedInput[inputs.ApproveSuggestionInput]
-}
-
-func (a *ApproveSuggestionAction) Description() string { return "Approve a pending suggestion" }
-
-func (a *ApproveSuggestionAction) Execute(ctx context.Context, actx *action.Context) error {
-	input := a.Input(actx)
-
+// SuggestionApprove approves a pending suggestion.
+//
+// @policy CanApproveSuggestionPolicy
+func SuggestionApprove(ctx context.Context, actx *action.Context, in inputs.ApproveSuggestionInput) error {
 	_, err := sm.Suggestion.Approve(ctx, actx, actx.EntityID, write.Set{
-		fields.Suggestion.ConvertedTaskID.When(input.PRDID != "").Value(input.PRDID),
+		fields.Suggestion.ConvertedTaskID.When(in.PRDID != "").Value(in.PRDID),
 	})
 	if errors.Is(err, action.ErrStaleState) {
 		return action.Fail("suggestion is not pending")

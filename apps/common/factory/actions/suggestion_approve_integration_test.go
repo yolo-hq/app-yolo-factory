@@ -18,7 +18,7 @@ func TestApproveSuggestion_HappyPath(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	sug := seedSuggestion(t, tx, proj.ID, nil) // status=pending
 
-	result := runAction(t, tx, &ApproveSuggestionAction{},
+	result := runAction(t, tx, &SuggestionApproveAction{},
 		yolotest.WithEntityName("Suggestion"),
 		yolotest.WithEntityID(sug.ID),
 		yolotest.WithInput(inputs.ApproveSuggestionInput{}),
@@ -32,7 +32,7 @@ func TestApproveSuggestion_DenyNotPending(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	sug := seedSuggestion(t, tx, proj.ID, &entities.Suggestion{Status: "approved"})
 
-	result := runAction(t, tx, &ApproveSuggestionAction{},
+	result := runAction(t, tx, &SuggestionApproveAction{},
 		yolotest.WithEntityName("Suggestion"),
 		yolotest.WithEntityID(sug.ID),
 		yolotest.WithInput(inputs.ApproveSuggestionInput{}),
@@ -46,7 +46,7 @@ func TestApproveSuggestion_DenyRejected(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	sug := seedSuggestion(t, tx, proj.ID, &entities.Suggestion{Status: "rejected"})
 
-	result := runAction(t, tx, &ApproveSuggestionAction{},
+	result := runAction(t, tx, &SuggestionApproveAction{},
 		yolotest.WithEntityName("Suggestion"),
 		yolotest.WithEntityID(sug.ID),
 		yolotest.WithInput(inputs.ApproveSuggestionInput{}),

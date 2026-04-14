@@ -17,7 +17,7 @@ func TestSubmitPRD_HappyPath(t *testing.T) {
 	tx := dbTx(t)
 	proj := seedProject(t, tx, nil) // status=active
 
-	result := runAction(t, tx, &SubmitPRDAction{},
+	result := runAction(t, tx, &PRDSubmitAction{},
 		yolotest.WithEntityName("Project"),
 		yolotest.WithEntityID(proj.ID),
 		yolotest.WithInput(inputs.SubmitPRDInput{
@@ -34,7 +34,7 @@ func TestSubmitPRD_DenyArchivedProject(t *testing.T) {
 	tx := dbTx(t)
 	proj := seedProject(t, tx, &entities.Project{Status: "archived"})
 
-	result := runAction(t, tx, &SubmitPRDAction{},
+	result := runAction(t, tx, &PRDSubmitAction{},
 		yolotest.WithEntityName("Project"),
 		yolotest.WithEntityID(proj.ID),
 		yolotest.WithInput(inputs.SubmitPRDInput{
@@ -52,7 +52,7 @@ func TestSubmitPRD_DenyMissingRequiredFields(t *testing.T) {
 	tx := dbTx(t)
 	proj := seedProject(t, tx, nil)
 
-	result := runAction(t, tx, &SubmitPRDAction{},
+	result := runAction(t, tx, &PRDSubmitAction{},
 		yolotest.WithEntityName("Project"),
 		yolotest.WithEntityID(proj.ID),
 		yolotest.WithInput(inputs.SubmitPRDInput{
