@@ -1,6 +1,6 @@
 //go:build integration
 
-package actions
+package actions_test
 
 import (
 	"context"
@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/yolo-hq/yolo/yolotest"
+
+	actionsgen "github.com/yolo-hq/app-yolo-factory/.yolo/gen/adapters/apps/common/factory/actions"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
@@ -22,7 +24,7 @@ func TestAnswerQuestion_HappyPath(t *testing.T) {
 	run := seedRun(t, tx, task.ID, nil)
 	q := seedQuestion(t, tx, task.ID, run.ID, nil) // status=open
 
-	result := runAction(t, tx, &QuestionAnswerAction{},
+	result := runAction(t, tx, &actionsgen.QuestionAnswerAction{},
 		yolotest.WithEntityName("Question"),
 		yolotest.WithEntityID(q.ID),
 		yolotest.WithInput(inputs.AnswerQuestionInput{Answer: "Use the existing pattern"}),
@@ -48,7 +50,7 @@ func TestAnswerQuestion_DenyNotOpen(t *testing.T) {
 	run := seedRun(t, tx, task.ID, nil)
 	q := seedQuestion(t, tx, task.ID, run.ID, &entities.Question{Status: "answered"})
 
-	result := runAction(t, tx, &QuestionAnswerAction{},
+	result := runAction(t, tx, &actionsgen.QuestionAnswerAction{},
 		yolotest.WithEntityName("Question"),
 		yolotest.WithEntityID(q.ID),
 		yolotest.WithInput(inputs.AnswerQuestionInput{Answer: "Answer attempt"}),
@@ -65,7 +67,7 @@ func TestAnswerQuestion_DenyMissingAnswer(t *testing.T) {
 	run := seedRun(t, tx, task.ID, nil)
 	q := seedQuestion(t, tx, task.ID, run.ID, nil)
 
-	result := runAction(t, tx, &QuestionAnswerAction{},
+	result := runAction(t, tx, &actionsgen.QuestionAnswerAction{},
 		yolotest.WithEntityName("Question"),
 		yolotest.WithEntityID(q.ID),
 		yolotest.WithInput(inputs.AnswerQuestionInput{

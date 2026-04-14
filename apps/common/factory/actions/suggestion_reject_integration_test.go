@@ -1,6 +1,6 @@
 //go:build integration
 
-package actions
+package actions_test
 
 import (
 	"testing"
@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/yolo-hq/yolo/yolotest"
+
+	actionsgen "github.com/yolo-hq/app-yolo-factory/.yolo/gen/adapters/apps/common/factory/actions"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
@@ -18,7 +20,7 @@ func TestRejectSuggestion_HappyPath(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	sug := seedSuggestion(t, tx, proj.ID, nil) // status=pending
 
-	result := runAction(t, tx, &SuggestionRejectAction{},
+	result := runAction(t, tx, &actionsgen.SuggestionRejectAction{},
 		yolotest.WithEntityName("Suggestion"),
 		yolotest.WithEntityID(sug.ID),
 		yolotest.WithInput(inputs.RejectSuggestionInput{Reason: "Not aligned with roadmap"}),
@@ -32,7 +34,7 @@ func TestRejectSuggestion_DenyNotPending(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	sug := seedSuggestion(t, tx, proj.ID, &entities.Suggestion{Status: "rejected"})
 
-	result := runAction(t, tx, &SuggestionRejectAction{},
+	result := runAction(t, tx, &actionsgen.SuggestionRejectAction{},
 		yolotest.WithEntityName("Suggestion"),
 		yolotest.WithEntityID(sug.ID),
 		yolotest.WithInput(inputs.RejectSuggestionInput{Reason: "Already rejected"}),
@@ -46,7 +48,7 @@ func TestRejectSuggestion_DenyMissingReason(t *testing.T) {
 	proj := seedProject(t, tx, nil)
 	sug := seedSuggestion(t, tx, proj.ID, nil)
 
-	result := runAction(t, tx, &SuggestionRejectAction{},
+	result := runAction(t, tx, &actionsgen.SuggestionRejectAction{},
 		yolotest.WithEntityName("Suggestion"),
 		yolotest.WithEntityID(sug.ID),
 		yolotest.WithInput(inputs.RejectSuggestionInput{

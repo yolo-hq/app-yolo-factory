@@ -1,53 +1,56 @@
-package actions
+package actions_test
 
 import (
 	"testing"
 
 	"github.com/yolo-hq/yolo/core/action"
+
+	actionsgen "github.com/yolo-hq/app-yolo-factory/.yolo/gen/adapters/apps/common/factory/actions"
 )
 
 // interface compliance checks — compile-time only.
 var (
-	_ action.Action = (*ProjectCreateAction)(nil)
-	_ action.Action = (*ProjectUpdateAction)(nil)
-	_ action.Action = (*ProjectArchiveAction)(nil)
-	_ action.Action = (*ProjectPauseAction)(nil)
-	_ action.Action = (*ProjectResumeAction)(nil)
-	_ action.Action = (*PRDSubmitAction)(nil)
-	_ action.Action = (*PRDApproveAction)(nil)
-	_ action.Action = (*PRDExecuteAction)(nil)
-	_ action.Action = (*InsightAcknowledgeAction)(nil)
-	_ action.Action = (*InsightApplyAction)(nil)
-	_ action.Action = (*InsightDismissAction)(nil)
-	_ action.Action = (*QuestionAnswerAction)(nil)
-	_ action.Action = (*SuggestionApproveAction)(nil)
-	_ action.Action = (*SuggestionRejectAction)(nil)
-	_ action.Action = (*TaskCancelAction)(nil)
-	_ action.Action = (*TaskRetryAction)(nil)
+	_ action.Action = (*actionsgen.ProjectCreateAction)(nil)
+	_ action.Action = (*actionsgen.ProjectUpdateAction)(nil)
+	_ action.Action = (*actionsgen.ProjectArchiveAction)(nil)
+	_ action.Action = (*actionsgen.ProjectPauseAction)(nil)
+	_ action.Action = (*actionsgen.ProjectResumeAction)(nil)
+	_ action.Action = (*actionsgen.PRDSubmitAction)(nil)
+	_ action.Action = (*actionsgen.PRDApproveAction)(nil)
+	_ action.Action = (*actionsgen.PRDExecuteAction)(nil)
+	_ action.Action = (*actionsgen.InsightAcknowledgeAction)(nil)
+	_ action.Action = (*actionsgen.InsightApplyAction)(nil)
+	_ action.Action = (*actionsgen.InsightDismissAction)(nil)
+	_ action.Action = (*actionsgen.QuestionAnswerAction)(nil)
+	_ action.Action = (*actionsgen.SuggestionApproveAction)(nil)
+	_ action.Action = (*actionsgen.SuggestionRejectAction)(nil)
+	_ action.Action = (*actionsgen.TaskCancelAction)(nil)
+	_ action.Action = (*actionsgen.TaskRetryAction)(nil)
+	_ action.Action = (*actionsgen.RunCompleteAction)(nil)
 )
-
 
 func TestActions_Description(t *testing.T) {
 	cases := []struct {
 		name   string
 		action action.Action
 	}{
-		{"CreateProject", &ProjectCreateAction{}},
-		{"UpdateProject", &ProjectUpdateAction{}},
-		{"ArchiveProject", &ProjectArchiveAction{}},
-		{"PauseProject", &ProjectPauseAction{}},
-		{"ResumeProject", &ProjectResumeAction{}},
-		{"SubmitPRD", &PRDSubmitAction{}},
-		{"ApprovePRD", &PRDApproveAction{}},
-		{"ExecutePRD", &PRDExecuteAction{}},
-		{"AcknowledgeInsight", &InsightAcknowledgeAction{}},
-		{"ApplyInsight", &InsightApplyAction{}},
-		{"DismissInsight", &InsightDismissAction{}},
-		{"AnswerQuestion", &QuestionAnswerAction{}},
-		{"ApproveSuggestion", &SuggestionApproveAction{}},
-		{"RejectSuggestion", &SuggestionRejectAction{}},
-		{"CancelTask", &TaskCancelAction{}},
-		{"RetryTask", &TaskRetryAction{}},
+		{"ProjectCreate", actionsgen.ProjectCreateAction{}},
+		{"ProjectUpdate", actionsgen.ProjectUpdateAction{}},
+		{"ProjectArchive", actionsgen.ProjectArchiveAction{}},
+		{"ProjectPause", actionsgen.ProjectPauseAction{}},
+		{"ProjectResume", actionsgen.ProjectResumeAction{}},
+		{"PRDSubmit", actionsgen.PRDSubmitAction{}},
+		{"PRDApprove", actionsgen.PRDApproveAction{}},
+		{"PRDExecute", actionsgen.PRDExecuteAction{}},
+		{"InsightAcknowledge", actionsgen.InsightAcknowledgeAction{}},
+		{"InsightApply", actionsgen.InsightApplyAction{}},
+		{"InsightDismiss", actionsgen.InsightDismissAction{}},
+		{"QuestionAnswer", actionsgen.QuestionAnswerAction{}},
+		{"SuggestionApprove", actionsgen.SuggestionApproveAction{}},
+		{"SuggestionReject", actionsgen.SuggestionRejectAction{}},
+		{"TaskCancel", actionsgen.TaskCancelAction{}},
+		{"TaskRetry", actionsgen.TaskRetryAction{}},
+		{"RunComplete", actionsgen.RunCompleteAction{}},
 	}
 
 	for _, tc := range cases {

@@ -108,6 +108,11 @@ func PRDDiff(ctx context.Context, qctx *query.Context, in inputs.DiffPRDInput) (
 	}, nil
 }
 
+// RunPRDGitDiffForTest exposes runPRDGitDiff to external test packages.
+func RunPRDGitDiffForTest(ctx context.Context, repoPath, first, last string) (string, int, error) {
+	return runPRDGitDiff(ctx, repoPath, first, last)
+}
+
 func runPRDGitDiff(ctx context.Context, repoPath, first, last string) (string, int, error) {
 	diffRange := fmt.Sprintf("%s^..%s", first, last)
 	var stdout, stderr bytes.Buffer

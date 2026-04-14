@@ -1,4 +1,4 @@
-package actions
+package actions_test
 
 import (
 	"context"

@@ -1,6 +1,6 @@
 //go:build integration
 
-package actions
+package actions_test
 
 import (
 	"testing"
@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/yolo-hq/yolo/yolotest"
+
+	actionsgen "github.com/yolo-hq/app-yolo-factory/.yolo/gen/adapters/apps/common/factory/actions"
 
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/entities"
 	"github.com/yolo-hq/app-yolo-factory/apps/common/factory/inputs"
@@ -19,7 +21,7 @@ func TestRetryTask_HappyPath(t *testing.T) {
 	prd := seedPRD(t, tx, proj.ID, nil)
 	task := seedTask(t, tx, proj.ID, prd.ID, &entities.Task{Status: "failed"})
 
-	result := runAction(t, tx, &TaskRetryAction{},
+	result := runAction(t, tx, &actionsgen.TaskRetryAction{},
 		yolotest.WithEntityName("Task"),
 		yolotest.WithEntityID(task.ID),
 		yolotest.WithInput(inputs.RetryTaskInput{}),
@@ -34,7 +36,7 @@ func TestRetryTask_HappyPathWithModelOverride(t *testing.T) {
 	prd := seedPRD(t, tx, proj.ID, nil)
 	task := seedTask(t, tx, proj.ID, prd.ID, &entities.Task{Status: "failed"})
 
-	result := runAction(t, tx, &TaskRetryAction{},
+	result := runAction(t, tx, &actionsgen.TaskRetryAction{},
 		yolotest.WithEntityName("Task"),
 		yolotest.WithEntityID(task.ID),
 		yolotest.WithInput(inputs.RetryTaskInput{Model: "opus"}),
@@ -49,7 +51,7 @@ func TestRetryTask_DenyNotFailed(t *testing.T) {
 	prd := seedPRD(t, tx, proj.ID, nil)
 	task := seedTask(t, tx, proj.ID, prd.ID, nil) // status=queued
 
-	result := runAction(t, tx, &TaskRetryAction{},
+	result := runAction(t, tx, &actionsgen.TaskRetryAction{},
 		yolotest.WithEntityName("Task"),
 		yolotest.WithEntityID(task.ID),
 		yolotest.WithInput(inputs.RetryTaskInput{}),
