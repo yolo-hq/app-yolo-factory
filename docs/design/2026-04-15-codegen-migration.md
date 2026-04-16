@@ -58,6 +58,7 @@ Each migration PRD is blocked by its framework counterpart and lives in this rep
 3. **Factory Event migration** — [#94](https://github.com/yolo-hq/app-yolo-factory/issues/94), blocked by [yolo#565](https://github.com/yolo-hq/yolo/issues/565)
 4. **Factory Input migration** — [#95](https://github.com/yolo-hq/app-yolo-factory/issues/95), blocked by [yolo#566](https://github.com/yolo-hq/yolo/issues/566)
 5. **Factory Action + Projection migration** — [#96](https://github.com/yolo-hq/app-yolo-factory/issues/96), blocked by [yolo#567](https://github.com/yolo-hq/yolo/issues/567)
+6. **Factory Policy migration** — [#97](https://github.com/yolo-hq/app-yolo-factory/issues/97), blocked by [yolo#568](https://github.com/yolo-hq/yolo/issues/568)
 
 ## Cleanup policy (universal)
 
