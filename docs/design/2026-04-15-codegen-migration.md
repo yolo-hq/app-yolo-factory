@@ -16,6 +16,9 @@ Factory has zombie codegen for 4 of the 14 file kinds. Hand-written files and ge
 | Filter | `apps/common/factory/filters/` (10 files) | `.yolo/gen/<entity>/filter_gen.go` (10 orphans) | [yolo#564](https://github.com/yolo-hq/yolo/issues/564) |
 | Event | `apps/common/factory/events/` (3 files — `event_types.go`, `emit_generated.go`, `payloads.go`) + `.yolo/events/registry.go` | triple duplication | [yolo#565](https://github.com/yolo-hq/yolo/issues/565) |
 | Input | `apps/common/factory/inputs/` (10 files, 0 spec blocks) | none yet | [yolo#566](https://github.com/yolo-hq/yolo/issues/566) |
+| Action + Projection | `apps/common/factory/actions/` (16 files ~500 LOC), 10+ projection structs inline | duplicates + hand drift | [yolo#567](https://github.com/yolo-hq/yolo/issues/567) |
+| Policy | `apps/common/factory/policies/` (14 files, identical 3-part shape) | 0% gen | [yolo#568](https://github.com/yolo-hq/yolo/issues/568) |
+| Service | `apps/common/factory/services/` (16 files, 0 spec blocks, struct-field DI drift) | 0% gen | [yolo#569](https://github.com/yolo-hq/yolo/issues/569) |
 
 ## Backup
 
@@ -59,6 +62,26 @@ Each migration PRD is blocked by its framework counterpart and lives in this rep
 4. **Factory Input migration** — [#95](https://github.com/yolo-hq/app-yolo-factory/issues/95), blocked by [yolo#566](https://github.com/yolo-hq/yolo/issues/566)
 5. **Factory Action + Projection migration** — [#96](https://github.com/yolo-hq/app-yolo-factory/issues/96), blocked by [yolo#567](https://github.com/yolo-hq/yolo/issues/567)
 6. **Factory Policy migration** — [#97](https://github.com/yolo-hq/app-yolo-factory/issues/97), blocked by [yolo#568](https://github.com/yolo-hq/yolo/issues/568)
+7. **Factory Service migration** — #98 (pending file), blocked by [yolo#569](https://github.com/yolo-hq/yolo/issues/569). Covers G11 + G12 retrofits for events moved inline into services/actions.
+
+## Service migration (factory#98 scope)
+
+Source of truth: [`kind-06-service.md`](https://github.com/yolo-hq/yolo/blob/0.x/docs/design/2026-04-15-codegen-redesign/kind-06-service.md).
+
+Delta vs current factory:
+
+- **New spec:** `apps/common/factory/specs/services.yml` with one entry per existing service. ~16 entries, ~800 YAML lines estimated.
+- **Hand rewrite:** Each `apps/common/factory/services/<name>.go` becomes `type X struct { gen.X }` + `Execute(ctx, sctx)` + `Validate*` methods. Remove struct-field DI boilerplate (DI now via global `svc` registry gen). Remove `emits:"..."` tag — events move into chain spec.
+- **Event inline migration (G12):** Any custom events currently emitted via `service.EmitEvent(ctx, ...)` become `after_success.steps` → `event:` entries in service spec. Action-emitted custom events move into action `events:` block.
+- **Chain migration:** Existing service code that manually calls `Actions(actx).X(...)`, `jobs.Defer()`, `Services.X.Execute()` after primary logic — if purely post-Execute orchestration, move to `after_success.steps`. Keep in hand code only when mid-Execute sequencing required.
+- **Typed errors:** Each `fmt.Errorf(...)` / `action.Fail(...)` in service migrates to `errors:` list + `s.FailWithCode(gen.X)`. Lint enforces enum coverage.
+- **Nested vs top-level rule (S16):** Services called via `sctx.Services.X.Execute()` skip chain automatically. No migration action needed — framework enforces.
+- **Projection prefetch (S17):** Identified double-load hot paths from profiling: `run_complete` → `rollback_run` chains reload Run + Tasks. Caller uses `sctx.Prefetch(run, tasks)` to skip re-query.
+- **Expected touch count:** ~60 call sites across actions, jobs, other services that invoke services. Plus every event consumer handler referencing custom event names (handler kind still deferred, but registry assembly will catch dangling refs).
+
+Blocked by: yolo#569. Dependencies on earlier migrations: #92 (Entity), #94 (Event — G12 retrofit shared), #95 (Input — validator discovery shared), #96 (Action — chain grammar shared).
+
+Expected blast radius: **~400 LOC Go deleted → ~60 YAML lines + ~200 LOC hand preserved for Execute bodies.**
 
 ## Cleanup policy (universal)
 
