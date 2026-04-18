@@ -98,6 +98,47 @@ Expected blast radius: **~400 LOC Go deleted → ~60 YAML lines + ~200 LOC hand 
 - **CI build time** — `yolo gen` runs at build start. If slow, cache in CI between runs
 - **Bootstrap on fresh CI clone** — `.yolo/` empty, codegen must run first. `yolo doctor` should be the entry point in CI as well
 
+## 2026-04-18 retrofit — shared sub-grammars + TypedData migration
+
+Framework locked 4 new global rules + 4 shared sub-grammar docs (G13 Projection, G14 Chain, G15 Bindings, G16 Error codes). Factory migration scope expands to consume them.
+
+### New factory work
+
+| Item | Scope | Blocked by |
+|---|---|---|
+| TypedData → Projection migration | ~30 actions + ~14 policies — remove `action.TypedData[T]` embed + `*Data` struct; add `projection:` block in action/policy specs; replace `a.Data(actx)` with `actx.Projection.X` | yolo#570 (Projection shared grammar) |
+| Action `events:` block → unified chain | ~16 actions — rewrite `events:` block as `after_success:` / `after_fail:` with `event:` / `service:` / `action:` / `job:` items + `with:` | yolo#567 retrofit |
+| Action error codes (G16) | Add `errors:` block to actions; align `FailWithCode()` codes | yolo#567 retrofit |
+| Policy error codes (G16) | Add `errors:` block to 14 policies; `pctx.Deny(errors.X)` typed | yolo#568 retrofit |
+| Service S17 Prefetch cleanup | Drop runtime Prefetch calls where used (audit: likely 0 since not yet implemented) | yolo#569 retrofit |
+| Input error codes (I23) | Add `errors:` block to 10 inputs; validator `on_fail:` mapping | yolo#566 retrofit |
+| Filter F15 single-file-per-entity | Verify already compliant (likely yes — one filter file per entity convention) | yolo#564 retrofit |
+
+### Codemod: `yolo gen migrate typeddata-to-projection`
+
+Reads existing `type XxxData struct { field tags }` + `action.TypedData[XxxData]` usage, emits YAML projection block per action/policy. Factory runs codemod once; review diff; delete `*Data` structs.
+
+### Touch estimate
+
+| Kind | Additional touches (beyond base migration) |
+|---|---|
+| Action | ~16 files (chain rewrite + projection block + errors block) |
+| Policy | ~14 files (projection block + errors block) |
+| Service | audit for Prefetch (expect 0) |
+| Input | ~10 files (errors block) |
+| Filter | ~0 (F15 already implicit) |
+
+Total additional: ~40 file touches on top of base migration. Spec-heavy, Go-light.
+
+### Migration PRDs
+
+- factory#99 — TypedData → Projection grammar migration (blocked by yolo#570)
+- Existing PRDs #96-#98 updated with retrofit scope comments.
+
+### Blast radius: no new import storms
+
+All retrofits are either spec-level (YAML) or API-substitution inside existing Go files. No new import sites beyond what base migration already touches.
+
 ## Done criteria (per kind)
 
 - Hand dir state matches the final layout in the framework kind file
