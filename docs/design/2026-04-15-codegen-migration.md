@@ -181,6 +181,36 @@ handler:
 
 **Merge strategy:** Coordinate with factory#94 (Event kind migration) — both touch event pipeline. Event PR first (contract side), Handler PR second (consumer side). Or bundle if practical.
 
+### 2026-04-18c — Job kind + G18 typed Context + G19 typed test helpers (factory#101)
+
+**Framework locked:** kind-09-job.md (J1-J101), shared/projection.md P25 (entity resolution), shared/chain.md G17 (post_commit), global.md G18/G19.
+
+**Scope:** migrate factory's ad-hoc background jobs + apply G18/G19 cross-kind retrofits.
+
+**New work items:**
+
+| Item | Scope | Blocked by |
+|---|---|---|
+| Job migration | ~5-15 jobs in factory: audit ad-hoc goroutine/cron code → convert to spec + typed Ctx signature | yolo#574 |
+| G18 typed Ctx retrofit | All consumer Execute signatures → `Execute(ctx *gen.{Name}Ctx) error` / `Execute(ctx *gen.{Name}Ctx, result) (result, error)` for Query/Policy. Mechanical via `yolo gen migrate typed-ctx`. Touches Action, Service, Policy, Handler, Job, Query files | yolo#572 |
+| G19 typed test helpers retrofit | All test assertion calls → typed helpers (`DispatchBulkExport` not `DispatchJob("bulk_export", ...)`). Mechanical via `yolo gen migrate typed-test-helpers` | yolo#573 |
+| app.yml queues + workers config | Add `queues:`, `workers:`, `job:` sections | yolo#574 |
+| Framework entities auto-migration | `job_executions`, `job_dead_letter`, `job_controls`, `rate_limit_rules` created on bootstrap when jobs declared | yolo#574 |
+
+**Merge sequence:**
+
+1. yolo framework PRDs land (#572, #573, #574)
+2. factory#94 (Event migration)
+3. factory#100 (Handler migration — Consumer → Handler rename)
+4. factory G18 typed-ctx codemod
+5. factory G19 typed-test-helpers codemod
+6. factory#101 (this migration — Job kind + app.yml config)
+7. All tests pass, CI green
+
+**Total LOC estimate (factory#101 alone):** ~1500-2500.
+
+**Queues + workers concerns:** see [project_queues_workers_concerns.md](../../../../.claude/projects/-Users-jomonjohnson-projects-yolo-hq/memory/project_queues_workers_concerns.md) memory note — full app.yml queue grammar finalizes in shared/queues-workers.md grill (pending). This PRD uses initial scaffolding; grammar may refine.
+
 ### Blast radius: no new import storms
 
 All retrofits are either spec-level (YAML) or API-substitution inside existing Go files. No new import sites beyond what base migration already touches.
