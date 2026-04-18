@@ -133,7 +133,53 @@ Total additional: ~40 file touches on top of base migration. Spec-heavy, Go-ligh
 ### Migration PRDs
 
 - factory#99 — TypedData → Projection grammar migration (blocked by yolo#570)
+- [factory#100](https://github.com/yolo-hq/app-yolo-factory/issues/100) — Handler migration (Consumer → Handler rename + convert consumers); blocked by yolo#571
 - Existing PRDs #96-#98 updated with retrofit scope comments.
+
+### 2026-04-18b — Handler kind migration (factory#100)
+
+**Scope:** Migrate factory's `event.Consumer` implementations to new `event.Handler` pattern. Framework kind grilled (kind-08-handler.md, yolo#571).
+
+**Audit targets:**
+- Find all `event.Consumer` impls in factory (`services/*_consumer.go`, `events/consumers/*`, or scattered)
+- Likely 5-10 files based on typical domain app (H74)
+
+**Code migration per consumer:**
+- Remove `event.Consumer` interface impl
+- Embed `gen.{HandlerName}` struct
+- Update `Execute` signature to typed `Execute(hctx handler.Context, event *gen.{EventName}) error`
+- Replace inline projection (ConsumerFields-style) with `hctx.Projection.X`
+- Add spec entry in `specs/{domain}/handlers.yml`
+- Move file to `apps/common/{domain}/handlers/`
+
+**Codemod:** `yolo gen migrate consumer-to-handler` — mechanical rewrite + scaffold handlers.yml entry.
+
+**Framework entities created automatically on first `yolo migrate up` post-upgrade:**
+- `handler_executions` (dedup + log)
+- `handler_dead_letter` (failed jobs)
+- `event_log` (optional, opt-in via `handler.event_log_enabled: true` in app.yml)
+
+**Factory app.yml additions:**
+
+```yaml
+handler:
+  dead_letter_retention: 30d          # default
+  execution_log_retention: 7d         # default
+  auto_cleanup: true
+  event_log_enabled: false            # optional
+```
+
+**Additional touches:**
+
+| Item | Estimate |
+|---|---|
+| Handler spec entries | ~5-10 YAML |
+| Go code migration | ~200-400 LOC |
+| Test updates | ~100-300 LOC |
+| `Consumer` → `Handler` call-site rename | ~20-40 |
+| Total | ~500-800 LOC |
+
+**Merge strategy:** Coordinate with factory#94 (Event kind migration) — both touch event pipeline. Event PR first (contract side), Handler PR second (consumer side). Or bundle if practical.
 
 ### Blast radius: no new import storms
 
