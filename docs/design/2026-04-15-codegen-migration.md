@@ -274,3 +274,53 @@ Shared grammar locked in yolo/docs/design/2026-04-15-codegen-redesign/shared/que
 - OTel traces include factory's Execute boundaries
 - Custom health checks registered for all external deps
 - No regressions in existing job throughput or latency
+
+## 2026-04-19 update: Query kind migration
+
+Kind locked in yolo/docs/design/2026-04-15-codegen-redesign/kind-10-query.md. Factory migration tracked in **factory#103**.
+
+**Blocked by (framework PRDs):**
+- yolo#580 Query kind (~530 LOC net)
+- yolo#570 Projection (P26 HAVING + P27 search + P28 polymorphic — all v1 per G22)
+- yolo#572 G18 Typed Ctx, yolo#573 G19 Test Helpers, yolo#575 G20 Testing universals
+- yolo#576–#579 G21 queues-workers (rate limit + observability + cache event invalidation)
+
+### Changes
+
+1. Create `specs/factory/queries.yml` — declare `cost`, `status`, `prd_diff` queries (+ new ones as needed)
+2. Migrate `apps/common/factory/queries/cost.go` to `type Cost struct { gen.Cost }` + `Execute(qctx *gen.CostCtx) error`
+3. Same pattern for `status.go` and `prd_diff.go`
+4. Update tests to G19 typed helpers (`s.QueryStatus(t, input).ExpectSuccess()...`)
+5. Add `Description()` to each; fix import paths to new gen package
+6. HTTP routes auto (no override needed)
+7. RBAC plugin integration wired (field-level permissions for sensitive fields)
+8. Add cache declarations where beneficial (`cache: 5m` on status, conservative TTL on cost_report)
+9. Verify OpenAPI + MCP auto-registration for each
+
+### Merge sequence
+
+1. yolo#580 Query kind lands (+ projection extensions P26/P27/P28)
+2. factory#103 migration: spec + hand migration + tests
+3. All integration tests pass
+4. OpenAPI spec verified `/api/_meta/openapi.json`
+5. MCP tools discoverable
+6. RBAC plugin hooks tested
+7. Cutover in prod
+
+### Blast radius
+
+- Low — 3 existing queries migrated; no runtime behavior change for consumers
+- Spec files added (new), hand files refactored (~50 LOC changes each)
+- Tests rewritten to G19 helpers (clearer, same assertions)
+- HTTP routes stay identical (auto-derivation matches existing convention)
+- OpenAPI gained — new surface, not behavior change
+
+### Done criteria
+
+- 3 queries migrated + passing integration tests
+- `specs/factory/queries.yml` lint-clean under new grammar
+- Generated code compiles
+- HTTP routes working (smoke test each)
+- RBAC plugin hook wired
+- OpenAPI spec includes all 3
+- No regressions in admin UI consuming these queries
