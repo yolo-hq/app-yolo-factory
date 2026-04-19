@@ -223,3 +223,54 @@ All retrofits are either spec-level (YAML) or API-substitution inside existing G
 - `go build ./...` and `go test ./...` green
 - `yolo gen --prune` run on a clean worktree produces no new warnings
 - CI passes end-to-end
+
+## 2026-04-19 update: Queues + Workers (G21) migration
+
+Shared grammar locked in yolo/docs/design/2026-04-15-codegen-redesign/shared/queues-workers.md. Factory migration tracked in **factory#102**.
+
+**Blocked by (framework PRDs):**
+- yolo#576 Queues + Workers + Scheduler (~900 LOC)
+- yolo#577 Rate Limit + Circuit Breaker (~350 LOC)
+- yolo#578 Dead Letter Replay (~250 LOC)
+- yolo#579 Ops Port + Health + Observability (~250 LOC)
+
+### Changes
+
+1. Create `config/queues.yml` — extract queue declarations from app.yml + job specs. Fields: priority, retry (max_attempts/backoff/initial_delay/max_delay), timeout, dead_letter_after, rate_limit (max/per/scope).
+2. Create `config/workers.yml` — declare pools with queues/max_concurrency/poll_interval/prefetch/lease_duration/heartbeat_interval/shutdown_timeout/deploy hints.
+3. Migrate to single binary + flag-driven modes: `factory serve`, `factory worker --pool=X`, `factory scheduler`, `factory cli ...`.
+4. Add ops port 9091 localhost-default config. Sidecar pattern in ECS task def.
+5. Enable leader-elected scheduler pool (`max_tasks: 1`). Declare `catchup: fire_once|fire_all|skip` on scheduled jobs.
+6. Declare `circuit_breaker:` on critical outbound specs (Stripe, SMS, etc).
+7. Seed default rules in `rate_limit_rule` entity from queue-level config.
+8. DLQ adoption: set `replay_safe: true|false` + `spec_version` on every job spec. Mark PII fields `pii: true`. Create admin role `dlq.reveal_pii`.
+9. Register app-specific custom health checks (`github_api`, `openai_api`, external deps).
+10. Queue rename migrations via alias bridge if any existing queue naming changes.
+
+### Merge sequence
+
+1. Framework yolo#576/577/578/579 land
+2. factory#102 migration applies config split + single binary + ops port + DLQ CLI adoption
+3. All tests pass, CI green
+4. Prometheus + OTel + health probes verified in staging
+5. Cutover to new worker binary in prod (zero-downtime rolling)
+
+### Blast radius
+
+- Medium — config/ files added, app.yml slimmed, job specs gain new optional fields (replay_safe/spec_version/pii)
+- Deploy pipeline updated (Dockerfile + ECS task def + probes + stopTimeout alignment)
+- Observability stack (Prometheus scrape + OTel exporter) wired
+- No Go code changes inside Execute methods (framework auto-wires metrics/traces/logs)
+
+### Done criteria
+
+- Factory runs all modes via single binary + flag
+- Config split into `config/queues.yml` + `config/workers.yml`
+- Ops port 9091 bound to localhost
+- Graceful shutdown <= pool `shutdown_timeout` from SIGTERM to exit
+- DLQ entries created on final failure; replayable via `yolo dlq` CLI
+- Scheduler singleton with leader election + catchup semantics
+- Prometheus scrape returns framework metrics on `/metrics`
+- OTel traces include factory's Execute boundaries
+- Custom health checks registered for all external deps
+- No regressions in existing job throughput or latency
