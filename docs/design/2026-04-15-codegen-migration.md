@@ -324,3 +324,62 @@ Kind locked in yolo/docs/design/2026-04-15-codegen-redesign/kind-10-query.md. Fa
 - RBAC plugin hook wired
 - OpenAPI spec includes all 3
 - No regressions in admin UI consuming these queries
+
+## 2026-04-19 update: Command migration
+
+Kind locked in yolo/docs/design/2026-04-15-codegen-redesign/kind-11-command.md. Factory migration tracked in **factory#105**.
+
+**Blocked by (framework PRDs):**
+- yolo#581 Command kind (~1135 LOC net)
+- yolo#574 Job kind (shares async_execution entity)
+- yolo#570 Projection (P26/P27/P28 all v1 per G22)
+- yolo#572 G18 Typed Ctx
+- yolo#573 G19 Test Helpers + named answers
+- yolo#575 G20 Testing universals
+
+### Review of 6 existing factory commands
+
+| File | Reclassify | Rationale |
+|------|------------|-----------|
+| `advisor.go` | **→ Query** | Reads state for advice; no side effects |
+| `backup.go` | **stays Command** | Infrastructure ops |
+| `lint.go` | **stays Command** | Static analysis |
+| `project_scan.go` | **→ Query** | Reads projects |
+| `recover.go` | **stays Command** | Recovery ops (dangerous, CLI-only) |
+| `sentinel.go` | **stays Command** | Monitoring check |
+
+### Changes
+
+1. Move advisor + project_scan to `apps/common/factory/queries/`; declare in `specs/factory/queries.yml`
+2. Create `specs/factory/commands.yml` with 4 remaining commands + spec grammar
+3. Migrate 4 commands to G18 typed Ctx + G11 gen embed pattern
+4. Drop `events:` blocks (if any); use G14 chain `after_success:` / `after_fail:`
+5. Adopt typed state (Job-style resumable) for long commands (backup, recover)
+6. Use `cctx.Actions.XXX` / `cctx.Queries.YYY` / `cctx.Services.ZZZ` / `cctx.Jobs.WWW.Dispatch` for cross-kind calls
+7. Migrate tests to G19 named answers (`WithAnswer("field", value)`)
+8. MCP opt-in explicit per command: safe → `surfaces: [cli, mcp]`; dangerous → `[cli]` only
+9. `command_executions` table (if any) migrates to shared `async_execution` schema
+10. History/resume/cancel CLI via `factory cli command history/resume/cancel`
+11. Verify `cli exec` low-level pattern still works (no migration needed)
+
+### Blast radius
+
+- Low — 6 files touched, 2 move dirs, 4 migrate
+- Spec files added (commands.yml + queries.yml updates)
+- Tests rewritten to G19 named answers (clearer assertions, order-independent)
+- CLI subcommand names preserved (no breaking change to users)
+- MCP tool registration added for safe commands (new surface)
+
+### Done criteria
+
+- 4 commands migrated + passing integration tests
+- 2 commands reclassified to Query + passing tests
+- `specs/factory/commands.yml` + updated `queries.yml` lint-clean
+- Generated code compiles
+- CLI subcommands work (backup/lint/recover/sentinel)
+- Queries work via `factory cli query advisor`, `cli query project_scan`
+- MCP tools registered for safe commands only
+- Interactive prompts work on TTY; fail-fast in CI
+- Resume/cancel via history CLI works
+- async_execution entity populated correctly
+- No regressions in admin UI or `cli exec` low-level pattern
