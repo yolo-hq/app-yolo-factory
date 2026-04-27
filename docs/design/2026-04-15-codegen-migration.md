@@ -383,3 +383,62 @@ Kind locked in yolo/docs/design/2026-04-15-codegen-redesign/kind-11-command.md. 
 - Resume/cancel via history CLI works
 - async_execution entity populated correctly
 - No regressions in admin UI or `cli exec` low-level pattern
+
+## 2026-04-27 update: State Machine + Activity Log migration
+
+**Tracked:** factory#106. Blocked by yolo#582 (State Machine framework) + yolo#583 (Activity Log framework) + PRD #142 (Real-time WebSocket) + RBAC plugin.
+
+### Scope
+
+Migrate 8 stateful factory entities (Task, PRD, Run, Project, Question, Suggestion, Insight, Review) from hand-coded `action.StateMachine{...}` in `state/*.go` to spec-driven `transitions:` block in entity YAML. Enable activity_log app-wide.
+
+### Changes per entity
+
+1. Define `fields.{status_field}.transitions:` block in `specs/factory/entities/{entity}.yml`
+2. Add `default:` for initial state + `freeze:` per terminal state (soft default; hard for Failed/Refunded-class)
+3. Move side effects (after_success events, errors, policy refs) to corresponding action specs
+4. Update action `execute:` blocks to use `transition:` step with `set:` extras (G23)
+5. Delete hand `apps/common/factory/state/{entity}.go` (codegen replaces)
+6. Update tests to use typed helpers (`AssertTaskStatus`, `FireTransition`, `AssertActivityLogged`)
+7. Verify race-safety via `FuzzConcurrent` test
+8. Verify activity_log writes correctly via `AssertActivityHistory`
+
+### Activity log enablement
+
+1. Enable globally in `app.yml`; per-entity overrides for high-volume entities
+2. PII fields marked: emails/tokens/secrets get `activity_log: false` or `redact`
+3. Causer wiring: HTTP=User, Jobs=Job, CLI=System, Webhooks=Webhook
+4. Real-time WebSocket admin timeline integration via PRD #142
+5. GDPR purge CLI verified end-to-end
+
+### Phases
+
+| Phase | Scope |
+|---|---|
+| 1 | Frameworks ship (yolo#582 + yolo#583) — blocking |
+| 2 | Migrate Task spec + tests; enable `strict_mode: warn` (pilot) |
+| 3 | Migrate PRD + Run + Project; enable activity_log app-wide |
+| 4 | Migrate Question + Suggestion + Insight + Review |
+| 5 | Flip `strict_mode: error`; delete all hand `state/*.go` files |
+| 6 | Verify admin timeline + GDPR purge + sampling configs |
+
+### Blast radius
+
+- Medium — 8 entities × spec + tests; ~16 files touched, 8 hand `state/` files deleted
+- Activity_log table + indexes + pg_partman setup via migration
+- gdpr_purges meta-table created
+- Entity test fixtures may need adjustment for activity_log assertions
+- Admin UI gains activity timeline (deferred to admin panel grill)
+
+### Done criteria
+
+- All 8 stateful entities migrated to spec-driven transitions
+- Hand `state/*.go` files removed
+- `strict_mode: error` global, no direct-write panics
+- Activity_log table populated for all entity changes (creates/updates/deletes/transitions)
+- Race-safety verified via `FuzzConcurrent` for all transitions
+- Admin timeline reads activity_log via real-time channel
+- GDPR purge CLI tested end-to-end
+- pg_partman daily partitions rotating correctly
+- No regressions in existing factory tests
+- Activity_log forward-only doc warning published
