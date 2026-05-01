@@ -1,0 +1,189 @@
+schema: v1
+
+services:
+  advisor:
+    desc: Spawn read-only AI agent to analyze a project and suggest improvements
+    input:
+      project_id: ulid | required
+      analysis_type: string | required
+    output:
+      suggestion_count: int
+    errors:
+      - project_not_found: Project $input.project_id not found
+      - ai_unavailable: AI service unavailable
+      - parse_failed: Failed to parse advisor output
+
+  backup:
+    desc: Write entity state to a git-backed directory; full snapshot when trigger=snapshot
+    input:
+      trigger: string | required
+      entity_type: string?
+      entity_id: string?
+    output:
+      file_path: string
+      commit_hash: string
+    errors:
+      - git_init_failed: Failed to initialize git repo
+      - write_failed: Failed to write entity file
+      - commit_failed: Failed to commit backup
+
+  budget_reset:
+    desc: Reset monthly budget counters for all active projects
+    output:
+      reset_count: int
+
+  context:
+    desc: Build AI prompt pair (prompt + system) for a given pipeline phase
+    input:
+      phase: string | required
+      retry_error: string?
+      is_retry: bool?
+    output:
+      prompt: string
+      system_prompt: string
+    errors:
+      - unknown_phase: Unknown phase $input.phase
+
+  dependency:
+    desc: Validate task dependencies and detect cycles
+    input:
+      task_id: ulid | required
+      depends_on: text?
+    output:
+      valid: bool
+      cycle_error: string
+      all_met: bool
+    errors:
+      - task_not_found: Task $input.task_id not found
+      - cycle_detected: Dependency cycle detected
+
+  git:
+    desc: Execute git operations (pull/push/branch/merge/commit/worktree) for task workflows
+    input:
+      operation: string | required
+      repo_path: string | required
+      branch: string?
+      task_id: string?
+      message: string?
+      path: string?
+    output:
+      commit_hash: string
+      branch_name: string
+      worktree_path: string
+      raw_output: string
+    errors:
+      - unknown_operation: Unknown git operation $input.operation
+      - git_failed: Git command failed
+
+  integration_review:
+    desc: Spawn read-only AI agent to review cross-task integration patterns
+    input:
+      project_id: ulid | required
+      combined_diff: text?
+    output:
+      finding_count: int
+      suggestion_count: int
+    errors:
+      - ai_unavailable: AI service unavailable
+      - parse_failed: Failed to parse integration review output
+
+  linter:
+    desc: Run static analysis checks on project code
+    input:
+      project_path: string | required
+    output:
+      passed: bool
+      checks_run: int
+      checks_passed: int
+      checks_failed: int
+    errors:
+      - lint_run_failed: Failed to run lint checks
+
+  orchestrator:
+    desc: Execute a single task through the full plan->implement->test->audit->review->merge workflow
+    input:
+      task_id: ulid | required
+    output:
+      status: string
+      cost_usd: float
+      commit_hash: string
+      summary: string
+    errors:
+      - task_not_found: Task $input.task_id not found
+      - prd_not_found: PRD not found for task
+      - project_not_found: Project not found for task
+      - budget_exceeded: Monthly budget exceeded
+      - git_failed: Git operation failed
+      - ai_unavailable: AI service unavailable
+
+  planner:
+    desc: Spawn AI agent to break a PRD into implementation tasks
+    input:
+      prd_id: ulid | required
+    output:
+      task_count: int
+    errors:
+      - prd_not_found: PRD $input.prd_id not found
+      - project_not_found: Project not found
+      - ai_unavailable: AI service unavailable
+      - parse_failed: Failed to parse planner output
+      - no_tasks: Planner returned no tasks
+      - cycle_detected: Dependency cycle in planned tasks
+
+  process_advisor:
+    desc: Analyze execution history metrics and generate process improvement insights
+    input:
+      project_id: ulid | required
+      min_completed_tasks: int?
+    output:
+      insight_count: int
+      skipped: bool
+      reason: string
+    errors:
+      - ai_unavailable: AI service unavailable
+      - parse_failed: Failed to parse process advisor output
+
+  question_resolver:
+    desc: Attempt to auto-resolve an agent question via CLAUDE.md or planner agent
+    input:
+      project_id: ulid | required
+    output:
+      answer: string
+      answered_by: string
+      resolved: bool
+    errors:
+      - ai_unavailable: AI service unavailable
+
+  run_completion:
+    desc: Cascade failures to dependent tasks and check whether all task dependencies are satisfied
+    output:
+      cascaded_count: int
+
+  sentinel:
+    desc: Run health checks against a project and produce findings
+    input:
+      project_id: ulid | required
+    output:
+      finding_count: int
+      tasks_created: int
+      suggestions_created: int
+    errors:
+      - project_not_found: Project $input.project_id not found
+      - watch_failed: Health watch failed
+
+  timeout:
+    desc: Find running runs that have exceeded their timeout and fail them
+    output:
+      timed_out: int
+
+  wiki:
+    desc: Maintain per-project knowledge base at project/.factory/wiki.md via AI extraction
+    input:
+      project_path: string | required
+      task_id: ulid | required
+      task_title: string | required
+      task_output: text?
+      review_output: text?
+    errors:
+      - mkdir_failed: Failed to create .factory directory
+      - write_failed: Failed to write wiki file
