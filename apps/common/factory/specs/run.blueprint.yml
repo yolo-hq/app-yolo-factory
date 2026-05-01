@@ -26,11 +26,103 @@ entity:
 state:
   field: status
   transitions:
-    block:    running -> blocked
-    unblock:  blocked -> running
+    block:   running -> blocked
+    resume:  blocked -> running
     complete: running -> completed
-    fail:     running -> failed
-    cancel:   running,blocked -> cancelled
+    fail:    running,blocked -> failed
+    cancel:  running,blocked -> cancelled
+
+actions:
+  block_run:
+    kind: transition
+    transition: block
+    description: Block a running run waiting for a question
+
+  resume_run:
+    kind: transition
+    transition: resume
+    description: Resume a blocked run after question answered
+
+  cancel_run:
+    kind: transition
+    transition: cancel
+    description: Cancel a running or blocked run
+
+  fail_run:
+    kind: transition
+    transition: fail
+    description: Mark a run as failed
+
+  complete_run:
+    kind: custom
+    input: complete_run
+    description: Record run completion and advance state machine
+    skip_policies: all
+    emits: [RunCompleted, RunFailed]
+
+policies:
+  can_block_run:
+    entity: run
+    data:
+      run:
+        entity: run
+        where: id = $input.id
+        fields: [status]
+    rules:
+      - expr: $data.run.status == $enum.RunStatus.Running
+        else: run must be running
+
+  can_resume_run:
+    entity: run
+    data:
+      run:
+        entity: run
+        where: id = $input.id
+        fields: [status]
+    rules:
+      - expr: $data.run.status == $enum.RunStatus.Blocked
+        else: run must be blocked
+
+  can_cancel_run:
+    entity: run
+    data:
+      run:
+        entity: run
+        where: id = $input.id
+        fields: [status]
+    rules:
+      - any:
+          - expr: $data.run.status == $enum.RunStatus.Running
+          - expr: $data.run.status == $enum.RunStatus.Blocked
+        else: run must be running or blocked
+
+  can_fail_run:
+    entity: run
+    data:
+      run:
+        entity: run
+        where: id = $input.id
+        fields: [status]
+    rules:
+      - any:
+          - expr: $data.run.status == $enum.RunStatus.Running
+          - expr: $data.run.status == $enum.RunStatus.Blocked
+        else: run must be running or blocked
+
+inputs:
+  complete_run:
+    fields:
+      status: string | required
+      cost_usd: float?
+      tokens_in: int?
+      tokens_out: int?
+      duration_ms: int?
+      num_turns: int?
+      error: text?
+      commit_hash: string?
+      files_changed: text?
+      result: text?
+      session_id: string?
 
 filters:
   - status eq,in
