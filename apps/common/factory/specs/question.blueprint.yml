@@ -20,6 +20,36 @@ state:
     answer:        open -> answered
     auto_resolve:  open -> auto_resolved
 
+actions:
+  answer_question:
+    kind: custom
+    input: answer_question
+    description: Answer an open question
+    emits: [QuestionAnswered]
+
+  auto_resolve_question:
+    kind: transition
+    transition: auto_resolve
+    description: Auto-resolve an open question (system)
+    skip_policies: all
+
+policies:
+  can_answer_question:
+    entity: question
+    data:
+      question:
+        entity: question
+        where: id = $input.id
+        fields: [status]
+    rules:
+      - expr: $data.question.status == $enum.QuestionStatus.Open
+        else: question must be open
+
+inputs:
+  answer_question:
+    fields:
+      answer: text | required
+
 filters:
   - task_id eq
   - run_id eq
