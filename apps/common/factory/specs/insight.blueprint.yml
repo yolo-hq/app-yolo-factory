@@ -19,6 +19,53 @@ state:
     apply:       acknowledged -> applied
     dismiss:     pending,acknowledged -> dismissed
 
+actions:
+  acknowledge_insight:
+    kind: transition
+    transition: acknowledge
+  apply_insight:
+    kind: transition
+    transition: apply
+  dismiss_insight:
+    kind: transition
+    transition: dismiss
+
+policies:
+  can_acknowledge_insight:
+    entity: insight
+    data:
+      insight:
+        entity: insight
+        where: id = $input.id
+        fields: [status]
+    rules:
+      - expr: $data.insight.status == $enum.InsightStatus.Pending
+        else: insight must be pending
+
+  can_apply_insight:
+    entity: insight
+    data:
+      insight:
+        entity: insight
+        where: id = $input.id
+        fields: [status]
+    rules:
+      - expr: $data.insight.status == $enum.InsightStatus.Acknowledged
+        else: insight must be acknowledged
+
+  can_dismiss_insight:
+    entity: insight
+    data:
+      insight:
+        entity: insight
+        where: id = $input.id
+        fields: [status]
+    rules:
+      - any:
+          - expr: $data.insight.status == $enum.InsightStatus.Pending
+          - expr: $data.insight.status == $enum.InsightStatus.Acknowledged
+        else: insight must be pending or acknowledged
+
 filters:
   - project_id eq
   - category eq,in
