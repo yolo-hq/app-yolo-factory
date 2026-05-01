@@ -18,11 +18,92 @@ entity:
 state:
   field: status
   transitions:
-    approve:  draft -> approved
-    plan:     approved -> planning
-    start:    planning -> in_progress
-    complete: in_progress -> completed
-    fail:     in_progress -> failed
+    approve:        draft -> approved
+    execute:        draft,approved -> planning
+    start_progress: planning -> in_progress
+    complete:       in_progress,planning -> completed
+    fail:           draft,approved,planning,in_progress -> failed
+
+actions:
+  submit_prd:
+    kind: create
+    input: submit_prd
+    description: Submit a new PRD for a project
+
+  approve_prd:
+    kind: custom
+    description: Approve a draft PRD and optionally trigger planning
+    skip_policies: false
+    emits: [PRDApproved]
+
+  execute_prd:
+    kind: custom
+    description: Execute a PRD by starting planning
+    emits: []
+
+  fail_prd:
+    kind: transition
+    transition: fail
+    description: Mark a PRD as failed
+    skip_policies: all
+
+  complete_prd:
+    kind: transition
+    transition: complete
+    description: Mark a PRD as completed
+    skip_policies: all
+
+  start_prd:
+    kind: transition
+    transition: start_progress
+    description: Start progress on a planned PRD
+    skip_policies: all
+
+policies:
+  can_approve_prd:
+    entity: prd
+    data:
+      prd:
+        entity: prd
+        where: id = $input.id
+        fields: [status]
+    rules:
+      - expr: $data.prd.status == $enum.PRDStatus.Draft
+        else: prd must be in draft
+
+  can_execute_prd:
+    entity: prd
+    data:
+      prd:
+        entity: prd
+        where: id = $input.id
+        fields: [status]
+    rules:
+      - any:
+          - expr: $data.prd.status == $enum.PRDStatus.Draft
+          - expr: $data.prd.status == $enum.PRDStatus.Approved
+        else: prd must be draft or approved
+
+  can_submit_prd:
+    entity: project
+    data:
+      project:
+        entity: project
+        where: id = $input.project_id
+        fields: [status]
+    rules:
+      - expr: $data.project.status == $enum.ProjectStatus.Active
+        else: project must be active
+
+inputs:
+  submit_prd:
+    fields:
+      project_id: ulid | required
+      title: string:1-200 | required
+      body: text | required
+      acceptance_criteria: text | required
+      design_decisions: text?
+      source: string?
 
 filters:
   - status eq,in
