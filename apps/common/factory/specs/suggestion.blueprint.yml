@@ -19,6 +19,61 @@ state:
     reject:  pending -> rejected
     convert: approved -> converted
 
+actions:
+  approve_suggestion:
+    kind: transition
+    transition: approve
+    input: approve_suggestion
+  reject_suggestion:
+    kind: transition
+    transition: reject
+    input: reject_suggestion
+  convert_suggestion:
+    kind: transition
+    transition: convert
+
+inputs:
+  approve_suggestion:
+    fields:
+      prd_id: ulid?
+  reject_suggestion:
+    fields:
+      reason: string:1-500 | required
+
+policies:
+  can_approve_suggestion:
+    entity: suggestion
+    data:
+      suggestion:
+        entity: suggestion
+        where: id = $input.id
+        fields: [status]
+    rules:
+      - expr: $data.suggestion.status == $enum.SuggestionStatus.Pending
+        else: suggestion must be pending
+
+  can_reject_suggestion:
+    entity: suggestion
+    data:
+      suggestion:
+        entity: suggestion
+        where: id = $input.id
+        fields: [status]
+    rules:
+      - expr: $data.suggestion.status == $enum.SuggestionStatus.Pending
+        else: suggestion must be pending
+
+  can_convert_suggestion:
+    entity: suggestion
+    data:
+      suggestion:
+        entity: suggestion
+        where: id = $input.id
+        fields: [status]
+    rules:
+      - expr: $data.suggestion.status == $enum.SuggestionStatus.Approved
+        else: suggestion must be approved
+
 filters:
   - project_id eq
   - source eq,in
