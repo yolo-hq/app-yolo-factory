@@ -25,12 +25,94 @@ state:
   field: status
   transitions:
     start:    queued -> running
-    block:    running -> blocked
+    block:    queued,running -> blocked
     unblock:  blocked -> queued
     review:   running -> reviewing
     complete: reviewing -> done
     fail:     running,reviewing -> failed
-    cancel:   queued,running,blocked -> cancelled
+    cancel:   queued,blocked,running,reviewing -> cancelled
+    retry:    failed -> queued
+    requeue:  running,reviewing -> queued
+
+actions:
+  cancel_task:
+    kind: transition
+    transition: cancel
+    description: Cancel a non-terminal task
+
+  retry_task:
+    kind: custom
+    input: retry_task
+    description: Retry a failed task
+    emits: []
+
+  start_task:
+    kind: transition
+    transition: start
+    description: Start a queued task
+    skip_policies: all
+
+  block_task:
+    kind: transition
+    transition: block
+    description: Block a running task waiting for a question
+    skip_policies: all
+
+  unblock_task:
+    kind: transition
+    transition: unblock
+    description: Unblock a blocked task
+    skip_policies: all
+
+  review_task:
+    kind: transition
+    transition: review
+    description: Mark a running task as under review
+    skip_policies: all
+
+  complete_task:
+    kind: transition
+    transition: complete
+    description: Complete a task under review
+    skip_policies: all
+
+  fail_task:
+    kind: transition
+    transition: fail
+    description: Mark a running or reviewing task as failed
+    skip_policies: all
+
+policies:
+  can_cancel_task:
+    entity: task
+    data:
+      task:
+        entity: task
+        where: id = $input.id
+        fields: [status]
+    rules:
+      - any:
+          - expr: $data.task.status == $enum.TaskStatus.Queued
+          - expr: $data.task.status == $enum.TaskStatus.Blocked
+          - expr: $data.task.status == $enum.TaskStatus.Running
+          - expr: $data.task.status == $enum.TaskStatus.Reviewing
+        else: task must be in a cancellable state
+
+  can_retry_task:
+    entity: task
+    data:
+      task:
+        entity: task
+        where: id = $input.id
+        fields: [status]
+    rules:
+      - expr: $data.task.status == $enum.TaskStatus.Failed
+        else: task must be failed to retry
+
+inputs:
+  retry_task:
+    fields:
+      model: string?
 
 filters:
   - status eq,in
