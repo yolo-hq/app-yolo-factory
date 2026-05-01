@@ -1,0 +1,76 @@
+schema: v1
+
+jobs:
+  advisor:
+    desc: Run optimization advisor on active projects
+    queue: default
+    retry: exponential
+    retry_max: 1
+    input:
+      project_id: ulid | required
+      analysis_type: string | required
+    errors:
+      - ai_unavailable: AI service unavailable
+
+  backup_snapshot:
+    desc: Create periodic backup snapshots of factory state
+    queue: default
+    retry: exponential
+    retry_max: 1
+    errors:
+      - backup_failed: Failed to create backup snapshot
+
+  check_timeouts:
+    desc: Check and fail tasks that exceeded timeout
+    queue: default
+    errors:
+      - query_failed: Failed to query running runs
+
+  execute_workflow:
+    desc: Run the full implementation workflow for a queued task
+    queue: execution
+    retry: exponential
+    retry_max: 1
+    input:
+      task_id: ulid | required
+    errors:
+      - task_not_found: Task $input.task_id not found
+      - workflow_failed: Workflow execution failed
+
+  plan_prd:
+    desc: Plan and create tasks from an approved PRD
+    queue: execution
+    retry: exponential
+    retry_max: 1
+    input:
+      prd_id: ulid | required
+    errors:
+      - prd_not_found: PRD $input.prd_id not found
+      - planning_failed: Failed to plan PRD
+
+  process_advisor:
+    desc: Analyze factory process metrics and generate insights
+    queue: default
+    retry: exponential
+    retry_max: 1
+    input:
+      project_id: ulid | required
+    errors:
+      - ai_unavailable: AI service unavailable
+
+  reset_budgets:
+    desc: Reset monthly budget counters for all projects
+    queue: default
+    errors:
+      - query_failed: Failed to query active projects
+
+  sentinel:
+    desc: Run sentinel health checks on active projects
+    queue: default
+    retry: exponential
+    retry_max: 1
+    input:
+      project_id: ulid | required
+    errors:
+      - project_not_found: Project $input.project_id not found
+      - watch_failed: Health watch failed
