@@ -1,0 +1,25 @@
+schema: v1
+
+queries:
+  cost:
+    desc: Cost breakdown by model and period
+    tier: custom
+    input:
+      project_id: ulid?
+    errors:
+      - query_failed: Failed to compute cost breakdown
+
+  prd_diff:
+    desc: Combined git diff for a completed PRD
+    tier: custom
+    input:
+      prd_id: ulid | required
+    errors:
+      - not_found: PRD $input.prd_id not found
+      - git_error: Failed to compute git diff
+
+  status:
+    desc: Factory dashboard summary — tasks by status, active PRDs, monthly spend
+    tier: custom
+    errors:
+      - query_failed: Failed to load factory status
