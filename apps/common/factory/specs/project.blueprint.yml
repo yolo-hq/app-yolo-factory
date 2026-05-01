@@ -26,6 +26,96 @@ entity:
     setup_commands: jsonb = "[]"
     test_commands: jsonb = "[]"
 
+state:
+  field: status
+  transitions:
+    pause:   active -> paused
+    resume:  paused -> active
+    archive: active,paused -> archived
+
+actions:
+  create_project:
+    kind: create
+    input: create_project
+    skip_policies: all
+  update_project:
+    kind: update
+    input: update_project
+    skip_policies: all
+  pause_project:
+    kind: transition
+    transition: pause
+  resume_project:
+    kind: transition
+    transition: resume
+  archive_project:
+    kind: transition
+    transition: archive
+
+inputs:
+  create_project:
+    fields:
+      name: string:1-200 | required
+      repo_url: url | required
+      local_path: text | required
+      default_branch: string?
+      default_model: string?
+      budget_per_task_usd: float?
+      budget_per_prd_usd: float?
+      budget_monthly_usd: float?
+      max_retries: int?
+      timeout_secs: int?
+      auto_merge: bool?
+      setup_commands: text?
+      test_commands: text?
+  update_project:
+    fields:
+      name: string:1-200?
+      default_branch: string?
+      default_model: string?
+      budget_per_task_usd: float?
+      budget_per_prd_usd: float?
+      budget_monthly_usd: float?
+      max_retries: int?
+      timeout_secs: int?
+      auto_merge: bool?
+
+policies:
+  can_pause_project:
+    entity: project
+    data:
+      project:
+        entity: project
+        where: id = $input.id
+        fields: [status]
+    rules:
+      - expr: $data.project.status == $enum.ProjectStatus.Active
+        else: project must be active
+
+  can_resume_project:
+    entity: project
+    data:
+      project:
+        entity: project
+        where: id = $input.id
+        fields: [status]
+    rules:
+      - expr: $data.project.status == $enum.ProjectStatus.Paused
+        else: project must be paused
+
+  can_archive_project:
+    entity: project
+    data:
+      project:
+        entity: project
+        where: id = $input.id
+        fields: [status]
+    rules:
+      - any:
+          - expr: $data.project.status == $enum.ProjectStatus.Active
+          - expr: $data.project.status == $enum.ProjectStatus.Paused
+        else: project must be active or paused
+
 filters:
   - status eq
   - name eq,contains,starts_with
