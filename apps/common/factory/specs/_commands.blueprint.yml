@@ -1,0 +1,60 @@
+schema: v1
+
+commands:
+  advisor.run:
+    desc: Run advisor analysis on a project
+    surfaces: [cli]
+    admin_only: false
+    input:
+      project: string | required
+      analysis: string?
+    errors:
+      - project_not_found: Project not found
+
+  backup:
+    desc: Trigger a manual backup snapshot
+    surfaces: [cli]
+    admin_only: false
+    input:
+      state_path: string?
+
+  lint:
+    desc: Run static analysis checks on project code
+    surfaces: [cli]
+    admin_only: false
+    input:
+      path: string | required
+    errors:
+      - lint_failed: Lint failed with errors
+
+  project.scan:
+    desc: Auto-discover and register git repos in a directory
+    surfaces: [cli]
+    admin_only: false
+    input:
+      dir: string | required
+      dry_run: bool?
+      branch: string?
+      model: string?
+    errors:
+      - read_dir_failed: Failed to read directory
+
+  recover:
+    desc: Recover factory state from backup
+    surfaces: [cli]
+    admin_only: false
+    input:
+      from: string | required
+    errors:
+      - recover_failed: Failed to recover state from backup
+
+  sentinel.run:
+    desc: Run sentinel health checks on a project or all active projects
+    surfaces: [cli]
+    admin_only: false
+    input:
+      project: string?
+      all: bool?
+    errors:
+      - no_target: Specify --project or --all
+      - project_not_found: Project not found
